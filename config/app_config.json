@@ -1,0 +1,4 @@
+{
+  "_aciklama": "Uygulamanın uzaktan ayarları. GitHub'da bu dosyayı düzenleyip kaydedin; bir sonraki günlük çalıştırmada uygulamaya ulaşır. Bu sürümde reklam yoktur.",
+  "ads": {"enabled": false, "home_banner": false, "list_banner": false, "native_every": 0, "test_mode": true}
+}

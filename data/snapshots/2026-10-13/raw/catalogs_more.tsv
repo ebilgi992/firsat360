@@ -1,0 +1,14 @@
+# FIRSAT360 gerçek veri — yeni mağazaların resmî katalog/broşür kayıtları — 13.10.2026 (okunma ~20:35, WebFetch)
+# Kapak/sayfa görselleri mağazanın kendi sayfasında yayımladığı resmî adreslerdir; dosya kopyalanmaz.
+# Geçerlilik sayfada yazmıyorsa "-" (tahmin edilmedi). Sayfaların tamamı resmî bağlantıda (flipbook) incelenir.
+# Kaynaklar: hakmar.com.tr/indirim/ · katalog.watsons.com.tr/ekim-katalog-2026/page/1 ·
+#   brosurler.metro-tr.com/kozmetik-deterjan/page/1 · bizimtoptan.com.tr/pages/katalog · gratis.com/gratis-katalog
+# Sütunlar: store	id	title	kind	valid_text	official_url	cover_url
+hakmar	hakmar-genel-insert-0819-ekim	Genel İnsert · 8-19 Ekim	aktuel	8-19 Ekim	https://hakmar.com.tr/indirim/	https://hakmar.com.tr/wp-content/uploads/2026/10/08-19-Ekim-2026-Genel-Insert-1-scaled.jpg
+hakmar	hakmar-kirtasiye-2026	Kırtasiye Broşürü	aktuel	21 Ağustos-31 Ekim	https://hakmar.com.tr/indirim/	https://hakmar.com.tr/wp-content/uploads/2026/09/kirtasiye-2026-baski-1-1.jpg
+watsons	watsons-ekim-katalog-2026	Ekim Kataloğu 2026	flipbook	-	https://katalog.watsons.com.tr/ekim-katalog-2026/page/1	https://view.publitas.com/resize/rev-95488569/YE3aTweXbqN3H_Cgq53PDPaMRSDPU5Kavo7zcVLx7Cg/fit-in/1306x1959/filters:quality(90)/production-revolution-publitas-com/223/3421773/pages/690655b4-878a-4457-9979-ccb78e93278c-downscaled.jpg
+metro	metro-temizlik-kisisel-bakim-ekim	Temizlik ve Kişisel Bakım Broşürü	flipbook	1 - 31 Ekim	https://brosurler.metro-tr.com/kozmetik-deterjan/page/1	https://view.publitas.com/resize/rev-95488569/q7HuNOAa5cW9AYeLML9rseekB8Xn6MDhh_ZgvvcVvCQ/fit-in/1273x2010/filters:quality(90)/production-revolution-publitas-com/737/2607340/pages/7e184972-00bb-4cea-b7e0-8cd42f774063-downscaled.jpg
+bizimtoptan	bizimtoptan-haftalik-katalog	Haftalık Katalog	flipbook	-	https://heyzine.com/flip-book/f7d10044c6.html	https://img-bizimtoptan.mncdn.com/Content/Images/Thumbs/3292902.png
+bizimtoptan	bizimtoptan-geleneksel-kanal	Geleneksel Kanal Fırsat Bülteni	flipbook	-	https://bizimtoptan.aflip.in/geleneksel_kanal-firsat-bulteni.html	https://img-bizimtoptan.mncdn.com/Content/Images/Thumbs/3292906.png
+bizimtoptan	bizimtoptan-horeca	HORECA Kataloğu	flipbook	-	https://bizimtoptan.aflip.in/horeca_katalog.html	https://img-bizimtoptan.mncdn.com/Content/Images/Thumbs/3292905.png
+gratis	gratis-ekim-katalog	Gratis Ekim Kataloğu	flipbook	-	https://online.fliphtml5.com/gratiscom/vczv/	https://api.gratis.retter.io/1oakekr4e/CALL/Image/get/lKdwyj1CxE_1024x1024.png

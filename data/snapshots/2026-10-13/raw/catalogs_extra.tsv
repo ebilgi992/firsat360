@@ -1,0 +1,7 @@
+# FIRSAT360 gerçek veri — ek resmî katalog kayıtları (yalnızca bağlantı) — 13.10.2026
+# Migroskop Dijital: https://www.money.com.tr/mc/kampanyalara-bak/migroskop-dijital/83 sayfasında "Sayı 908, 8 - 21 Ekim 2026" (okunma ~09:15, WebFetch).
+#   Sayfa görselleri sayfada boş geldi; katalog PDF adresi doğrulanamadı → yalnızca resmî bağlantı.
+# A101 afiş sayfası (/aldin-aldin-gelecek-hafta-brosuru, /afisler) içeriği tarayıcıda yükleniyor; görsel/tarih okunamadı → yalnızca bağlantı.
+# Sütunlar: store	id	title	kind	valid_text	official_url
+migros	migros-migroskop-dijital-908	Migroskop Dijital Katalog · Sayı 908	flipbook	8 - 21 Ekim 2026	https://www.money.com.tr/mc/kampanyalara-bak/migroskop-dijital/83
+a101	a101-afisler	A101 Afişler ve Broşürler	flipbook	-	https://www.a101.com.tr/afisler

@@ -1,0 +1,49 @@
+{
+  "snapshot_date": "2026-10-13",
+  "method": "manual_snapshot",
+  "tool_note": "Resmî sayfalar WebFetch aracıyla okundu; geliştirme sunucusunun kabuğu mağaza sitelerine bağlanamıyor (ağ politikası 403).",
+  "observed": {
+    "bim": "2026-10-13T08:12:00+03:00",
+    "a101": "2026-10-13T08:12:00+03:00",
+    "sok": "2026-10-13T08:16:00+03:00",
+    "migros": "2026-10-13T08:16:00+03:00",
+    "bim_afis": "2026-10-13T09:14:00+03:00",
+    "tkkoop": "2026-10-13T20:28:00+03:00",
+    "product_images": "2026-10-13T20:35:00+03:00",
+    "hakmar": "2026-10-13T20:35:00+03:00",
+    "watsons": "2026-10-13T20:35:00+03:00",
+    "metro": "2026-10-13T20:35:00+03:00",
+    "bizimtoptan": "2026-10-13T20:35:00+03:00",
+    "gratis": "2026-10-13T20:35:00+03:00"
+  },
+  "bim_tabs": {
+    "1690": {
+      "label": "10-16 Ekim",
+      "column": "indirim"
+    },
+    "1681": {
+      "label": "13 Ekim Salı",
+      "column": "aktuel"
+    },
+    "1682": {
+      "label": "14 Ekim Çarşamba",
+      "column": "aktuel"
+    },
+    "1683": {
+      "label": "16 Ekim Cuma",
+      "column": "aktuel"
+    },
+    "1684": {
+      "label": "18 Ekim Pazar",
+      "column": "aktuel"
+    }
+  },
+  "notes": [
+    "BİM sekme anahtarları ve etiketleri resmî sayfadaki sekme bağlantılarından alındı (06 Ekim Salı=1674 … 21 Ekim Çarşamba=1687, 10-16 Ekim=1690).",
+    "BİM sekmelerinde 'Daha Fazla Ürün Göster' düğmesi var; yalnızca ilk yüklenen ürünler alındı.",
+    "A101 listesi 12.10'a göre değişti: 2 ürün çıktı, 2 ürün girdi.",
+    "Migros ilk sayfası 12.10 ile aynı (30 ürün, fiyatlar aynı).",
+    "09:14–09:16 ek okuma: BİM afişleri (28 sayfa görseli, 11 tarih), ŞOK kampanya görselleri (55), Migros ürün görselleri (30), Migroskop Dijital Sayı 908 (8-21 Ekim).",
+    "17:30–20:35 ek okuma: her ürünün kendi resmî detay sayfasından ana görsel (BİM 344, A101 39, ŞOK 49, Tarım Kredi 65 sayfa) → product_images.tsv; Tarım Kredi 'Kat Kat Fırsat 13-19 Ekim' (65 ürün); Hakmar 2 broşür (16 sayfa görseli); Watsons, Metro, Bizim Toptan (3), Gratis katalog kapakları ve resmî bağlantıları."
+  ]
+}

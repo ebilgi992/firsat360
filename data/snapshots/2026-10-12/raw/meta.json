@@ -1,0 +1,17 @@
+{
+  "snapshot_date": "2026-10-12",
+  "method": "manual_snapshot",
+  "tool_note": "Resmî sayfalar WebFetch aracıyla okundu; geliştirme sunucusunun kabuğu mağaza sitelerine bağlanamıyor (ağ politikası 403).",
+  "observed": {
+    "bim": "2026-10-12T12:05:00+03:00",
+    "a101": "2026-10-12T12:06:00+03:00",
+    "migros": "2026-10-12T12:07:00+03:00",
+    "sok": "2026-10-12T12:12:00+03:00"
+  },
+  "bim_tabs": {
+    "1690": {"label": "10-16 Ekim", "column": "indirim"},
+    "1681": {"label": "13 Ekim Salı", "column": "aktuel"},
+    "1682": {"label": "14 Ekim Çarşamba", "column": "aktuel"}
+  },
+  "notes": []
+}

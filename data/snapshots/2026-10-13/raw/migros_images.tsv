@@ -1,0 +1,34 @@
+# FIRSAT360 gerçek veri — Migros ürün görselleri — 13.10.2026
+# Kaynak: https://www.migros.com.tr/rest/search/screens/migroskop-urunleri-dt-3 → images[0].urls.PRODUCT_LIST (doğrulandı)
+# Büyük görsel (PRODUCT_DETAIL) = PRODUCT_LIST adresinden "-105x105" çıkarılarak; kural ilk 5 üründe yanıtla doğrulandı.
+# Görseller Migros'un CDN'inden gösterilir, kopyalanmaz. Sütunlar: prettyName	list_url
+komili-aycicek-yagi-5-l-p-3eb6ee	https://images.migrosone.com/sanalmarket/product/04110062/4110062_1-5f2b02-105x105.jpg
+kinik-maden-suyu-6-x-200-ml-p-7ab200	https://images.migrosone.com/sanalmarket/product/08040960/8040960_1-13964d-105x105.jpg
+solo-ultra-organik-bambu-ozlu-havlu-12li-p-1d955cc	https://images.migrosone.com/sanalmarket/product/31020492/31020492_1-76125f-105x105.jpg
+komili-lezzetlik-yumusak-naturel-sizma-zeytinyagi-2-l-p-3f124a	https://images.migrosone.com/sanalmarket/product/04133450/4133450-56fd4f-105x105.jpg
+erikli-su-5-l-p-7b04fb	https://images.migrosone.com/sanalmarket/product/08062203/08062203_1-895e5f-105x105.jpg
+billur-tuz-rafine-iyotlu-sofra-tuzu-750-g-p-5bdfee	https://images.migrosone.com/sanalmarket/product/06021102/billur-tuz-rafine-iyotlu-sofra-tuzu-750-gr-29b318-105x105.jpg
+solo-ultra-organik-bambu-pamuk-ozlu-tuvalet-kagidi-32li-p-1d941cd	https://images.migrosone.com/sanalmarket/product/31015373/31015373_1-472b28-105x105.jpg
+soke-un-5-kg-p-4c73e5	https://images.migrosone.com/sanalmarket/product/05010405/05010405_1-bcae71-105x105.png
+kahve-dunyasi-tambol-bademli-sutlu-cikolata-77-g-p-6b641c	https://images.migrosone.com/sanalmarket/product/07037980/7037980_1-c19308-105x105.jpg
+coca-cola-orijinal-tat-pet-15-l-p-7a3c97	https://images.migrosone.com/sanalmarket/product/08010903/8010903_yan-2e2bcb-105x105.jpg
+superfresh-ispanak-450-g-p-1039147	https://images.migrosone.com/sanalmarket/product/17011015/17011015_1-a9c52d-105x105.jpg
+tat-domates-salcasi-cam-710-g-p-897b64	https://images.migrosone.com/sanalmarket/product/09010020/09010020_1-bbe44a-105x105.jpg
+droetker-hamur-kabartma-tozu-15li-paket-150-g-p-5c7d6b	https://images.migrosone.com/sanalmarket/product/06061419/06061419-5fa2eb-105x105.png
+banvit-pilic-pirzola-kg-p-2be8451	https://images.migrosone.com/sanalmarket/product/46040145/46040145_1-4e02a8-105x105.jpg
+nuhun-ankara-burgu-makarna-500-g-p-4cc143	https://images.migrosone.com/sanalmarket/product/05030211/nuh-un-ankara-burgu-makarna-500-gr-968684-105x105.jpg
+kahve-dunyasi-tambol-findikli-sutlu-cikolata-77-g-p-6b9426	https://images.migrosone.com/sanalmarket/product/07050278/7050278_1-b27f20-105x105.jpg
+bolca-hindi-dilimli-gogus-750-g-p-cafbf4	https://images.migrosone.com/sanalmarket/product/13302772/13302772-79b26a-105x105.jpg
+droetker-sekerli-vanilin-15li-paket-75-g-p-5c7d6c	https://images.migrosone.com/sanalmarket/product/06061420/06061420-0c4d9b-105x105.png
+nuhun-ankara-spagetti-makarna-500-g-p-4cc140	https://images.migrosone.com/sanalmarket/product/05030208/05030208-0f1c64-105x105.jpg
+bingo-akilli-kapsul-pro-max-bulasik-makinasi-tablet-40li-548-g-p-1d8b7bb	https://images.migrosone.com/sanalmarket/product/30980027/30980027_1-736941-105x105.jpg
+coca-cola-zero-sugar-pet-15-l-p-7a3c98	https://images.migrosone.com/sanalmarket/product/08010904/8010904_1-8edb97-105x105.jpg
+ernet-camasir-sodasi-500-g-p-1cbbf5e	https://images.migrosone.com/sanalmarket/product/30130014/30130014-203836-105x105.jpg
+eker-kaymak-200-g-p-b8a1b5	https://images.migrosone.com/sanalmarket/product/12100021/12100021_1-ec46b4-105x105.jpg
+nuhun-ankara-boncuk-makarna-500-g-p-4cc147	https://images.migrosone.com/sanalmarket/product/05030215/nuh-un-ankara-boncuk-makarna-500-gr-d86176-105x105.jpg
+kahve-dunyasi-tambol-kakao-nibli-bitter-dolgulu-cikolata-100-g-p-6b4b46	https://images.migrosone.com/sanalmarket/product/07031622/07031622_1-bf38ee-105x105.jpg
+eti-gong-misir-ve-pirinc-patlagi-64-g-p-6aff31	https://images.migrosone.com/sanalmarket/product/07012145/07012145-36cdc0-105x105.jpg
+barilla-linguine-yassi-spagetti-makarna-no13-500-g-p-4cc1cd	https://images.migrosone.com/sanalmarket/product/05030349/5030349_1-1b3461-105x105.jpg
+kahve-dunyasi-tambol-antep-fistikli-sutlu-cikolata-77-g-p-6b4737	https://images.migrosone.com/sanalmarket/product/07030583/7030583_1-ef40bb-105x105.jpg
+sutas-suzme-yogurt-750-g-p-bebda2	https://images.migrosone.com/sanalmarket/product/12500386/12500386-8c433e-105x105.jpg
+sirma-c-limon-aromali-6-x-200-ml-p-7aaecd	https://images.migrosone.com/sanalmarket/product/08040141/8040141-f6116b-105x105.jpg

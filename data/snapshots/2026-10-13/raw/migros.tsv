@@ -1,0 +1,38 @@
+# FIRSAT360 gerçek veri anlık görüntüsü — Migros — 13.10.2026
+# Kaynak: https://www.migros.com.tr/rest/search/screens/migroskop-urunleri-dt-3
+#   (migros.com.tr Migroskop sayfasının yüklediği JSON; kimlik doğrulama yok; robots.txt'de /rest yasaklı değil;
+#    belgelenmiş/resmî bir API DEĞİLDİR — kullanım koşulları yazılı olarak teyit edilmeli)
+# Okunma: 2026-10-13 ~08:16 (Europe/Istanbul) — WebFetch aracıyla; ilk sayfa (30 ürün, hitCount 1819)
+# 13.10 okumasında 30 ürünün ad, shownPrice ve regularPrice değerleri 12.10 ile aynı çıktı.
+# shownPrice/regularPrice kuruş cinsinden. regularPrice = MAĞAZA BEYANI önceki fiyat (FIRSAT360 doğrulamadı).
+# Sütunlar: name	shownPrice	regularPrice	prettyName
+Komili Ayçiçek Yağı 5 L	49995	58695	komili-aycicek-yagi-5-l-p-3eb6ee
+Kınık Maden Suyu 6 x 200 Ml	4990	6670	kinik-maden-suyu-6-x-200-ml-p-7ab200
+Solo Ultra Organik Bambu Özlü Havlu 12'li	16995	28995	solo-ultra-organik-bambu-ozlu-havlu-12li-p-1d955cc
+Komili Lezzetlik Yumuşak Natürel Sızma Zeytinyağı 2 L	57500	90500	komili-lezzetlik-yumusak-naturel-sizma-zeytinyagi-2-l-p-3f124a
+Erikli Su 5 L	4990	7495	erikli-su-5-l-p-7b04fb
+Billur Tuz Rafine İyotlu Sofra Tuzu 750 G	2888	3850	billur-tuz-rafine-iyotlu-sofra-tuzu-750-g-p-5bdfee
+Solo Ultra Organik Bambu & Pamuk Özlü Tuvalet Kağıdı 32'li	25995	46995	solo-ultra-organik-bambu-pamuk-ozlu-tuvalet-kagidi-32li-p-1d941cd
+Söke Un 5 Kg	15900	21995	soke-un-5-kg-p-4c73e5
+Kahve Dünyası Tambol Bademli Sütlü Çikolata 77 G	6990	9950	kahve-dunyasi-tambol-bademli-sutlu-cikolata-77-g-p-6b641c
+Coca-Cola Orijinal Tat Pet 1,5 L	6490	8000	coca-cola-orijinal-tat-pet-15-l-p-7a3c97
+SuperFresh Ispanak 450 G	8397	11995	superfresh-ispanak-450-g-p-1039147
+Tat Domates Salçası Cam 710 G	6995	10995	tat-domates-salcasi-cam-710-g-p-897b64
+Dr.Oetker Hamur Kabartma Tozu 15'li Paket 150 G	3750	4700	droetker-hamur-kabartma-tozu-15li-paket-150-g-p-5c7d6b
+Banvit Piliç Pirzola Kg	18995	18995	banvit-pilic-pirzola-kg-p-2be8451
+Nuh'un Ankara Burgu Makarna 500 G	2846	3795	nuhun-ankara-burgu-makarna-500-g-p-4cc143
+Kahve Dünyası Tambol Fındıklı Sütlü Çikolata 77 G	6990	9450	kahve-dunyasi-tambol-findikli-sutlu-cikolata-77-g-p-6b9426
+Bolca Hindi Dilimli Göğüs 750 G	27995	38995	bolca-hindi-dilimli-gogus-750-g-p-cafbf4
+Dr.Oetker Şekerli Vanilin 15'li Paket 75 G	2800	3500	droetker-sekerli-vanilin-15li-paket-75-g-p-5c7d6c
+Nuh'Un Ankara Spagetti Makarna 500 G	2846	3795	nuhun-ankara-spagetti-makarna-500-g-p-4cc140
+Bingo Akıllı Kapsül Pro Max Bulaşık Makinası Tablet 40'lı 548 G	23995	49995	bingo-akilli-kapsul-pro-max-bulasik-makinasi-tablet-40li-548-g-p-1d8b7bb
+Coca-Cola Zero Sugar Pet 1,5 L	6490	8000	coca-cola-zero-sugar-pet-15-l-p-7a3c98
+Ernet Çamaşır Sodası 500 G	5995	7295	ernet-camasir-sodasi-500-g-p-1cbbf5e
+Eker Kaymak 200 G	12995	16295	eker-kaymak-200-g-p-b8a1b5
+Nuh'un Ankara Boncuk Makarna 500 G	2846	3795	nuhun-ankara-boncuk-makarna-500-g-p-4cc147
+Kahve Dünyası Tambol Kakao Nibli Bitter Dolgulu Çikolata 100 G	6950	9990	kahve-dunyasi-tambol-kakao-nibli-bitter-dolgulu-cikolata-100-g-p-6b4b46
+Eti Gong Mısır ve Pirinç Patlağı 64 G	2590	2590	eti-gong-misir-ve-pirinc-patlagi-64-g-p-6aff31
+Barilla Linguine (Yassı) Spagetti Makarna No.13 500 G	4946	6595	barilla-linguine-yassi-spagetti-makarna-no13-500-g-p-4cc1cd
+Kahve Dünyası Tambol Antep Fıstıklı Sütlü Çikolata 77 G	9990	12990	kahve-dunyasi-tambol-antep-fistikli-sutlu-cikolata-77-g-p-6b4737
+Sütaş Süzme Yoğurt 750 G	13995	15950	sutas-suzme-yogurt-750-g-p-bebda2
+Sırma C+ Limon Aromalı 6 x 200 Ml	7590	8875	sirma-c-limon-aromali-6-x-200-ml-p-7aaecd

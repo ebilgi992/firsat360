@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Güncel verinin yayımlandığı sabit adres (GitHub Pages'teki feed.json). Derlemede FEED_URL ile verilir;
+     boşsa uygulama içindeki veriyle çalışır. Kullanıcıya gösterilmez ve değiştirilemez. -->
+<resources>
+    <string name="feed_url" translatable="false"></string>
+</resources>

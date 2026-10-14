@@ -1,0 +1,5 @@
+{"successful": true, "data": {"searchInfo": {"pageCount": 1, "hitCount": 3, "storeProductInfos": [
+ {"name": "Komili Ayçiçek Yağı 5 L", "shownPrice": 49995, "regularPrice": 58695, "prettyName": "komili-aycicek-yagi-5-l-p-3eb6ee"},
+ {"name": "Banvit Piliç Pirzola Kg", "shownPrice": 18995, "regularPrice": 18995, "prettyName": "banvit-pilic-pirzola-kg-p-2be8451"},
+ {"name": "Eksik Alanlı Ürün", "shownPrice": null, "regularPrice": 100, "prettyName": "eksik-p-1"}
+], "sortCriteria": [], "aggregationGroups": []}}}

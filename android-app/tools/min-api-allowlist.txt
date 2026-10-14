@@ -1,0 +1,8 @@
+# minSdk 26'da olmayan ama Build.VERSION.SDK_INT kontrolüyle korunan API'ler (MainActivity.kt).
+# Biçim: <sahip>[.<üye>]  # gerekçe
+android/window/OnBackInvokedCallback  # API 33+; yalnızca SDK_INT >= 33 dalında oluşturulur
+android/window/OnBackInvokedDispatcher  # API 33+; yalnızca SDK_INT >= 33 dalında kullanılır
+android/app/Activity.getOnBackInvokedDispatcher  # API 33+; SDK_INT >= 33 kontrolü
+android/view/WindowInsetsController  # API 30+; yalnızca SDK_INT >= 30 dalında kullanılır
+android/view/Window.getInsetsController  # API 30+; SDK_INT >= 30 kontrolü
+android/view/View.getWindowInsetsController  # API 30+; yalnızca SDK_INT >= 30 dalında kullanılır (applySystemBars)

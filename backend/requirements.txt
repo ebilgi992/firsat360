@@ -1,0 +1,5 @@
+# 14.10.2026'da bu sürümlerle test edildi (Python 3.13). Sunucu gerekmez: GitHub Actions'ta çalışır.
+SQLAlchemy==2.1.4
+httpx==0.28.1
+selectolax==1.0.0
+pytest==9.1.1

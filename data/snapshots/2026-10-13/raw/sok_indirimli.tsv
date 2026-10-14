@@ -1,0 +1,47 @@
+# FIRSAT360 gerçek veri anlık görüntüsü — ŞOK "Haftanın Fırsatları / İndirimli Ürünler" — 13.10.2026
+# Kaynak: https://www.sokmarket.com.tr/indirimli-urunler-cms-pl1 (sayfa 1) ve ?page=2 (resmî site; sayfada "292 adet ürün listelendi")
+# Okunma: 2026-10-13 ~08:16 (s.1) ve ~08:22 (s.2) (Europe/Istanbul) — WebFetch aracıyla, ilk 2 sayfa (40 ürün)
+# Her üründe sayfa iki fiyat gösteriyor. Sayfa "İndirimli Ürünler / Kampanyalı Ürünler" başlıklı olduğundan
+# düşük fiyat güncel (indirimli) fiyat, yüksek fiyat MAĞAZA BEYANI önceki fiyat olarak alındı (FIRSAT360 doğrulamadı).
+# Görseller alınmadı. Kampanya tarih aralığı sayfada yazmıyor → bilinmiyor.
+# Sütunlar: name	price_text	old_price_text	detail_url
+Ege Kamp Sandalyesi Soğutuculu Şemsiyeli 2'li	1.990,00₺	2.490,00₺	https://www.sokmarket.com.tr/ege-kamp-sandalyesi-sogutuculu-semsiyeli-2-li-p-761411
+Tantitoni 2.5l Outdoor Termos	1.250,00₺	1.590,00₺	https://www.sokmarket.com.tr/tantitoni-2-5l-outdoor-termos-p-703230
+Elit Rattan Koltuk	699,00₺	999,00₺	https://www.sokmarket.com.tr/elit-rattan-koltuk-p-14882
+Colgate Harry Potter Pilli Diş Fırçası	449,00₺	699,00₺	https://www.sokmarket.com.tr/colgate-harry-potter-pilli-dis-fircasi-p-798345
+Minix Mbappe Figür	699,00₺	899,00₺	https://www.sokmarket.com.tr/minix-mbappe-figur-p-741608
+Minix Ronaldo Figür	699,00₺	899,00₺	https://www.sokmarket.com.tr/minix-ronaldo-figur-p-741728
+Minix Messi Figür	699,00₺	899,00₺	https://www.sokmarket.com.tr/minix-messi-figur-p-739768
+Axe Marshmallow Smoke Deodorant 150 Ml+35 Ml	199,00₺	399,00₺	https://www.sokmarket.com.tr/axe-marshmallow-smoke-deodorant-150-ml-35-ml-p-773683
+Tto-x Yüz Temizleme Köpüğü Kuru Ciltler 200 Ml	199,00₺	399,00₺	https://www.sokmarket.com.tr/tto-x-yuz-temizleme-kopugu-kuru-ciltler-200-ml-p-829427
+Tto-x Yüz Temizleme Köpüğü Yağlı Ciltler 200 Ml	199,00₺	399,00₺	https://www.sokmarket.com.tr/tto-x-yuz-temizleme-kopugu-yagli-ciltler-200-ml-p-827596
+Milka Oreo 300 g	199,00₺	399,00₺	https://www.sokmarket.com.tr/milka-oreo-300-g-p-7196
+Milka Schoko & Keks 300 g	199,00₺	399,00₺	https://www.sokmarket.com.tr/milka-schoko-keks-300-g-p-4611
+Tto-x Yüz Temizleme Köpüğü Hassas Ciltler 200 Ml	199,00₺	399,00₺	https://www.sokmarket.com.tr/tto-x-yuz-temizleme-kopugu-hassas-ciltler-200-ml-p-829426
+Güneşlikli Kamp Sandalyesi	999,00₺	1.190,00₺	https://www.sokmarket.com.tr/guneslikli-kamp-sandalyesi-p-489915
+Maya Rattan Desen Koltuk	575,00₺	750,00₺	https://www.sokmarket.com.tr/maya-rattan-desen-koltuk-p-18138
+Vanish Oxi Action Leke Çıkarıcı Beyazlar 480 G	269,00₺	439,00₺	https://www.sokmarket.com.tr/vanish-oxi-action-leke-cikarici-beyazlar-480-g-p-453920
+Vanish Oxi Action Leke Çıkarıcı Renkliler 480 G	269,00₺	439,00₺	https://www.sokmarket.com.tr/vanish-oxi-action-leke-cikarici-renkliler-480-g-p-454834
+Koza Erkek Şortlu Takımı Gri M-l	299,00₺	449,00₺	https://www.sokmarket.com.tr/koza-erkek-sortlu-takimi-gri-m-l-p-744638
+Balparmak Yayla Ve Ova Çiçek Balı 850 g	549,00₺	699,00₺	https://www.sokmarket.com.tr/balparmak-yayla-ve-ova-cicek-bali-850-g-p-1218
+Rexona Woman Clinical Protection Deodorant 150 Ml	249,00₺	389,00₺	https://www.sokmarket.com.tr/rexona-woman-clinical-protection-deodorant-150-ml-p-194620
+Elidor Ultra Işıltı Serum 90 Ml	249,00₺	379,00₺	https://www.sokmarket.com.tr/elidor-ultra-isilti-serum-90-ml-p-757592
+Bebelac 3 Devam Sütü 800 G	599,00₺	729,00₺	https://www.sokmarket.com.tr/bebelac-3-devam-sutu-800-g-p-1246
+Nestle Coffee Mate 625 g	199,00₺	329,00₺	https://www.sokmarket.com.tr/nestle-coffee-mate-625-g-p-318376
+Signal White Now Gold Diş Macunu 75 Ml	99,00₺	229,00₺	https://www.sokmarket.com.tr/signal-white-now-gold-dis-macunu-75-ml-p-3980
+Dove Bond Repaır Saç Serumu 80 Ml	299,00₺	429,00₺	https://www.sokmarket.com.tr/dove-bond-repair-sac-serumu-80-ml-p-771840
+Elseve Hydra Hyaluronıc Maske 300 Ml	269,00₺	399,00₺	https://www.sokmarket.com.tr/elseve-hydra-hyaluronic-maske-300-ml-p-458657
+Bioblas Argan Bakım Yağı 100 Ml	249,00₺	375,00₺	https://www.sokmarket.com.tr/bioblas-argan-bakim-yagi-100-ml-p-386888
+Nivea Yoğun Besleyici Vücut Sütü 250 Ml	125,00₺	250,00₺	https://www.sokmarket.com.tr/nivea-yogun-besleyici-vucut-sutu-250-ml-p-487932
+Dinarsu Kilim 80x150 Cm	225,00₺	350,00₺	https://www.sokmarket.com.tr/dinarsu-kilim-80x150-cm-p-737920
+Elidor Güçlü Ve Parlak Şampuan 650 Ml+325 Ml	279,00₺	399,00₺	https://www.sokmarket.com.tr/elidor-guclu-ve-parlak-sampuan-650-ml-325-ml-p-318396
+Elidor Onarıcı Ve Koruyucu Şampuan 650 Ml+325 Ml	279,00₺	399,00₺	https://www.sokmarket.com.tr/elidor-onarici-ve-koruyucu-sampuan-650-ml-325-ml-p-318273
+Kuromi Edt Parfüm 50 Ml	229,00₺	349,00₺	https://www.sokmarket.com.tr/kuromi-edt-parfum-50-ml-p-702325
+Morfose Ultra Strong Saç Spreyi 250 ml	175,00₺	290,00₺	https://www.sokmarket.com.tr/morfose-ultra-strong-sac-spreyi-250-ml-p-3731
+Durex Maraton 10'lu Geciktirici Prezervatif	175,00₺	289,00₺	https://www.sokmarket.com.tr/durex-maraton-10-lu-geciktirici-prezervatif-p-14012
+Elidor İpek Terapisi Şampuan 400 Ml	149,00₺	259,00₺	https://www.sokmarket.com.tr/elidor-ipek-terapisi-sampuan-400-ml-p-811232
+Esem Kadın Terlik Çift Toka Metalik Füme-rose 38	299,00₺	399,00₺	https://www.sokmarket.com.tr/esem-kadin-terlik-cift-toka-metalik-fume-rose-38-p-721444
+Clear Men Kepeğe Karşı Etkili Şampuan Scalp Maxcharge 330 ml	169,00₺	269,00₺	https://www.sokmarket.com.tr/clear-men-kepege-karsi-etkili-sampuan-scalp-maxcharge-330-ml-p-811237
+Altınyıldız Erkek Polo Yaka T-shirt Comfort Xl	399,00₺	499,00₺	https://www.sokmarket.com.tr/altinyildiz-erkek-polo-yaka-t-shirt-comfort-xl-p-744634
+Altınyıldız Erkek Polo Yaka T-shirt Comfort M	399,00₺	499,00₺	https://www.sokmarket.com.tr/altinyildiz-erkek-polo-yaka-t-shirt-comfort-m-p-745555
+Altınyıldız Erkek Polo Yaka T-shirt Comfort L	399,00₺	499,00₺	https://www.sokmarket.com.tr/altinyildiz-erkek-polo-yaka-t-shirt-comfort-l-p-745554

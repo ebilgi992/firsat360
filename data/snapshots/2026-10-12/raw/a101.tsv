@@ -1,0 +1,46 @@
+# FIRSAT360 gerçek veri anlık görüntüsü — A101
+# Kaynak: https://www.a101.com.tr/aldin-aldin (resmî "Aldın Aldın" sayfası, sayfada "39 ürün bulundu")
+# Okunma: 2026-10-12, ~12:06 (Europe/Istanbul) — WebFetch aracıyla sayfa metninden aktarıldı
+# Sayfada kampanya tarih aralığı yazmıyor → valid_from/valid_to bilinmiyor.
+# old_price yalnızca sayfada üstü çizili fiyat varsa doludur ve MAĞAZA BEYANIDIR (FIRSAT360 doğrulamadı).
+# /kapida/ yollu ürünler A101 Kapıda (online) kanalının fiyatıdır; mağaza rafı fiyatıyla aynı olmayabilir.
+# Sütunlar: name	price_text	old_price_text	detail_url
+Piranha 9946M Bluetooth Kulaklık	₺349,00	-	https://www.a101.com.tr/elektronik/piranha-9946m-bluetooth-kulaklik_p-25002012
+Piranha 2215 Kafaüstü Bluetooth Kulaklık Beyaz	₺499,00	-	https://www.a101.com.tr/elektronik/piranha-2215-kafaustu-bluetooth-kulaklik-beyaz_p-25005554
+Piranha 2215 Kafaüstü Bluetooth Kulaklık Siyah	₺499,00	-	https://www.a101.com.tr/elektronik/piranha-2215-kafaustu-bluetooth-kulaklik-siyah_p-25005554
+Wee Baby Damaklı Emzik No:1 Mavi	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-1-mavi_p-25006916
+Wee Baby Damaklı Emzik No:1 Pembe	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-1-pembe_p-25006916
+Wee Baby Damaklı Emzik No:1 Yeşil	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-1-yesil_p-25006916
+Wee Baby Damaklı Emzik No:2 Mavi	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-2-mavi_p-25006917
+Wee Baby Damaklı Emzik No:2 Pembe	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-2-pembe_p-25006917
+Wee Baby Damaklı Emzik No:2 Yeşil	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-2-yesil_p-25006917
+Wee Baby Damaklı Emzik No:3 Mavi	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-3-mavi_p-25006918
+Wee Baby Damaklı Emzik No:3 Pembe	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-3-pembe_p-25006918
+Wee Baby Damaklı Emzik No:3 Yeşil	₺129,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-damakli-emzik-no-3-yesil_p-25006918
+Wee Baby Kutulu Çatal Kaşık Seti Mavi	₺149,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-kutulu-catal-kasik-seti-mavi_p-25006919
+Wee Baby Kutulu Çatal Kaşık Seti Pembe	₺149,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/wee-baby-kutulu-catal-kasik-seti-pembe_p-25006919
+Kanz Bebek Çıtçıtlı Body Atlet Beyaz	₺199,00	-	https://www.a101.com.tr/anne-bebek-oyuncak/kanz-bebek-citcitli-body-atlet-beyaz_p-25007677
+Lav Sera Kavanoz 2'li 900 cc	₺189,00	-	https://www.a101.com.tr/ev-yasam/lav-sera-kavanoz-2-li-900-cc_p-25007756
+Piranha 7869 Bluetooth Hoparlör Mavi	₺399,00	-	https://www.a101.com.tr/elektronik/piranha-7869-bluetooth-hoparlor-mavi_p-25010711
+Piranha 7869 Bluetooth Hoparlör Mor	₺399,00	-	https://www.a101.com.tr/elektronik/piranha-7869-bluetooth-hoparlor-mor_p-25010711
+Piranha 7869 Bluetooth Hoparlör Turuncu	₺399,00	-	https://www.a101.com.tr/elektronik/piranha-7869-bluetooth-hoparlor-turuncu_p-25010711
+Çok Amaçlı Saklama Kabı 15 L	₺189,00	-	https://www.a101.com.tr/ev-yasam/cok-amacli-saklama-kabi-15-l_p-26000116
+Porsion İçli Köfte Dondurulmuş 320 G	₺95,00	₺119,50	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/porsion-icli-kofte-dondurulmus-320-g_p-21001578
+Superfresh Pizza King Extra Dondurulmuş 475 G	₺145,00	₺209,00	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/superfresh-pizza-king-extra-dondurulmus-475-g_p-21001363
+Lievito Artizan Karışık Pizza Dondurulmuş 525 G	₺199,00	₺249,50	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/lievito-artizan-karisik-pizza-dondurulmus-525-g_p-21001623
+Lievito Artisan Pizza Dana Rozbif Dondurulmuş 475 G	₺199,00	₺249,00	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/lievito-artisan-pizza-dana-rozbif-dondurulmus-475-g_p-21001581
+Superfresh Frulove Limonlu Cheesecake Topları Dondurulmuş 170 G	₺199,00	₺239,00	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/superfresh-frulove-limonlu-cheesecake-toplari-dondurulmus-170-g_p-21001591
+Superfresh Frulove Brownie Topları Dondurulmuş 170 G	₺199,00	₺239,00	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/superfresh-frulove-brownie-toplari-dondurulmus-170-g-_p-21001590
+Bidaa Tavuklu Sebzeli Ramen Dondurulmuş 420 G	₺139,00	₺179,50	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/bidaa-tavuklu-sebzeli-ramen-dondurulmus-420-g-_p-21001594
+Peynes Tam Yağlı Taze Beyaz Peynir 1 KG	₺299,00	-	https://www.a101.com.tr/kapida/sut-urunleri-kahvaltilik/peynes-tam-yagli-taze-beyaz-peynir-1-kg_p-12000073
+Namet 7/24 Hindi Kokteyl Sosis 140 G	₺41,50	-	https://www.a101.com.tr/kapida/et-tavuk-sarkuteri/namet-724-hindi-kokteyl-sosis-140-g_p-11001709
+Sütaş Yarım Yağlı Süt 1 L	₺49,50	₺65,00	https://www.a101.com.tr/kapida/sut-urunleri-kahvaltilik/sutas-yarim-yagli-sut-1-l-_p-12000527
+Peynes Lor Peyniri 1 Kg	₺79,50	-	https://www.a101.com.tr/kapida/sut-urunleri-kahvaltilik/peynes-lor-peyniri-1-kg-_p-12003507
+Tat Köftelik Bulgur 1 Kg	₺44,50	-	https://www.a101.com.tr/kapida/temel-gida/tat-koftelik-bulgur-1-kg_p-14002559
+Froland Kıymalı Kol Böreği Dondurulmuş 500 G	₺191,00	₺239,00	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/froland-kiymali-kol-boregi-dondurulmus-500-g_p-21001562
+Superfresh Frambuaz Dondurulmuş 300 G	₺235,00	₺319,00	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/superfresh-frambuaz-dondurulmus-300-g_p-21001410
+Listerine Cool Mint Ağız Bakım Suyu 250 ml	₺125,00	₺215,00	https://www.a101.com.tr/kapida/kisisel-bakim/listerine-cool-mint-agiz-bakim-suyu-250-ml-_p-24006159
+Listerine Cool Mint Hafif Tat Ağız Bakım Suyu 250 ml	₺125,00	₺215,00	https://www.a101.com.tr/kapida/kisisel-bakim/listerine-cool-mint-hafif-tat-agiz-bakim-suyu-250-ml-_p-24003492
+Feast Zengin Pasta Dondurulmuş 550 G	₺199,00	₺239,00	https://www.a101.com.tr/kapida/donuk-hazir-yemek-meze/feast-zengin-pasta-dondurulmus-550-g-_p-21001500
+Torku Macchiato Sütlü İçecek 230 ml	₺49,50	-	https://www.a101.com.tr/kapida/su-icecek/torku-macchiato-sutlu-icecek-230-ml_p-12002692
+Sleepy Bio Naturel Premium Plus Gece Ekstra Hijyenik Ped 8'li	₺39,50	₺69,50	https://www.a101.com.tr/kapida/kisisel-bakim/sleepy-bio-naturel-premium-plus-gece-ekstra-hijyenik-ped-8li_p-23001608

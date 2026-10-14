@@ -1,0 +1,35 @@
+# FIRSAT360 gerçek veri — BİM afişleri (resmî katalog sayfa görselleri) — 13.10.2026
+# Kaynak: https://www.bim.com.tr/Categories/680/afisler.aspx (resmî "Afişler" sayfası) — Okunma: 2026-10-13 ~09:14, WebFetch
+# Her tarih için sayfada 1. afişin "İndir" bağlantısı (tam boy) ve diğer afişlerin küçük resimleri (k_ önekli) var.
+# Tam boy adresi: sayfada verilen (verified=yes) ya da küçük resim adından "k_" öneki kaldırılarak türetilen (verified=no).
+# Türetme kuralı sayfada doğrulandı: 06 Ekim 1. afiş küçük resmi k_1439b1fa… ↔ tam boy 1439b1fa… . Uygulama tam boy
+# yüklenemezse küçük resme düşer. Görseller FIRSAT360 sunucusuna kopyalanmaz; BİM'in kendi CDN adresinden gösterilir.
+# Sütunlar: afis_key	label	column	page_no	full_url	thumb_url	full_verified
+1397	06 Ekim Salı	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/1439b1fa-6249-414c-88cc-702967a0e089.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_1439b1fa-6249-414c-88cc-702967a0e089.jpg	yes
+1397	06 Ekim Salı	aktuel	2	https://cdn1.bim.com.tr/uploads/afisler/ce852911-558f-4aa7-8567-e7714131647d.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_ce852911-558f-4aa7-8567-e7714131647d.jpg	no
+1397	06 Ekim Salı	aktuel	3	https://cdn1.bim.com.tr/uploads/afisler/fd4c991f-3d98-43ea-af6d-97412ca2cecd.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_fd4c991f-3d98-43ea-af6d-97412ca2cecd.jpg	no
+1398	07 Ekim Çarşamba	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/755076dc-733a-482f-b0ba-595a11916276.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_755076dc-733a-482f-b0ba-595a11916276.jpg	yes
+1399	09 Ekim Cuma	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/0281b2c0-e82a-49e4-a27d-ad04e274a1cc.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_0281b2c0-e82a-49e4-a27d-ad04e274a1cc.jpg	yes
+1399	09 Ekim Cuma	aktuel	2	https://cdn1.bim.com.tr/uploads/afisler/ca59d420-d06e-4010-92a1-29a36abead21.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_ca59d420-d06e-4010-92a1-29a36abead21.jpg	no
+1399	09 Ekim Cuma	aktuel	3	https://cdn1.bim.com.tr/uploads/afisler/98fa93be-4193-4770-8a62-78fcbfe90b00.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_98fa93be-4193-4770-8a62-78fcbfe90b00.jpg	no
+1399	09 Ekim Cuma	aktuel	4	https://cdn1.bim.com.tr/uploads/afisler/3ef4a779-9ba7-4a6f-b557-3d8901a9ffd9.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_3ef4a779-9ba7-4a6f-b557-3d8901a9ffd9.jpg	no
+1405	11 Ekim Pazar	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/92cff1aa-f31c-4f21-82ae-254c514b16a1.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_92cff1aa-f31c-4f21-82ae-254c514b16a1.jpg	yes
+1405	11 Ekim Pazar	aktuel	2	https://cdn1.bim.com.tr/uploads/afisler/23701e32-5c31-434c-8abc-8846772c76ba.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_23701e32-5c31-434c-8abc-8846772c76ba.jpg	no
+1405	11 Ekim Pazar	aktuel	3	https://cdn1.bim.com.tr/uploads/afisler/bc831330-e03b-4954-a263-bc25140120ae.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_bc831330-e03b-4954-a263-bc25140120ae.jpg	no
+1405	11 Ekim Pazar	aktuel	4	https://cdn1.bim.com.tr/uploads/afisler/ad42c2a1-dadc-4012-8787-f2edfc87cfda.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_ad42c2a1-dadc-4012-8787-f2edfc87cfda.jpg	no
+1406	13 Ekim Salı	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/dbeb5241-a728-43be-9d22-e92aa6e3754d.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_dbeb5241-a728-43be-9d22-e92aa6e3754d.jpg	yes
+1406	13 Ekim Salı	aktuel	2	https://cdn1.bim.com.tr/uploads/afisler/63964dcd-3979-41b5-92e5-a629a49a8d84.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_63964dcd-3979-41b5-92e5-a629a49a8d84.jpg	no
+1406	13 Ekim Salı	aktuel	3	https://cdn1.bim.com.tr/uploads/afisler/d5d525f4-045c-4917-a9a1-8dc80add7e68.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_d5d525f4-045c-4917-a9a1-8dc80add7e68.jpg	no
+1407	14 Ekim Çarşamba	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/f4ec6552-9b62-459a-9faa-821915893efa.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_f4ec6552-9b62-459a-9faa-821915893efa.jpg	yes
+1407	14 Ekim Çarşamba	aktuel	2	https://cdn1.bim.com.tr/uploads/afisler/f2b1065f-5c33-438b-a04b-f7262db6438a.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_f2b1065f-5c33-438b-a04b-f7262db6438a.jpg	no
+1409	16 Ekim Cuma	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/ea2ea3f4-2675-4ca2-92da-4233e64f1d88.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_ea2ea3f4-2675-4ca2-92da-4233e64f1d88.jpg	yes
+1409	16 Ekim Cuma	aktuel	2	https://cdn1.bim.com.tr/uploads/afisler/75cf9c5e-2c3a-4a95-842a-e34bd68d38a1.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_75cf9c5e-2c3a-4a95-842a-e34bd68d38a1.jpg	no
+1409	16 Ekim Cuma	aktuel	3	https://cdn1.bim.com.tr/uploads/afisler/5c92c88b-d87e-4928-ab06-c65d874b21d0.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_5c92c88b-d87e-4928-ab06-c65d874b21d0.jpg	no
+1413	20 Ekim Salı	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/24baf7f4-0f95-4a84-9c26-c1899413cfd7.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_24baf7f4-0f95-4a84-9c26-c1899413cfd7.jpg	yes
+1413	20 Ekim Salı	aktuel	2	https://cdn1.bim.com.tr/uploads/afisler/b338b28e-30cd-4aaa-be18-3e9c88023487.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_b338b28e-30cd-4aaa-be18-3e9c88023487.jpg	no
+1413	20 Ekim Salı	aktuel	3	https://cdn1.bim.com.tr/uploads/afisler/39c18f22-8a84-482e-9ee8-9c0718eb9c37.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_39c18f22-8a84-482e-9ee8-9c0718eb9c37.jpg	no
+1415	21 Ekim Çarşamba	aktuel	1	https://cdn1.bim.com.tr/uploads/afisler/8dfa3b5a-422f-457b-930d-64a2c2ed953f.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_8dfa3b5a-422f-457b-930d-64a2c2ed953f.jpg	yes
+1198	24 Mart-31 Aralık	indirim	1	https://cdn1.bim.com.tr/uploads/afisler/8ec590ee-0c12-4806-b101-dd5c2db55fc0.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_8ec590ee-0c12-4806-b101-dd5c2db55fc0.jpg	yes
+1412	10-16 Ekim	indirim	1	https://cdn1.bim.com.tr/uploads/afisler/287ddc3b-5bfc-470d-b984-90c72c0273da.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_287ddc3b-5bfc-470d-b984-90c72c0273da.jpg	yes
+1412	10-16 Ekim	indirim	2	https://cdn1.bim.com.tr/uploads/afisler/b3f28b4b-8da4-484d-bc63-95af186d9088.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_b3f28b4b-8da4-484d-bc63-95af186d9088.jpg	no
+1412	10-16 Ekim	indirim	3	https://cdn1.bim.com.tr/uploads/afisler/f4fd0dad-8bc8-49ca-943d-e64bec2dce73.jpg	https://cdn1.bim.com.tr/uploads/afisler/k_f4fd0dad-8bc8-49ca-943d-e64bec2dce73.jpg	no
