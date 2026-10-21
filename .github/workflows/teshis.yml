@@ -1,0 +1,36 @@
+# Kaynak teşhisi: verilen resmî sayfaların ham yanıtını (başlıklar + gövde) "teshis" dalına kaydeder.
+# Ayrıştırıcı geliştirirken gerçek sayfa yapısını görmek için; robots.txt'ye uyan veri hattından bağımsız, elle çalıştırılır.
+name: kaynak-teshis
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Boşlukla ayrılmış https adresleri (en fazla 6)"
+        required: true
+        type: string
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Sayfaları al
+        env:
+          URLS: ${{ inputs.urls }}
+        run: |
+          mkdir out; i=0
+          for u in $URLS; do
+            case "$u" in https://*) ;; *) echo "atlandı: $u"; continue;; esac
+            i=$((i+1)); [ $i -gt 6 ] && break
+            curl -sS -L --max-redirs 5 --max-time 30 --max-filesize 20000000 \
+              -A "FIRSAT360Bot/1.0 (+https://github.com/ebilgi992/firsat360)" \
+              -D "out/$i.headers" -o "out/$i.body" -w "%{http_code} %{content_type} %{url_effective}\n" "$u" > "out/$i.status" || true
+            echo "$u" > "out/$i.url"; sleep 3
+          done
+      - name: teshis dalına yaz
+        run: |
+          cd out
+          git init -q -b teshis && git config user.name firsat360-bot && git config user.email firsat360-bot@users.noreply.github.com
+          git add -A && git commit -qm "teshis $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" teshis
