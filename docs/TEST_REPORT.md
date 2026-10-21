@@ -1,4 +1,28 @@
-# V1 (1.0.0) test raporu — 21.10.2026
+# Test raporu
+
+## 1.1.0 (21.10.2026)
+| Market | Gerçek katalog bulundu mu | Sayfa/PDF | Doğrulandı mı | Uygulamada açılıyor mu | Güncel mi |
+|---|---|---|---|---|---|
+| Onur | ✅ | 6 PDF | ✅ `%PDF` imzası | PDF okuyucu (uygulama içi) — cihazda BLOCKED | ✅ 13–26 / 15–21 Ekim |
+| File | ✅ | 5 afiş görseli | ✅ JPEG imzası | okuyucu — cihazda BLOCKED | tarih yok (afiş) |
+| A101 | ❌ sunucuda (Cloudflare) | — | — | cihazda resmî sayfa + "Sayfa sayfa aç" — BLOCKED | — |
+| CarrefourSA | ❌ sunucuda (Cloudflare) | — | — | cihazda resmî sayfa — BLOCKED | — |
+| BİM | ✅ | 12 güncel sayfalı aktüel | ✅ | BLOCKED (cihaz) | ✅ |
+| Migros/Migroskop | ✅ | 160 sayfa | ✅ | BLOCKED (cihaz) | ✅ Sayı 908 (8–21 Ekim) |
+| ŞOK | ✅ ürün listesi (112 ürün, %100 görsel) | broşür yok (kampanya afişleri 13.10'dan beri kaynakta yok → gizlendi) | ✅ | BLOCKED | ✅ |
+| Hakmar | ✅ | 2 broşür (20–28 Ekim insert, Kırtasiye) | ✅ | BLOCKED | ✅ |
+| Metro | ✅ | 1 broşür | ✅ | BLOCKED | ✅ |
+
+| Test | Sonuç |
+|---|---|
+| Python `pytest` | PASS — 147 geçti, 2 atlandı (PostgreSQL) |
+| Onur gerçek HTML'de ayrıştırma (teşhis dalındaki ham sayfa) | PASS — 944, 13–26 Ekim, doğru PDF/kapak |
+| Hata sayfası görsel/PDF sayılmıyor (`sniff`) | PASS |
+| Ana sayfa mükerrer (`home.noDuplicates`) | PASS |
+| Android çekirdek 157/157, debug + release (APK+AAB) derleme | PASS |
+| Cihaz/emülatör akışları | BLOCKED (bu ortamda KVM yok) |
+
+## 1.0.0 (V1) — 21.10.2026
 
 Sonuçlar: PASS = çalıştırıldı ve geçti · FAIL = çalıştırıldı, başarısız · BLOCKED = bu ortamda çalıştırılamadı.
 

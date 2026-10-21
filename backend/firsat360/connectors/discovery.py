@@ -219,10 +219,11 @@ def merge_rendered(found: Found, html: str, responses: list[dict], base_url: str
     return found
 
 
-def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx: int) -> list[CatalogData]:
+def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx: int,
+                default_title: str = "Broşür") -> list[CatalogData]:
     out: list[CatalogData] = []
     slug = re.sub(r"[^a-z0-9]+", "-", (urlparse(page_url).path + "-" + (urlparse(page_url).query or "")).lower()).strip("-")[-30:]
-    title = found.title or "Broşür"
+    title = found.title or default_title
     start, end = parse_tr_range(title, observed)
     if found.images:
         pages = [{"url": u, "thumb_url": u, "page": i + 1, "verified": True} for i, u in enumerate(found.images[:60])]
@@ -302,7 +303,7 @@ class DiscoveryConnector(Connector):
                 if bad:
                     attempts.append(f"{bad} görsel doğrulanamadı (HTML/hata/boş)")
                 found.images = ok
-            res.catalogs += to_catalogs(self.store_id, url, found, observed_at.date(), i)
+            res.catalogs += to_catalogs(self.store_id, url, found, observed_at.date(), i, self.src.title)
         if not res.catalogs:
             raise ConnectorError(f"{self.src.title}: hiçbir resmî kaynakta broşür bulunamadı · denemeler: "
                                  + " | ".join(attempts))
@@ -321,5 +322,5 @@ SOURCES = {
                                hosts=("carrefoursa.com",)),
     # Kök neden: resmî alan adı file.com.tr (filemarket.com.tr değil). Resmî sitede broşür sayfası yok; ana sayfadaki
     # "AFIS" adlı resmî ürün afişleri (uploads/file/banner/…AFIS…) gösterilir.
-    "file": StoreSource("file", "File Market afişleri", ["https://www.file.com.tr/"], hosts=("file.com.tr",)),
+    "file": StoreSource("file", "File Market ürün afişleri", ["https://www.file.com.tr/"], hosts=("file.com.tr",)),
 }

@@ -1,5 +1,15 @@
 # Değişiklik günlüğü
 
+## 1.1.0 — 21 Ekim 2026
+- **Onur Market:** resmî insert PDF'leri (3 bölge, kampanya sayfalarından); PDF imzası doğrulanır, geçmiş insertler alınmaz.
+- **File Market:** doğru resmî alan adı (file.com.tr) ve resmî ürün afişleri.
+- **Gerçek içerik türü doğrulaması:** sayfa görselleri ve PDF'ler ilk baytlarından (JPEG/PNG/WEBP/PDF) doğrulanır;
+  HTML hata sayfası broşür olarak kaydedilmez. HEAD'e hatalı yanıt veren sunucular için GET + akış.
+- **403 teşhisi:** hata kaydında engelleyen (Cloudflare vb.), içerik türü, yönlendirme zinciri; yönlendirme sınırı 5.
+- **Cihazda toplanan broşür önbelleği:** A101/CarrefourSA gibi sunucuda okunamayan marketlerde, resmî sayfadan
+  toplanan sayfalar cihazda 3 gün saklanır; sonraki açılışta broşür doğrudan uygulama içi okuyucuda.
+- **kaynak-teshis iş akışı:** ham sayfa yanıtlarını `teshis` dalına kaydeder (ayrıştırıcı geliştirme).
+
 ## 1.0.0 (V1) — 21 Ekim 2026
 - **Mükerrer katalog yok:** ana sayfa bölümleri tek kaynaktan (`HomeCatalogs`) — Market broşürleri → Bugün başlayanlar →
   Süresi dolmak üzere → Diğer kataloglar; her katalog yalnızca bir bölümde. "Son güncelleme" bilgisi rafın altında.

@@ -89,8 +89,8 @@ STORES = {
         "name": "Onur Market",
         "official_url": "https://kurumsal.onurmarket.com/",
         "catalog_url": "https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz",
-        "legal_note": "İnsertler resmî kurumsal sitede bölge bazlı (İstanbul, Bursa, Trakya), JavaScript ile yükleniyor "
-                      "(21.10.2026). robots.txt okunamadı → her çalıştırmada yeniden kontrol edilir.",
+        "legal_note": "İnsertler resmî kurumsal sitede bölge+kampanya sayfalarında (İstanbul, Bursa, Trakya), resmî PDF "
+                      "olarak (21.10.2026). robots.txt yok (404) → kısıtlama yok.",
     },
     "carrefoursa": {
         "name": "CarrefourSA",

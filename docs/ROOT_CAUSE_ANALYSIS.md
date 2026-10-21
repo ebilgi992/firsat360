@@ -20,4 +20,9 @@ Veri yolu: kaynak → bağlayıcı → ayrıştırma → doğrulama (imagematch)
 | 10 | CarrefourSA, File broşürü yok | kaynak | robots.txt otomatik erişime izin vermiyor / okunamıyor | Uyulur; resmî sayfa uygulama içinde açılır | — |
 | 11 | Günün İndirimleri değişmiyor | seçim | Aday havuzu küçük (16) + deterministik sıralama | Havuz genişletildi + günlük grup döngüsü | Ardışık günlerde ortak ürün 0 |
 
+| 12 | Onur insert yok | kaynak keşfi | İnsertler kampanya (`campaign=`) sayfasında, göreli adreslerle | Ayrı Onur bağlayıcısı | 0 → 6 doğrulanmış PDF |
+| 13 | File hiçbir şey | kaynak | Yanlış alan adı (filemarket.com.tr) + HEAD'de 302 döngüsü | file.com.tr + GET/ilk bayt doğrulaması | 0 → 5 resmî afiş |
+| 14 | A101/CarrefourSA 403 | kaynak | Cloudflare bot sınaması (`cf-mitigated: challenge`) veri merkezi IP'lerine | Aşılmaz; cihazda resmî sayfadan toplama + 3 gün cihaz önbelleği | cihazda doğrulanacak |
+| 15 | Hata sayfası "görsel" sayılabilir | doğrulama | Content-Type'a güveniliyordu | İlk baytlardan gerçek tür (JPEG/PNG/WEBP/PDF) | test: `test_html_error_page_is_not_saved_as_brochure_page` |
+
 **Doğrulanamayanlar:** emülatör/cihaz bu ortamda yok (KVM yok); 9. madde ve tüm ekran akışları cihazda denenmedi.
