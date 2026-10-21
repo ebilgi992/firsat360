@@ -3,7 +3,7 @@ from .bim import BimConnector
 from .discovery import SOURCES as DISCOVERY_SOURCES
 from .discovery import DiscoveryConnector
 from .extra import (A101_AFIS_URL, CompositeConnector, FlipbookConnector, FlipbookIndexConnector, FuncConnector,
-                    HakmarConnector, MigroskopConnector, PublitasConnector, TkkoopConnector, parse_a101_afis)
+                    HakmarConnector, MigroskopConnector, MoneyCatalogsConnector, PublitasConnector, TkkoopConnector, parse_a101_afis)
 from .migros import MigrosConnector
 from .onur import OnurConnector
 from .sok import SokConnector
@@ -24,7 +24,7 @@ def _base_connectors(max_pages: int):
         "bim": BimConnector(max_pages=max_pages),  # aktüel ürünler + afişler
         "sok": SokConnector(max_pages=max_pages),  # haftanın fırsatları + kampanya görselleri
         "migros": CompositeConnector("migros", [MigrosConnector(max_pages=max_pages),
-                                                MigroskopConnector()]),
+                                                MigroskopConnector(), MoneyCatalogsConnector()]),
         "tkkoop": TkkoopConnector(),
         "hakmar": HakmarConnector(),
         "watsons": PublitasConnector("watsons", "https://katalog.watsons.com.tr/"),

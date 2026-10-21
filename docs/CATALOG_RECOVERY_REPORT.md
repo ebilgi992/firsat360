@@ -1,3 +1,14 @@
+# Katalog kurtarma raporu — 1.3.0 (21.10.2026)
+
+## 1.3.0
+| Market | Kaynak | Bulgu | Sonuç |
+|---|---|---|---|
+| Migros | money.com.tr/mc/kataloglarimiz/* | Her yayın `<a\|button class="…_df_button" source="PDF" mcdate="tarih">`; tarihlerde HTML varlıkları (`Eyl&#xFC;l`) | 5M Migroskop 284 (8–21 Ekim), MacroStyle (1–31 Ekim) — PDF imzası çalıştırmada doğrulanır |
+| ŞOK | sokmarket.com.tr/kampanyalar | Kart yapısı değişti: görsel, başlık, "Kampanya Detayı" bağlantısı ayrı öğelerde | 59 resmî kampanya afişi (önceden 0) |
+| A101, CarrefourSA | resmî sayfa, cihazda | Sunucuda Cloudflare sınaması | Cihazda otomatik toplama + yerel okuyucuya geçiş; betik gerçek Chromium testinde PASS, cihazda BLOCKED (cihaz yok) |
+
+---
+
 # Katalog kurtarma raporu — 1.2.0 (21.10.2026)
 
 ## 1.2.0 yeniden doğrulama (17:15 UTC canlı çalıştırma)

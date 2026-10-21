@@ -388,6 +388,14 @@ class MainActivity : Activity() {
         show(s, true)
     }
 
+    /** Üstteki ekranı kapatıp yerine [s]'yi açar (geri tuşu bir önceki ekrana döner; ara ekran yığında kalmaz). */
+    fun replaceTop(s: Screen) {
+        stack.lastOrNull()?.onHide()
+        if (stack.isNotEmpty()) stack.removeAt(stack.size - 1)
+        stack.add(s)
+        show(s, true)
+    }
+
     fun refreshCurrent() { stack.lastOrNull()?.let { show(it, false) } }
 
     fun openOffer(id: String) = push(OfferScreen(this, id))

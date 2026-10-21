@@ -96,8 +96,17 @@ def parse_discount_list(html: str) -> tuple[list[OfferData], int]:
     return offers, rejected
 
 
+def _original_promo(u: str) -> str:
+    """Cloudflare boyutlandırma önekini kaldırır → resmî tam boy görsel (…/promotion-assets/…)."""
+    return re.sub(r"/cdn-cgi/image/[^/]+/", "/", u)
+
+
 def parse_campaign_banners(html: str) -> list[dict]:
-    """Kampanya listesindeki görselli kampanyalar → galeri sayfaları (resmî CDN görseli + kampanya bağlantısı)."""
+    """Kampanya listesindeki resmî kampanya afişleri → galeri sayfaları.
+
+    21.10.2026 yapısı: kart (div) içinde ayrı ayrı <img src=…promotion-assets…>, başlık <p> ve "Kampanya Detayı"
+    bağlantısı (<a href="…-prm-…">). Eski yapıda görsel bağlantının içindeydi; ikisi de desteklenir: bağlantıdan
+    yukarı çıkılarak kampanya görselini içeren en yakın kart bulunur."""
     tree = parse(html)
     pages, seen = [], set()
     for a in tree.css("a[href]"):
@@ -105,17 +114,19 @@ def parse_campaign_banners(html: str) -> list[dict]:
         if not CAMPAIGN_RE.search(href):
             continue
         url = urljoin(BASE, href)
-        img = None
-        for im in a.css("img"):
-            u = img_src(im)
-            if u and "promotion-assets" in u:
-                img = u
-                break
-        if not img or url in seen:
+        if url in seen:
+            continue
+        card = ancestor_with(a, lambda n: any("promotion-assets" in (img_src(i) or "") for i in n.css("img")), max_up=5)
+        if card is None:
+            continue
+        img = next((img_src(i) for i in card.css("img") if "promotion-assets" in (img_src(i) or "")), None)
+        if not img:
             continue
         seen.add(url)
-        title = clean(text_of(a)) or clean(a.attributes.get("title")) or "Kampanya"
-        pages.append({"url": img, "thumb_url": img, "caption": title, "link": url, "page": len(pages) + 1,
+        alt = next((i.attributes.get("alt") for i in card.css("img") if i.attributes.get("alt")), None)
+        title = clean(text_of(card.css_first("p"))) or clean(alt) or clean(text_of(a)) or "Kampanya"
+        full = _original_promo(img)
+        pages.append({"url": full, "thumb_url": img, "caption": title, "link": url, "page": len(pages) + 1,
                       "verified": True})
     return pages
 
@@ -236,6 +247,11 @@ class SokConnector(Connector):
         campaigns = parse_campaign_list(list_html)
         banners = parse_campaign_banners(list_html)
         if banners:
+            # Tam boy (boyutlandırmasız) adres gerçekten görsel mi? Değilse resmî küçük boyuta düşülür.
+            pr = client.probe(banners[0]["url"])
+            if not (pr.get("ok") and pr.get("kind") in ("jpeg", "png", "webp")):
+                for b in banners:
+                    b["url"] = b["thumb_url"]
             result.catalogs.append(CatalogData(id="sok-kampanya-gorselleri", title="ŞOK Kampanyaları",
                                                kind="campaign_gallery", official_url=LIST_URL, pages=banners,
                                                cover_url=banners[0]["thumb_url"]))

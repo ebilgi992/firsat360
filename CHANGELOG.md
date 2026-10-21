@@ -1,5 +1,15 @@
 # Değişiklik günlüğü
 
+## 1.3.0 — 21 Ekim 2026
+- **Kesintisiz yerel geçiş (A101, CarrefourSA):** kullanıcı kartı açar → resmî sayfa WebView'de, üstünde
+  "Resmî siteden güncel broşürler alınıyor…" katmanı (+ "Sayfayı göster") → enjekte betik sayfayı kaydırıp büyük dikey
+  broşür görsellerini (srcset'in en genişi dahil) toplar → sayfa sonuna ulaşılıp sayı sabitlenince WebView kapanır ve
+  yerel tam ekran okuyucu açılır. Doğrulama (Cloudflare/Turnstile/reCAPTCHA) sayfasında katman kalkar, kullanıcı kendisi
+  tamamlar; otomatik çözülmez. JavaScript köprüsü yok (evaluateJavascript). Betik gerçek Chromium ile test ediliyor.
+- **Migros:** money.com.tr "Kataloglarımız" arşivlerinden süresi dolmamış resmî PDF'ler (5M Migroskop, MacroStyle;
+  Migros Jet ve Piknik-Bahçe güncel sayı yayımlandığında). Migroskop'a güncel sayının resmî PDF'si (varsa).
+- **ŞOK:** kampanya afişleri yeni sayfa yapısına göre yeniden okunuyor (13 Ekim'den beri 0 → 59), tam boy görsel.
+
 ## 1.2.0 — 21 Ekim 2026
 - **Merkezi katalog durumu** (`CatalogRules.state`: yaklaşan/geçerli/bitmek üzere/bitti/bilinmiyor) tüm bölümlerde tek kural.
 - **Bölgesel kataloglar:** `catalogs.region` + feed `group`; aynı insertin bölge kopyaları tek kart (kullanıcının bölgesi);

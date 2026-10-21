@@ -319,7 +319,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
                 override fun onPageStarted(view: WebView?, u: String?, favicon: Bitmap?) { progress.visibility = View.VISIBLE }
                 override fun onPageFinished(view: WebView?, u: String?) {
                     progress.visibility = View.GONE
-                    if (catalog) view?.postDelayed({ collectPages(view) }, 2500)
+                    if (catalog && view != null) startExtraction(view)
                 }
             })
             setWebChromeClient(object : WebChromeClient() {
@@ -332,48 +332,149 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         val frame = FrameLayout(a)
         frame.addView(w, FrameLayout.LayoutParams(MATCH, MATCH))
         webFrame = frame
+        if (catalog && storeId != null) {
+            overlay = extractionOverlay()
+            frame.addView(overlay, FrameLayout.LayoutParams(MATCH, MATCH))
+        }
         outer.addView(frame, lp(MATCH, 0, weight = 1f))
         return outer
     }
 
+    // ------------------------------------------------------------------ cihazda resmî sayfadan broşür alma
+    //
+    // Akış (kullanıcı market kartına dokunduğunda başlar):
+    //  1. Resmî sayfa bu WebView'de, kullanıcının kendi bağlantısıyla açılır; üstünde yerel bir yükleme katmanı
+    //     ("Resmî siteden güncel broşürler alınıyor…") ve "Sayfayı göster" düğmesi vardır (kullanıcı her an siteyi görebilir).
+    //  2. Sayfa yüklenince EXTRACT_JS çalıştırılır: tembel yüklenen görseller için sayfa adım adım kaydırılır, ardından
+    //     büyük ve dikey (broşür/afiş sayfası oranında) görsellerin en yüksek çözünürlüklü adresi toplanır.
+    //  3. Görsel sayısı art arda iki ölçümde sabitse (≥2 sayfa) WebView kapanır ve yerel tam ekran okuyucu açılır.
+    //  4. Bot sınaması / doğrulama sayfası görülürse katman kalkar: kullanıcı adımı KENDİSİ tamamlar (otomatik çözülmez);
+    //     sayfa yeniden yüklenince alma kaldığı yerden sürer. 15 sn içinde broşür bulunamazsa resmî sayfa olduğu gibi kalır.
+    //
+    // Bağ: evaluateJavascript (tek yönlü, sonuç dönüşü). addJavascriptInterface/postMessage köprüsü KULLANILMAZ:
+    // üçüncü taraf sayfaya uygulama içine çağrı yapabileceği bir yüzey açılmaz. Görseller kopyalanmaz; resmî adresinden yüklenir.
+
+    private var overlay: View? = null
+    private var overlayText: android.widget.TextView? = null
     private var pagesBtn: View? = null
     private var webFrame: FrameLayout? = null
     private var collected: List<String> = emptyList()
+    private var lastCount = -1
+    private var polls = 0
+    private var handedOff = false
+    private var extracting = false
 
-    /**
-     * Resmî broşür sayfası telefonda açıldıktan sonra sayfadaki BÜYÜK ve DİKEY görseller (broşür/afiş sayfaları) toplanır.
-     * Yalnızca sayfanın kendi alan adı ailesindeki görseller kabul edilir (ör. www.a101.com.tr → cdn2.a101.com.tr).
-     * Bulunursa "Sayfa sayfa aç" ile yakınlaştırılabilir okuyucuda gösterilir. Görsel kopyalanmaz; resmî adresinden yüklenir.
-     */
-    private fun collectPages(view: WebView) {
-        val js = "(function(){return JSON.stringify(Array.from(document.images).filter(function(i){" +
-            "return i.naturalWidth>=500&&i.naturalHeight>=i.naturalWidth*0.9;}).map(function(i){return i.currentSrc||i.src;}));})()"
-        try {
-            view.evaluateJavascript(js) { raw ->
-                val list = try {
-                    val inner = com.firsat360.app.core.Json.parse(raw ?: "null") as? String ?: return@evaluateJavascript
-                    (com.firsat360.app.core.Json.parse(inner) as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-                } catch (e: Exception) { emptyList() }
-                val base = siteFamily(Uri.parse(view.url ?: url).host)
-                val pages = list.filter { u -> val h = Uri.parse(u).host; u.startsWith("https://") && h != null &&
-                    siteFamily(h) == base }.distinct().take(80)
-                if (pages.size >= 2 && pages != collected) {
-                    collected = pages
-                    storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
-                    pagesBtn?.let { webFrame?.removeView(it) }
-                    val b = a.button("Sayfa sayfa aç (${pages.size})", Icon.CATALOG, true) { openCollected() }
-                    pagesBtn = b
-                    webFrame?.addView(b, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
-                        .apply { bottomMargin = dp(20) })
-                }
-            }
-        } catch (e: Exception) { }
+    private fun extractionOverlay(): View = a.vbox().apply {
+        setBackgroundColor(0xF20B0D12.toInt())
+        setGravity(Gravity.CENTER)
+        isClickable = true  // alttaki sayfaya dokunulmasın (katman görünürken)
+        contentDescription = "Resmî siteden güncel broşürler alınıyor"
+        addView(ProgressBar(a).apply { isIndeterminate = true }, lp(dp(44), dp(44)))
+        overlayText = a.text("Resmî siteden güncel broşürler alınıyor…", 15f, 0xFFF2F3F7.toInt(), Theme.semibold,
+            gravity = Gravity.CENTER)
+        addView(overlayText, lp(WRAP, WRAP, t = dp(16)))
+        addView(a.text(Uri.parse(url).host ?: "", 12.5f, 0xB3F2F3F7.toInt(), Theme.regular, 1, Gravity.CENTER), lp(t = dp(6)))
+        addView(a.button("Sayfayı göster", Icon.GLOBE, false) { hideOverlay(null) }, lp(WRAP, WRAP, t = dp(22)))
     }
 
-    private fun openCollected() {
-        if (collected.isEmpty()) return
-        val ps = collected.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", url, true) }
-        a.push(CatalogReaderScreen(a, null, 0, null, title, extraPages = ps))
+    private fun hideOverlay(message: String?) {
+        overlay?.visibility = View.GONE
+        if (message != null) a.toast(message)
+    }
+
+    private fun startExtraction(view: WebView) {
+        if (handedOff) return
+        polls = 0; lastCount = -1
+        if (!extracting) { extracting = true; view.postDelayed({ poll(view) }, 1200) }
+    }
+
+    private fun poll(view: WebView) {
+        if (handedOff || web == null) { extracting = false; return }
+        try {
+            view.evaluateJavascript(EXTRACT_JS) { raw -> onExtracted(view, raw) }
+        } catch (e: Exception) { extracting = false; hideOverlay(null) }
+    }
+
+    private fun onExtracted(view: WebView, raw: String?) {
+        if (handedOff || web == null) return
+        val res = try {
+            val inner = com.firsat360.app.core.Json.parse(raw ?: "null") as? String
+            if (inner == null) null else com.firsat360.app.core.Json.parse(inner) as? Map<*, *>
+        } catch (e: Exception) { null }
+        polls++
+        if (res?.get("challenge") == true) {
+            // Doğrulama sayfası: otomatik geçilmez. Kullanıcı görür ve kendisi tamamlar.
+            extracting = false
+            hideOverlay("Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.")
+            return
+        }
+        val base = siteFamily(Uri.parse(view.url ?: url).host)
+        val pages = ((res?.get("urls") as? List<*>) ?: emptyList<Any>()).mapNotNull { it as? String }
+            .filter { u -> u.startsWith("https://") && siteFamily(Uri.parse(u).host) == base }
+            .distinctBy { it.substringBefore('?') }.take(80)
+        // Geçiş: sayfanın sonuna ulaşıldı VE son iki ölçüm aynı (tembel görseller yüklendi) → eksik sayfa kalmaz.
+        val atEnd = res?.get("end") == true
+        if (pages.size >= 2 && pages.size == lastCount && atEnd) { handOff(pages); return }
+        lastCount = pages.size
+        overlayText?.text = if (pages.isEmpty()) "Resmî siteden güncel broşürler alınıyor…"
+            else "${pages.size} broşür sayfası bulundu…"
+        if (pages.size >= 2) showPagesButton(pages)
+        if (polls >= MAX_POLLS) {
+            extracting = false
+            if (pages.size >= 2) { handOff(pages); return }  // süre doldu ama sayfalar var → bulunanlarla aç
+            hideOverlay("Bu sayfada broşür görseli bulunamadı; resmî sayfa gösteriliyor.")
+            return
+        }
+        view.postDelayed({ poll(view) }, POLL_MS)
+    }
+
+    /** Yerel okuyucuya geçiş: WebView yığından çıkar, yerine okuyucu açılır (geri → bir önceki ekran). */
+    private fun handOff(pages: List<String>) {
+        if (handedOff) return
+        handedOff = true; extracting = false
+        collected = pages
+        storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
+        val ps = pages.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", url, true) }
+        a.replaceTop(CatalogReaderScreen(a, null, 0, null, title, extraPages = ps))
+    }
+
+    private fun showPagesButton(pages: List<String>) {
+        collected = pages
+        pagesBtn?.let { webFrame?.removeView(it) }
+        val b = a.button("Sayfa sayfa aç (${pages.size})", Icon.CATALOG, true) { handOff(collected) }
+        pagesBtn = b
+        webFrame?.addView(b, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+            .apply { bottomMargin = dp(20) })
+        overlay?.bringToFront()
+    }
+
+    companion object {
+        private const val POLL_MS = 900L
+        private const val MAX_POLLS = 16  // ≈ 15 sn
+
+        /**
+         * Sayfada çalışan tek seferlik okuma betiği (her ölçümde yeniden çalışır, durum tutmaz):
+         *  - Doğrulama/bot sınaması sayfası tespiti (Cloudflare "challenge", Turnstile, reCAPTCHA çerçevesi) → {challenge:true}
+         *  - Tembel yükleme için sayfayı aşağı kaydırma (her çağrıda bir ekran; görseller yüklendikçe ölçüm büyür)
+         *  - Aday: <img> (currentSrc, srcset'in en genişi, data-src/data-original/data-lazy) ve <picture><source srcset>
+         *  - Filtre: yüklenmiş ve ≥500 px genişlik, yükseklik ≥ genişliğin 0,9'u (broşür/afiş sayfası; bant/logo değil)
+         *  - Belge sırası korunur (sayfa sırası).
+         */
+        const val EXTRACT_JS = """(function(){try{
+var d=document,t=(d.title||'').toLowerCase();
+if(t.indexOf('just a moment')>=0||t.indexOf('attention required')>=0||d.querySelector('#challenge-form,#cf-challenge-running,.cf-turnstile,iframe[src*="challenges.cloudflare.com"],iframe[src*="recaptcha"]'))return JSON.stringify({challenge:true});
+window.scrollBy(0,window.innerHeight*1.5);
+var se=d.scrollingElement||d.documentElement,end=(window.scrollY+window.innerHeight)>=(se.scrollHeight-20);
+function best(img){var s=img.getAttribute('srcset')||img.getAttribute('data-srcset')||'',b=null,bw=0;
+s.split(',').forEach(function(p){var q=p.trim().split(/\s+/);if(!q[0])return;var w=parseInt(q[1]||'0',10)||1;if(w>=bw){bw=w;b=q[0];}});
+var u=b||img.currentSrc||img.src||img.getAttribute('data-src')||img.getAttribute('data-original')||img.getAttribute('data-lazy')||'';
+try{return [new URL(u,location.href).href,bw];}catch(e){return ['',0];}}
+var out=[],seen={};
+Array.prototype.forEach.call(d.images,function(img){var w=img.naturalWidth,h=img.naturalHeight;if(!img.complete||!w||!h)return;
+var r=best(img),u=r[0],size=Math.max(w,r[1]);
+if(size<500||h<w*0.9||!u||u.indexOf('data:')===0||seen[u])return;seen[u]=1;out.push(u);});
+return JSON.stringify({urls:out,end:end,n:d.images.length});
+}catch(e){return JSON.stringify({urls:[],end:true,error:String(e)});}})()"""
     }
 
     override fun onBack(): Boolean {

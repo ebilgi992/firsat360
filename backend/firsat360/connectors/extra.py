@@ -514,6 +514,81 @@ class FlipbookConnector(Connector):
 
 
 MIGROSKOP_DIGITAL = "https://migroskop.migros.com.tr/migroskop"
+
+# Migros'un resmî katalog arşivleri (money.com.tr → Kataloglarımız). Her yayın:
+#   <a class="_df_button" source="<resmî PDF>" mcdate="8 - 21 Ekim 2026"><img data-src="<kapak>"></a> <p>Sayı: <b>N</b></p>
+MONEY_CATALOGS = {
+    "5m-migroskop": ("5M Migroskop", "https://www.money.com.tr/mc/kataloglarimiz/5m-migroskop-dijital/84"),
+    "macrostyle": ("MacroStyle", "https://www.money.com.tr/mc/kataloglarimiz/macrostyle-dijital/94"),
+    "migros-jet": ("Migros Jet", "https://www.money.com.tr/mc/kataloglarimiz/migros-jet-dijital/247"),
+    "piknik-bahce": ("Piknik-Bahçe", "https://www.money.com.tr/mc/kataloglarimiz/piknik-bahce-dijital/236"),
+}
+# Güncel sayı <button class="btn … _df_button">, arşiv öğeleri <a class="_df_button"> ile yayımlanıyor.
+_DF_ITEM = re.compile(r'<(?:a|button)\b[^>]*class="[^"]*\b_df_button\b[^"]*"[^>]*>', re.I)
+_ATTR = lambda name: re.compile(name + r'\s*=\s*"([^"]+)"', re.I)  # noqa: E731
+_MONEY_PDF_HOSTS = ("moneyclubkart.azureedge.net",)
+
+
+def parse_money_catalogs(html: str, observed: date, max_items: int = 2) -> list[dict]:
+    """Arşiv sayfasındaki yayınlar → süresi dolmamış olanlar (yeniden eskiye, en fazla max_items).
+    Dönüş: [{pdf, cover, valid_from, valid_to, issue}]. Tarihi okunamayan yayın alınmaz (eski arşiv sanılmasın)."""
+    raw = html.replace("&amp;", "&")
+    out, seen = [], set()
+    for m in _DF_ITEM.finditer(raw):
+        tag = m.group(0)
+        src = (_ATTR("source").search(tag) or [None, None])[1]
+        when = (_ATTR("mcdate").search(tag) or [None, None])[1]
+        if not src or not when or src in seen or urlparse(src).netloc.lower() not in _MONEY_PDF_HOSTS:
+            continue
+        seen.add(src)
+        import html as _html
+        when = _html.unescape(when)  # ay adları HTML varlığı olarak kodlu: "Eyl&#xFC;l" → "Eylül"
+        start, end = parse_tr_range(when, observed)
+        if start is None or end is None or end < observed:
+            continue
+        tail = raw[m.end():m.end() + 800]
+        head = raw[max(0, m.start() - 1500):m.start()]
+        if tag.lower().startswith("<a"):   # arşiv: kapak ve sayı bağlantıdan SONRA
+            cover = (re.search(r'data-src="([^"]+)"', tail) or [None, None])[1]
+            issue = (re.search(r"Say[ıi]:\s*<b>(\d+)</b>", tail) or [None, None])[1]
+        else:                               # güncel sayı: kapak ve sayı düğmeden ÖNCE
+            covers = re.findall(r'data-src="([^"]+)"', head)
+            cover = covers[-1] if covers else None
+            issues = re.findall(r"Say[ıi]:\s*<b>(\d+)</b>", head)
+            issue = issues[-1] if issues else None
+        out.append({"pdf": src, "cover": cover if cover and cover.startswith("https://") else None,
+                    "valid_from": start, "valid_to": end, "issue": issue, "label": when})
+    out.sort(key=lambda x: x["valid_from"], reverse=True)
+    return out[:max_items]
+
+
+class MoneyCatalogsConnector(Connector):
+    """Migros'un Migroskop dışındaki resmî dijital katalogları (5M Migroskop, MacroStyle, Migros Jet, Piknik-Bahçe).
+    Her PDF ilk baytlarından (%PDF) doğrulanır; doğrulanamayan yayın PDF'siz bırakılmaz, hiç alınmaz."""
+    store_id = "migros"
+    method = "live_html"
+
+    def fetch(self, client: PoliteClient, observed_at: datetime) -> ConnectorResult:
+        res = ConnectorResult(store_id=self.store_id, method=self.method, observed_at=observed_at)
+        for key, (name, url) in MONEY_CATALOGS.items():
+            try:
+                items = parse_money_catalogs(client.get(url).text, observed_at.date())
+            except ConnectorError as exc:
+                res.warnings.append(f"{name}: {exc}")
+                res.partial = True
+                continue
+            for it in items:
+                pr = client.probe(it["pdf"])
+                if not (pr.get("ok") and pr.get("kind") == "pdf"):
+                    res.warnings.append(f"{name}: PDF doğrulanamadı ({pr.get('status')}, {pr.get('kind')})")
+                    continue
+                cid = f"migros-{key}-{it['issue'] or it['valid_from'].isoformat()}"
+                res.catalogs.append(CatalogData(id=cid[:64], title=f"{name} · {it['label']}", kind="pdf",
+                                                official_url=url, valid_from=it["valid_from"], valid_to=it["valid_to"],
+                                                pdf_url=it["pdf"], cover_url=it["cover"]))
+        if not res.catalogs:
+            raise ConnectorError("Migros katalogları: süresi dolmamış doğrulanmış yayın yok")
+        return res
 _MIGROSKOP_IMG = re.compile(r"""https?://migroskop-assets\.migros\.com\.tr/migrosdigitalinsert/[^"'<>()]+?\.(?:jpe?g|png|webp)(?:\?[^"'<>()\s]*)?""", re.I)
 
 
@@ -555,6 +630,16 @@ class MigroskopConnector(Connector):
                 c.official_url = MIGROSKOP_DIGITAL
         except ConnectorError as exc:
             res.warnings.append(f"Migroskop dijital: {exc}")
+        if not c.pdf_url:
+            # Arşiv sayfasındaki güncel sayının resmî PDF'si (_df_button source=…), ilk baytlarından doğrulanır
+            try:
+                cur = parse_money_catalogs(client.get(MIGROSKOP_URL).text, observed_at.date(), 1)
+                if cur:
+                    pr = client.probe(cur[0]["pdf"])
+                    if pr.get("ok") and pr.get("kind") == "pdf":
+                        c.pdf_url = cur[0]["pdf"]
+            except ConnectorError as exc:
+                res.warnings.append(f"Migroskop PDF: {exc}")
         if not c.pdf_url:
             issue = c.id.rsplit("-", 1)[-1]
             try:

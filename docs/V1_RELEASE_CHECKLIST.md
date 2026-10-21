@@ -1,10 +1,10 @@
-# Yayın kontrol listesi — 1.2.0 (versionCode 14)
+# Yayın kontrol listesi — 1.3.0 (versionCode 15)
 
 | Madde | Durum |
 |---|---|
-| Sürüm 1.2.0 (versionCode 14) — build.gradle.kts, BuildInfo.kt, build-nogradle.sh | ✅ |
-| Debug APK (`dist/FIRSAT360-1.2.0.apk`, proje debug anahtarı — eski sürümün üzerine kurulur) | ✅ |
-| Release APK + AAB (`dist/FIRSAT360-1.2.0-release-unsigned.*`) | ✅ imzasız — `tools/sign-release.sh` ile **sizin yükleme anahtarınızla** imzalanmalı |
+| Sürüm 1.3.0 (versionCode 15) — build.gradle.kts, BuildInfo.kt, build-nogradle.sh | ✅ |
+| Debug APK (`dist/FIRSAT360-1.3.0.apk`, proje debug anahtarı — eski sürümün üzerine kurulur) | ✅ |
+| Release APK + AAB (`dist/FIRSAT360-1.3.0-release-unsigned.*`) | ✅ imzasız — `tools/sign-release.sh` ile **sizin yükleme anahtarınızla** imzalanmalı |
 | İmza anahtarı depoda yok | ✅ |
 | Gizlilik politikası (docs/privacy.html → GitHub Pages) | ⚠️ iletişim e-postası yer tutucu, doldurulmalı |
 | Veri güvenliği beyanı: hesap yok, kişisel veri toplanmaz, favoriler cihazda | ✅ (Play formu sizin tarafınızdan doldurulur) |
