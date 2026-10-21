@@ -101,8 +101,8 @@ STORES = {
     },
     "file": {
         "name": "File Market",
-        "official_url": "https://www.filemarket.com.tr/",
-        "catalog_url": "https://www.filemarket.com.tr/",
+        "official_url": "https://www.file.com.tr/",
+        "catalog_url": "https://www.file.com.tr/",
         "legal_note": "robots.txt otomatik erişimi kısıtlıyor (21.10.2026 gözlemi); bağlayıcı robots.txt izin "
                       "vermezse çalışmaz ve durumu raporlar.",
     },
@@ -132,9 +132,9 @@ BROCHURE_URLS = {
     "migros": "https://migroskop.migros.com.tr/migroskop",
     "carrefoursa": "https://www.carrefoursa.com/",
     "tkkoop": "https://www.tkkoop.com.tr/haftalik-kampanyalar",
-    "file": "https://www.filemarket.com.tr/",
+    "file": "https://www.file.com.tr/",
     "hakmar": "https://hakmar.com.tr/indirim/",
-    "onur": "https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz?region=istanbul",
+    "onur": "https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz?region=istanbul&campaign=istanbul-genel-insert",
     "bizimtoptan": "https://www.bizimtoptan.com.tr/pages/katalog",
     "metro": "https://brosurler.metro-tr.com/",
     "gratis": "https://www.gratis.com/gratis-katalog",

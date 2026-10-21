@@ -241,6 +241,27 @@ def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx:
     return out
 
 
+MIN_PAGE_BYTES = 15_000  # broşür sayfası bundan küçük olamaz (simge/boş görsel elenir)
+
+
+def validate_images(client: PoliteClient, urls: list[str], limit: int = 60) -> tuple[list[str], int]:
+    """HEAD ile her sayfa görselini doğrular: 200 + image/* + (biliniyorsa) en az MIN_PAGE_BYTES.
+    HTML hata sayfası, sıfır baytlık dosya veya yönlendirilmiş giriş sayfası broşür sayfası olarak kaydedilmez."""
+    ok, bad = [], 0
+    for u in urls[:limit]:
+        try:
+            r = client.head(u)
+        except ConnectorError:
+            r = None
+        ct = (r.headers.get("content-type", "") if r is not None else "").lower()
+        size = int(r.headers.get("content-length") or 0) if r is not None else 0
+        if r is not None and r.status_code == 200 and ct.startswith("image/") and (size == 0 or size >= MIN_PAGE_BYTES):
+            ok.append(u)
+        else:
+            bad += 1
+    return ok, bad
+
+
 class DiscoveryConnector(Connector):
     method = "discovery"
 
@@ -277,6 +298,11 @@ class DiscoveryConnector(Connector):
                     attempts.append(f"tarayıcı başarısız: {url}: {exc}")
                 except Exception as exc:  # noqa: BLE001 — tarayıcı hatası mağazayı/diğer mağazaları durdurmaz
                     attempts.append(f"tarayıcı hatası: {url}: {exc.__class__.__name__}")
+            if found.images:
+                ok, bad = validate_images(client, found.images)
+                if bad:
+                    attempts.append(f"{bad} görsel doğrulanamadı (HTML/hata/boş)")
+                found.images = ok
             res.catalogs += to_catalogs(self.store_id, url, found, observed_at.date(), i)
         if not res.catalogs:
             raise ConnectorError(f"{self.src.title}: hiçbir resmî kaynakta broşür bulunamadı · denemeler: "
@@ -292,11 +318,9 @@ class DiscoveryConnector(Connector):
 SOURCES = {
     "rossmann": StoreSource("rossmann", "Rossmann Katalog", ["https://www.rossmann.com.tr/kataloglar"],
                             hosts=("rossmann.com.tr",)),
-    "onur": StoreSource("onur", "Onur Market İnsert",
-                        [f"https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz?region={r}"
-                         for r in ("istanbul", "bursa", "trakya")],
-                        hosts=("onurmarket.com",)),
     "carrefoursa": StoreSource("carrefoursa", "CarrefourSA Katalog", ["https://www.carrefoursa.com/"],
                                hosts=("carrefoursa.com",)),
-    "file": StoreSource("file", "File Market Broşür", ["https://www.filemarket.com.tr/"], hosts=("filemarket.com.tr",)),
+    # Kök neden: resmî alan adı file.com.tr (filemarket.com.tr değil). Resmî sitede broşür sayfası yok; ana sayfadaki
+    # "AFIS" adlı resmî ürün afişleri (uploads/file/banner/…AFIS…) gösterilir.
+    "file": StoreSource("file", "File Market afişleri", ["https://www.file.com.tr/"], hosts=("file.com.tr",)),
 }

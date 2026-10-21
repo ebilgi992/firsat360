@@ -68,6 +68,17 @@ class ConnectorResult:
 MAX_RESPONSE_BYTES = 30 * 1024 * 1024
 
 
+def block_diagnosis(resp: httpx.Response) -> str:
+    """403/429'un kaynağı: hangi sunucu/CDN, hangi içerik türü, yönlendirme zinciri. Gövde kaydedilmez."""
+    h = resp.headers
+    who = ("Cloudflare" if "cf-ray" in h or "cloudflare" in h.get("server", "").lower() else
+           "Akamai" if any(k.lower().startswith("x-akamai") for k in h) or "akamai" in h.get("server", "").lower() else
+           "Imperva" if "x-iinfo" in h or "incap" in h.get("set-cookie", "").lower() else
+           "AWS CloudFront" if "x-amz-cf-id" in h else h.get("server", "bilinmiyor") or "bilinmiyor")
+    chain = " → ".join(str(r.url) for r in resp.history) or "yok"
+    return f"engelleyen: {who}; içerik: {h.get('content-type', '-')}; yönlendirme: {chain}"
+
+
 def check_public_url(url: str) -> None:
     """SSRF koruması: yalnızca http/https ve herkese açık adresler. localhost, özel/yerel/bağlantı-yerel IP'ler ve
     çıplak (noktasız) ana bilgisayar adları reddedilir. Kaynak adresleri yapılandırma dosyasından gelse de uygulanır."""
@@ -197,7 +208,8 @@ class PoliteClient:
                 cond = {}
                 continue
             if resp.status_code in (403, 429):
-                raise ConnectorError(f"{resp.status_code} yanıtı (erişim engeli/hız sınırı); aşılmaya çalışılmadı: {url}")
+                raise ConnectorError(f"{resp.status_code} yanıtı (erişim engeli/hız sınırı); aşılmaya çalışılmadı: {url} "
+                                     f"[{block_diagnosis(resp)}]")
             if 500 <= resp.status_code < 600:
                 last_exc = ConnectorError(f"Sunucu hatası {resp.status_code}: {url}")
                 self.sleep(min(30.0, 2.0 ** (attempt + 1)))

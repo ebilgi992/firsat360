@@ -19,6 +19,10 @@ def _client(pages: dict[str, tuple[int, str]]):
     def handler(req):
         if req.url.path == "/robots.txt":
             return httpx.Response(200, text=pages.get("robots", (200, "User-agent: *\nDisallow:"))[1])
+        if req.method == "HEAD" and str(req.url).endswith(".jpg"):
+            if "/bozuk" in str(req.url):  # sunucu görsel yerine HTML hata sayfası döndürüyor
+                return httpx.Response(200, headers={"content-type": "text/html"})
+            return httpx.Response(200, headers={"content-type": "image/jpeg", "content-length": "250000"})
         code, body = pages.get(str(req.url), (404, ""))
         return httpx.Response(code, text=body)
     return PoliteClient("test", min_interval_s=0, transport=httpx.MockTransport(handler), sleep=lambda s: None)
@@ -115,3 +119,9 @@ def test_real_chromium_render_captures_js_loaded_brochure(tmp_path):
         assert not any(u.endswith("/pics/insert/k.jpg") for u in f.images)  # küçük görsel broşür sayfası değil
     finally:
         srv.shutdown()
+
+
+def test_html_error_page_is_not_saved_as_brochure_page():
+    client = _client({SRC.urls[0]: (200, "<h1>İnsert</h1><img src='/pics/insert/s1.jpg'><img src='/pics/insert/bozuk.jpg'>")})
+    res = DiscoveryConnector(SRC, renderer=lambda u, ua: ("", [])).fetch(client, NOW)
+    assert [p["url"] for p in res.catalogs[0].pages] == ["https://kurumsal.onurmarket.com/pics/insert/s1.jpg"]
