@@ -245,17 +245,16 @@ MIN_PAGE_BYTES = 15_000  # broşür sayfası bundan küçük olamaz (simge/boş 
 
 
 def validate_images(client: PoliteClient, urls: list[str], limit: int = 60) -> tuple[list[str], int]:
-    """HEAD ile her sayfa görselini doğrular: 200 + image/* + (biliniyorsa) en az MIN_PAGE_BYTES.
-    HTML hata sayfası, sıfır baytlık dosya veya yönlendirilmiş giriş sayfası broşür sayfası olarak kaydedilmez."""
+    """Her sayfa görselinin gerçekten görsel olduğu ilk baytlarından doğrulanır (JPEG/PNG/WEBP); HTML hata sayfası,
+    boş dosya veya giriş sayfasına yönlendirme broşür sayfası olarak kaydedilmez. Bilinen boyut MIN_PAGE_BYTES altındaysa
+    (simge) elenir."""
     ok, bad = [], 0
     for u in urls[:limit]:
         try:
-            r = client.head(u)
+            p = client.probe(u)
         except ConnectorError:
-            r = None
-        ct = (r.headers.get("content-type", "") if r is not None else "").lower()
-        size = int(r.headers.get("content-length") or 0) if r is not None else 0
-        if r is not None and r.status_code == 200 and ct.startswith("image/") and (size == 0 or size >= MIN_PAGE_BYTES):
+            p = {"ok": False}
+        if p.get("ok") and p.get("kind") in ("jpeg", "png", "webp") and (not p.get("size") or p["size"] >= MIN_PAGE_BYTES):
             ok.append(u)
         else:
             bad += 1

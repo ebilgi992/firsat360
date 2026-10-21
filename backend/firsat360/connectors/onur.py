@@ -16,14 +16,17 @@ from urllib.parse import urljoin
 
 from ..normalize import clean, parse_tr_range
 from .base import CatalogData, Connector, ConnectorError, ConnectorResult, PoliteClient
-from .htmlutil import parse, text_of
 
 BASE = "https://kurumsal.onurmarket.com"
 INSERTS = BASE + "/tr/kampanyalar/insertlerimiz"
 REGIONS = ("istanbul", "bursa", "trakya")
+REGION_NAMES = {"istanbul": "İstanbul", "bursa": "Bursa", "trakya": "Trakya"}
 CAMPAIGN_RE = re.compile(r"campaign=([a-z0-9-]+)", re.I)
-COVER_RE = re.compile(r"/pics/inserts/(\d+)_([^\"'\s<>?]+?)\.(?:jpe?g|png|webp)", re.I)
-PDF_RE = re.compile(r"/download/(\d+)_([^\"'\s<>?]+?)\.?\.pdf", re.I)
+# Sayfa <base href="https://kurumsal.onurmarket.com/"> kullanır; adresler göreli ("pics/inserts/…", "download/…").
+COVER_RE = re.compile(r"pics/inserts/(\d+)_([^\"'\s<>?]+?)\.(?:jpe?g|png|webp)", re.I)
+PDF_RE = re.compile(r"download/(\d+)_([^\"'\s<>?]+?)\.?\.pdf", re.I)
+CURRENT_RE = re.compile(r"(?i)G[ÜU]NCEL\s+[İI]NSERT")
+PAST_RE = re.compile(r"(?i)GE[ÇC]M[İI][ŞS]\s+[İI]NSERT")
 
 
 def campaign_urls(html: str, region: str) -> list[str]:
@@ -34,39 +37,41 @@ def campaign_urls(html: str, region: str) -> list[str]:
     return [f"{INSERTS}?region={region}&campaign={c}" for c in found]
 
 
+_SPAN = re.compile(r'<span[^>]*class="txt\s+([a-d])"[^>]*>(.*?)</span>', re.I | re.S)
+
+
 def parse_campaign(html: str, page_url: str, region: str, observed) -> list[CatalogData]:
-    """Kampanya sayfasındaki insertler: numara → kapak, PDF, başlık, tarih."""
+    """Kampanya sayfasındaki GÜNCEL insertler. Gerçek yapı (21.10.2026): kapak görseli, ardından bilgi kutusu
+    <span class="txt a">GÜNCEL INSERT</span> <span class="txt b">İstanbul</span> <span class="txt c">13-26 Ekim 2026</span>
+    <span class="txt d">Onur'da Çok Al Az Öde</span>, ardından indirme bağlantısı (download/<no>_….pdf).
+    "Geçmiş İnsert" bölümündekiler alınmaz."""
     raw = html.replace("&amp;", "&")
-    covers = {m.group(1): urljoin(BASE, m.group(0)) for m in COVER_RE.finditer(raw)}
-    pdfs = {m.group(1): urljoin(BASE, m.group(0)) for m in PDF_RE.finditer(raw)}
-    tree = parse(html)
-    out = []
-    for no in sorted(set(covers) | set(pdfs), key=lambda x: -int(x)):
-        # İnsertin kartı: kapak görselini içeren en yakın, metni olan üst öğe → başlık ve tarih
-        title, text = None, ""
-        for img in tree.css("img"):
-            if f"/pics/inserts/{no}_" in (img.attributes.get("src") or "") + (img.attributes.get("data-src") or ""):
-                node = img.parent
-                for _ in range(5):
-                    if node is None:
-                        break
-                    t = text_of(node)
-                    if re.search(r"\d", t) and len(t) > 8:
-                        text = t
-                        break
-                    node = node.parent
-                title = clean(img.attributes.get("alt")) or None
-                break
-        slug = (COVER_RE.search(covers.get(no, "")) or PDF_RE.search(pdfs.get(no, "")))
-        title = title or (slug.group(2).replace("-", " ").strip().title() if slug else f"Insert {no}")
-        start, end = parse_tr_range(text or title, observed)
-        if end is not None and end < observed:
+    covers = {}
+    for m in COVER_RE.finditer(raw):
+        covers.setdefault(m.group(1), urljoin(BASE + "/", m.group(0)))
+    marks = sorted([(m.start(), "cur") for m in CURRENT_RE.finditer(raw)] +
+                   [(m.start(), "past") for m in PAST_RE.finditer(raw)])
+    out, seen = [], set()
+    for k, (pos, kind) in enumerate(marks):
+        if kind != "cur":
             continue
-        out.append(CatalogData(id=f"onur-{region}-{no}", title=f"{title} · {region.title()}", kind="pdf",
-                               official_url=page_url, valid_from=start, valid_to=end,
-                               pdf_url=pdfs.get(no), cover_url=covers.get(no),
-                               pages=[{"url": covers[no], "thumb_url": covers[no], "page": 1, "verified": True}]
-                               if covers.get(no) and not pdfs.get(no) else []))
+        end = marks[k + 1][0] if k + 1 < len(marks) else len(raw)
+        seg = raw[pos:min(end, pos + 4000)]
+        m_pdf = PDF_RE.search(seg)
+        if not m_pdf or m_pdf.group(1) in seen:
+            continue
+        no = m_pdf.group(1)
+        seen.add(no)
+        spans = {c: clean(re.sub(r"<[^>]+>", " ", t)) for c, t in _SPAN.findall(seg[:1500])}
+        date_text = spans.get("c") or re.sub(r"<[^>]+>", " ", seg[:800])
+        start, end_d = parse_tr_range(date_text, observed)
+        if end_d is not None and end_d < observed:
+            continue
+        title = spans.get("d") or clean(m_pdf.group(2).replace("-", " ").capitalize())
+        cover = covers.get(no)
+        out.append(CatalogData(id=f"onur-{region}-{no}", title=f"{title} · {REGION_NAMES.get(region, region)}", kind="pdf",
+                               official_url=page_url, valid_from=start, valid_to=end_d,
+                               pdf_url=urljoin(BASE + "/", m_pdf.group(0)), cover_url=cover))
     return out
 
 
@@ -95,9 +100,9 @@ class OnurConnector(Connector):
                     if c.pdf_url:
                         if c.pdf_url in seen_pdf:
                             continue  # aynı insert birden çok bölgede: tek kayıt
-                        r = client.head(c.pdf_url)
-                        if r is None or r.status_code != 200 or "pdf" not in r.headers.get("content-type", "").lower():
-                            res.warnings.append(f"PDF doğrulanamadı ({getattr(r, 'status_code', 'yok')}): {c.pdf_url}")
+                        pr = client.probe(c.pdf_url)  # ilk baytlar "%PDF" olmalı; hata sayfası PDF sayılmaz
+                        if not (pr.get("ok") and pr.get("kind") == "pdf"):
+                            res.warnings.append(f"PDF doğrulanamadı ({pr.get('status')}, {pr.get('kind')}): {c.pdf_url}")
                             c.pdf_url = None
                             if not c.cover_url:
                                 continue

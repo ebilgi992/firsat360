@@ -263,7 +263,7 @@ fun siteFamily(host: String?): String? {
 }
 
 class WebScreen(a: MainActivity, private val url: String, private val title: String,
-                private val catalog: Boolean = false) : Screen(a) {
+                private val catalog: Boolean = false, private val storeId: String? = null) : Screen(a) {
     override val tab: Tab get() = Tab.STORES
     private var web: WebView? = null
 
@@ -359,6 +359,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
                     siteFamily(h) == base }.distinct().take(80)
                 if (pages.size >= 2 && pages != collected) {
                     collected = pages
+                    storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
                     pagesBtn?.let { webFrame?.removeView(it) }
                     val b = a.button("Sayfa sayfa aç (${pages.size})", Icon.CATALOG, true) { openCollected() }
                     pagesBtn = b
@@ -541,6 +542,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         st.addView(a.button("Önbelleği temizle", Icon.TRASH, false) {
             com.firsat360.app.data.ImageLoader.clear()
             com.firsat360.app.data.PdfCache.dir(a).listFiles()?.forEach { it.delete() }
+            com.firsat360.app.data.DeviceBrochures.clear(a)
             a.toast("Önbellek temizlendi"); a.refreshCurrent()
         }, lp(t = dp(12)))
         val saved = com.firsat360.app.data.OfflineStore.list(a)

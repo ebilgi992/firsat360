@@ -19,10 +19,10 @@ def _client(pages: dict[str, tuple[int, str]]):
     def handler(req):
         if req.url.path == "/robots.txt":
             return httpx.Response(200, text=pages.get("robots", (200, "User-agent: *\nDisallow:"))[1])
-        if req.method == "HEAD" and str(req.url).endswith(".jpg"):
-            if "/bozuk" in str(req.url):  # sunucu görsel yerine HTML hata sayfası döndürüyor
-                return httpx.Response(200, headers={"content-type": "text/html"})
-            return httpx.Response(200, headers={"content-type": "image/jpeg", "content-length": "250000"})
+        if str(req.url).endswith(".jpg"):
+            if "/bozuk" in str(req.url):  # sunucu image/jpeg diyor ama gövde HTML hata sayfası
+                return httpx.Response(200, headers={"content-type": "image/jpeg"}, content=b"<!DOCTYPE html><html>")
+            return httpx.Response(200, headers={"content-type": "image/jpeg"}, content=b"\xff\xd8\xff\xe0" + b"0" * 20000)
         code, body = pages.get(str(req.url), (404, ""))
         return httpx.Response(code, text=body)
     return PoliteClient("test", min_interval_s=0, transport=httpx.MockTransport(handler), sleep=lambda s: None)

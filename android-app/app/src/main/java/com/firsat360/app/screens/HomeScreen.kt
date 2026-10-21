@@ -248,8 +248,15 @@ fun MainActivity.openBrochure(e: com.firsat360.app.core.ShelfEntry) {
         c != null && c.hasPages && com.firsat360.app.data.ImageLoader.enabled -> openReader(c.id)
         c != null && c.hasPdf -> push(PdfScreen(this, c.id))
         c != null && !c.webOnly -> openCatalog(c.id)
-        else -> push(WebScreen(this, c?.officialUrl ?: e.store.brochureUrl ?: e.store.catalogUrl,
-            "${e.store.name} broşür", catalog = true))
+        else -> {
+            // Bu cihazda son 3 günde resmî sayfadan toplanmış sayfalar varsa doğrudan okuyucu; yoksa resmî sayfa
+            val cached = com.firsat360.app.data.DeviceBrochures.get(this, e.store.id)
+            if (cached != null && com.firsat360.app.data.ImageLoader.enabled) {
+                val ps = cached.pages.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", cached.sourceUrl, true) }
+                push(CatalogReaderScreen(this, null, 0, null, "${e.store.name} broşür", extraPages = ps))
+            } else push(WebScreen(this, c?.officialUrl ?: e.store.brochureUrl ?: e.store.catalogUrl,
+                "${e.store.name} broşür", catalog = true, storeId = e.store.id))
+        }
     }
 }
 

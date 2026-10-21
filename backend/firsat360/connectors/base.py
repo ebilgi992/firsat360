@@ -68,6 +68,23 @@ class ConnectorResult:
 MAX_RESPONSE_BYTES = 30 * 1024 * 1024
 
 
+def sniff(b: bytes) -> str:
+    """İçerik türünü ilk baytlardan belirler (sunucunun Content-Type'ına güvenilmez)."""
+    if b.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if b.startswith(b"\x89PNG"):
+        return "png"
+    if b[:4] == b"RIFF" and b[8:12] == b"WEBP":
+        return "webp"
+    if b[:4] in (b"GIF8",):
+        return "gif"
+    if b.startswith(b"%PDF"):
+        return "pdf"
+    if b.lstrip()[:1] == b"<":
+        return "html"
+    return "unknown"
+
+
 def block_diagnosis(resp: httpx.Response) -> str:
     """403/429'un kaynağı: hangi sunucu/CDN, hangi içerik türü, yönlendirme zinciri. Gövde kaydedilmez."""
     h = resp.headers
@@ -116,7 +133,7 @@ class PoliteClient:
         self._robots: dict[str, urllib.robotparser.RobotFileParser | None] = {}
         self.client = httpx.Client(
             headers={"User-Agent": user_agent, "Accept-Language": "tr-TR,tr;q=0.9"},
-            timeout=httpx.Timeout(timeout_s), follow_redirects=True, transport=transport)
+            timeout=httpx.Timeout(timeout_s), follow_redirects=True, transport=transport, max_redirects=5)
         self.requests_made = 0
 
     def close(self):
@@ -164,6 +181,29 @@ class PoliteClient:
             rp = self._robots_for(url)
             if rp is not None and not rp.can_fetch(self.user_agent, url):
                 raise RobotsDisallowed(f"robots.txt bu adrese izin vermiyor: {url}")
+
+    def probe(self, url: str) -> dict:
+        """Dosyanın GERÇEK türünü doğrular: GET ile yalnızca ilk baytlar okunur (sihirli sayı), bağlantı kapatılır.
+        Bazı sunucular HEAD'e yanlış yanıt verir (File: sonsuz 302). Dönüş: {ok, kind, status, type, size}.
+        kind: jpeg | png | webp | gif | pdf | html | unknown."""
+        self.ensure_allowed(url)
+        check_public_url(url)
+        self._wait(urlparse(url).netloc)
+        self.requests_made += 1
+        try:
+            with self.client.stream("GET", url) as r:
+                check_public_url(str(r.url))
+                head = b""
+                for chunk in r.iter_bytes(64):
+                    head += chunk
+                    if len(head) >= 16:
+                        break
+                size = int(r.headers.get("content-length") or 0)
+                kind = sniff(head)
+                return {"ok": r.status_code == 200 and kind != "html" and kind != "unknown", "kind": kind,
+                        "status": r.status_code, "type": r.headers.get("content-type", ""), "size": size}
+        except (httpx.HTTPError, ConnectorError) as exc:
+            return {"ok": False, "kind": "error", "status": None, "type": "", "size": 0, "error": exc.__class__.__name__}
 
     def head(self, url: str) -> httpx.Response | None:
         """Varlık kontrolü (ör. katalog sayfa görseli var mı). robots.txt'ye uyar; hata durumunda None döner."""
