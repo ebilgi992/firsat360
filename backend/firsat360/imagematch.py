@@ -24,6 +24,13 @@ _SIZE_RE = re.compile(r"(?<![0-9])(\d+(?:[.,]\d+)?)\s*(?:x\s*(\d+(?:[.,]\d+)?)\s
 _TO_BASE = {"kg": ("g", 1000), "gr": ("g", 1), "g": ("g", 1), "l": ("ml", 1000), "lt": ("ml", 1000),
             "ml": ("ml", 1), "cl": ("ml", 10), "cc": ("ml", 1)}
 NAME_THRESHOLD = 0.5
+KEEP_ON_FAILED_CHECK = ("listing", "official_json")
+JUNK_NAMES = {"product-thumb", "product thumb", "product-image", "image", "img", "thumbnail", "urun", "urun gorseli"}
+
+
+def is_junk_name(name: str | None) -> bool:
+    n = fold(name or "").strip()
+    return not n or n in JUNK_NAMES or len(n) < 3
 
 
 def sizes(*texts: str | None) -> set[tuple[str, float]]:
@@ -48,7 +55,21 @@ def tokens(*texts: str | None) -> set[str]:
 
 
 def name_score(page_name: str, offer_text: str) -> float:
-    """Sayfa adındaki anlamlı sözcüklerin bizdeki ürün metninde bulunma oranı (0–1)."""
+    """Sayfa adındaki anlamlı sözcüklerin bizdeki ürün metninde bulunma oranı (0–1).
+    page_name satır satır birden çok aday içerebilir (h1'i olmayan sayfalar); en iyi aday puanı döner."""
+    if "\n" in (page_name or ""):
+        return max((_name_score1(x, offer_text) for x in page_name.split("\n") if x.strip()), default=0.0)
+    return _name_score1(page_name, offer_text)
+
+
+def best_name(page_name: str | None, offer_text: str) -> str | None:
+    if not page_name:
+        return None
+    cands = [x for x in page_name.split("\n") if x.strip()]
+    return max(cands, key=lambda x: _name_score1(x, offer_text)) if cands else None
+
+
+def _name_score1(page_name: str, offer_text: str) -> float:
     p, o = tokens(page_name), tokens(offer_text)
     if not p or not o:
         return 0.0
@@ -67,6 +88,7 @@ class PageImage:
     page_variant: str | None
     page_price_text: str | None
     image_url: str | None
+    gone: bool = False   # ürün sayfası kaldırılmış (başka sayfaya yönlendirildi)
 
     @property
     def page_price(self) -> Decimal | None:
@@ -101,6 +123,8 @@ def verify(store: str, product_url: str | None, name: str, brand: str | None, va
     cands = idx.get((store, norm_url(product_url)), [])
     if not cands:
         return Match(None, "no_page", 0.0, None, None, None)
+    if all(c.gone for c in cands):
+        return Match(None, "page_gone", 0.0, None, None, None)
     offer_text = " ".join(x for x in (brand, name, variant) if x)
     best, best_s = None, -1.0
     for c in cands:
@@ -111,20 +135,21 @@ def verify(store: str, product_url: str | None, name: str, brand: str | None, va
         if s > best_s:
             best, best_s = c, s
     c = best
-    page_sizes = sizes(c.page_name, c.page_variant)
+    shown_name = best_name(c.page_name, offer_text)
+    page_sizes = sizes(shown_name, c.page_variant)
     our_sizes = sizes(name, variant)
     pp = c.page_price
     conflict = None
     if pp is not None and price is not None and pp != price and pp != old_price:
         conflict = pp
-    base = dict(score=round(min(best_s, 1.0), 3), page_name=c.page_name, page_price=pp, price_conflict=conflict)
+    base = dict(score=round(min(best_s, 1.0), 3), page_name=shown_name, page_price=pp, price_conflict=conflict)
     if page_sizes and our_sizes and not (page_sizes & our_sizes):
         return Match(None, "size_mismatch", **base)
     if best_s < NAME_THRESHOLD:
         return Match(None, "name_mismatch", **base)
     size_text = None
     if page_sizes and not our_sizes:
-        m = _SIZE_RE.search(fold(c.page_name or ""))
+        m = _SIZE_RE.search(fold(shown_name or ""))
         if m:
             size_text = _size_display(m)
     if not c.image_url:
@@ -178,6 +203,13 @@ def apply_to_db(session, rows: list[PageImage], checked_at=None) -> dict:
     stats: dict[str, dict[str, int]] = {}
     when = checked_at.astimezone(timezone.utc) if checked_at else None
     for o in session.scalars(select(Offer).where(Offer.published.is_(True), Offer.store_id.in_(stores))):
+        if is_junk_name(o.name):
+            # Kaynakta ad yerine şablon metni okunmuş (ör. 'product-thumb'): ürünün kendi resmî sayfasındaki ad alınır.
+            page = next((r for r in idx.get((o.store_id, norm_url(o.product_url)), []) if not r.gone), None)
+            first = (page.page_name or "").split("\n")[0].strip() if page else ""
+            if first and not is_junk_name(first):
+                o.name = first
+                o.search_key = fold(" ".join(x for x in (o.brand, o.name, o.variant) if x))
         m = verify(o.store_id, o.product_url, o.name, o.brand, o.variant, o.price, o.store_declared_old_price, idx)
         if m.status == "name_mismatch" and not m.page_name:
             m.status = "page_empty"
@@ -194,8 +226,12 @@ def apply_to_db(session, rows: list[PageImage], checked_at=None) -> dict:
             o.image_url = o.image_large_url = m.image_url
             o.image_status = "verified"
             o.image_rights = "official_cdn_link"
-        elif o.image_status not in ("official_json",):
-            # Sayfada görsel yok ya da eşleşme doğrulanamadı → görsel GÖSTERİLMEZ (başka ürün görseli konmaz).
+        elif o.image_url and o.image_status in KEEP_ON_FAILED_CHECK and m.status != "size_mismatch":
+            # Liste/JSON görseli, ürünün resmî listesindeki KENDİ kartından alındı. Detay sayfasının okunamaması
+            # (kaldırılmış sayfa, görselsiz sayfa, ad biçim farkı) bu görseli geçersiz kılmaz → korunur.
+            pass
+        else:
+            # Görsel doğrulanamadı → görsel GÖSTERİLMEZ (başka ürün görseli konmaz); sonraki çalıştırmada yeniden denenir.
             o.image_url = o.image_large_url = None
             o.image_status = m.status
             o.image_rights = "none"

@@ -121,6 +121,13 @@ class PoliteClient:
         self.requests_made += 1
         return self.client.get(url, **kw)
 
+    def ensure_allowed(self, url: str) -> None:
+        """robots.txt izin vermiyorsa RobotsDisallowed (tarayıcıyla açılacak sayfalar için ön kontrol)."""
+        if self.check_robots:
+            rp = self._robots_for(url)
+            if rp is not None and not rp.can_fetch(self.user_agent, url):
+                raise RobotsDisallowed(f"robots.txt bu adrese izin vermiyor: {url}")
+
     def head(self, url: str) -> httpx.Response | None:
         """Varlık kontrolü (ör. katalog sayfa görseli var mı). robots.txt'ye uyar; hata durumunda None döner."""
         if self.check_robots:

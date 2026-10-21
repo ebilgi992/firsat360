@@ -1,5 +1,25 @@
 # FIRSAT360 Beta 0.6.1 — Test ve derleme raporu
 
+## 0.7.0 (21.10.2026) — görsel kök neden düzeltmeleri, kalite orkestratörü, yeni mağazalar
+
+| Test | Komut | Sonuç |
+|---|---|---|
+| Python birim + entegrasyon | `cd backend && python -m pytest -q` | ✅ 127 geçti, 2 atlandı (PostgreSQL) |
+| Görsel kök neden regresyonları | `tests/test_image_rootcause.py` (BİM/ŞOK detay sayfası, yönlendirme, afiş reddi, gecikmeli görsel, product-thumb, genel og:image) | ✅ 10/10 |
+| Kalite orkestratörü | `tests/test_quality.py` (düzelt → yeniden denetle, 403 yeniden denenmez, kullanıcı bildirimi GitHub akışı) | ✅ 2/2 |
+| Alternatif toplama motoru | `tests/test_discovery.py` (statik, tarayıcıya geçiş, robots, 403, **gerçek Chromium** ile JS'li sayfa) | ✅ 6/6 |
+| Günlük indirim rotasyonu | `test_daily_deals_rotate_each_day` + canlı veritabanında 4 gün simülasyonu: ardışık günlerde ortak ürün 0 | ✅ |
+| Canlı veritabanı üzerinde orkestratör | 21.10.2026 04:49 çalıştırmasının veritabanı | 163+49 süresi dolmuş, 15 şablon adlı ürün yayından alındı; 212 sahte TK görseli kaldırıldı |
+| Güvenlik | `bandit -r firsat360` · `pip-audit` | ✅ 0 bulgu · bilinen açık yok |
+| Android derleme | `bash build-nogradle.sh` (FEED_URL ile) | ✅ min-API, açılış sırası, v2+v3 imza |
+| Android çekirdeği (JVM) | `CoreTestsKt` 0.6.1 başvuru feed'i | ✅ 149/149 |
+| APK bütünlüğü | zip testi, paket `com.firsat360.app` 0.7.0-beta (10), gizli anahtar taraması | ✅ |
+
+**Bu ortamda yapılamayanlar (dürüst not):** mağaza sitelerine bu geliştirme ortamından erişim yok; yeni ayrıştırıcılar
+gerçek sayfa yapısına (21.10.2026'da web üzerinden gözlenen görsel adresi kalıpları) göre yazıldı ama canlı tam çalıştırma
+GitHub Actions'ta yapılacak. Emülatör/cihaz testi yapılamadı (KVM yok). Yeni mağazaların (Rossmann, Onur, CarrefourSA, File)
+gerçekten broşür döndürüp döndürmediği ilk canlı çalıştırmanın kalite raporunda görünecek.
+
 ## 0.6.1 (14.10.2026) — sunucusuz ve sade sürüm, tüm kataloglar uygulamada
 | Test | Komut / yöntem | Sonuç |
 |---|---|---|

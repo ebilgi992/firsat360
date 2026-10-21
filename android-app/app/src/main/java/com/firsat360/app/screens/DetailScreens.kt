@@ -181,6 +181,10 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
         col.addView(a.button("${store?.name ?: "Market"} sayfasında gör", Icon.GLOBE, true) { a.openWeb(url, store?.name ?: "") },
             lp(t = dp(22)))
         col.addView(a.text(Uri.parse(url).host ?: url, 12f, Theme.p.text3, Theme.regular, 1, Gravity.CENTER), lp(t = dp(10)))
+        col.addView(a.button("Hatalı bilgi bildir", Icon.INFO, false) { reportProblem(a, o, store?.name) }, lp(t = dp(18)))
+        col.addView(a.text("Yanlış görsel, fiyat veya ad görürseniz bildirin; ürün resmî sayfasından otomatik yeniden " +
+            "kontrol edilir. Bildirim GitHub üzerinden herkese açık yazılır; kişisel bilgi eklemeyin.", 11.5f, Theme.p.text3,
+            Theme.regular, gravity = Gravity.CENTER), lp(t = dp(8)))
 
         outer.addView(ScrollView(a).apply { isVerticalScrollBarEnabled = false; addView(col) }, lp(MATCH, 0, weight = 1f))
         return outer
@@ -327,6 +331,73 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     override fun onHide() { web?.stopLoading(); web?.destroy(); web = null }
 }
 
+/** Önceden doldurulmuş "[Hatalı veri]" bildirimi (ürün kimliği gövdede `offer:<id>`). Kişisel veri eklenmez. */
+fun reportProblem(a: MainActivity, o: com.firsat360.app.core.Offer, storeName: String?) {
+    val base = try { a.getString(com.firsat360.app.R.string.report_url).trim() } catch (e: Exception) { "" }
+    if (base.isBlank()) { a.toast("Bu derlemede bildirim adresi tanımlı değil"); return }
+    val title = "[Hatalı veri] ${storeName ?: o.storeId}: ${o.displayTitle}".take(120)
+    val body = "Sorun (görsel / fiyat / ad / tarih):\n\n\n---\noffer:${o.id}\nmağaza: ${o.storeId}\n" +
+        "kaynak: ${o.productUrl ?: o.sourceUrl}\nuygulama: ${BuildInfo.VERSION}"
+    a.openExternal(Uri.parse(base).buildUpon().appendQueryParameter("title", title)
+        .appendQueryParameter("body", body).build().toString())
+}
+
+/** Kaynak durumu: mağaza bazlı son başarılı güncelleme, hata ve ürün görseli oranı (feed'den hesaplanır). */
+class SourceStatusScreen(a: MainActivity) : Screen(a) {
+    override val tab: Tab get() = Tab.HOME
+
+    override fun create(): View {
+        val f = a.feed
+        val now = java.time.OffsetDateTime.now()
+        val outer = a.vbox()
+        outer.setBackgroundColor(Theme.p.bg)
+        outer.addView(a.topBar("Kaynak durumu"))
+        val col = a.vbox()
+        col.setPadding(dp(20), dp(4), dp(20), dp(36))
+        col.addView(a.text("Veriler her gün 07.05 ve 18.05'te marketlerin resmî sayfalarından otomatik güncellenir. " +
+            "Son yayın: ${Dates.relative(f.generatedAt, now)}.", 13f, Theme.p.text2, Theme.regular), lp(t = dp(6)))
+        val byStore = f.offers.groupBy { it.storeId }
+        val catCount = f.catalogs.groupBy { it.storeId }.mapValues { it.value.size }
+        for (s in f.stores.sortedWith(compareBy({ statusRank(it.status) }, { it.sort }, { it.name }))) {
+            val card = a.card(dp(16))
+            val h = a.hbox()
+            h.addView(a.storeBadge(s.id, s.name))
+            h.addView(a.text(s.name, 15f, Theme.p.text, Theme.semibold, 1), lp(0, WRAP, l = dp(10), weight = 1f))
+            val (label, fg, bg) = when (s.status) {
+                "ok" -> Triple("Güncel", Theme.p.ok, Theme.p.okSoft)
+                "partial" -> Triple("Kısmi", Theme.p.warn, Theme.p.warnSoft)
+                "link_only" -> Triple("Bağlantı", Theme.p.text2, Theme.p.surface2)
+                "error" -> Triple("Hata", Theme.p.danger, Theme.p.dangerSoft)
+                else -> Triple("Bekliyor", Theme.p.text2, Theme.p.surface2)
+            }
+            h.addView(a.pill(label, fg, bg, 12f, Theme.semibold))
+            card.addView(h)
+            val offers = byStore[s.id].orEmpty()
+            val withImg = offers.count { it.hasImage }
+            val lines = mutableListOf("Son başarılı okuma: ${Dates.relative(s.lastSuccessAt, now)}",
+                "${catCount[s.id] ?: 0} katalog · ${offers.size} ürün")
+            if (offers.isNotEmpty()) lines.add("Ürün görseli: $withImg/${offers.size} (%${withImg * 100 / offers.size})")
+            for (l in lines) card.addView(a.text(l, 13f, Theme.p.text2, Theme.regular), lp(t = dp(6)))
+            if (s.status == "error" && !s.lastError.isNullOrBlank()) {
+                card.addView(a.notice(Icon.INFO, plainError(s.lastError), Theme.p.danger, Theme.p.dangerSoft), lp(t = dp(10)))
+            }
+            col.addView(card, lp(t = dp(12)))
+        }
+        outer.addView(ScrollView(a).apply { isVerticalScrollBarEnabled = false; addView(col) }, lp(MATCH, 0, weight = 1f))
+        return outer
+    }
+
+    private fun statusRank(s: String) = when (s) { "error" -> 0; "partial" -> 1; "ok" -> 2; else -> 3 }
+
+    /** Teknik hata metnini kullanıcının anlayacağı kısa cümleye çevirir. */
+    private fun plainError(e: String): String = when {
+        "403" in e || "aşılmaya" in e -> "Market sitesi otomatik erişimi engelliyor; engel aşılmaz. Son kaydedilen veriler gösteriliyor."
+        "robots" in e -> "Market sitesi otomatik okumaya izin vermiyor; yalnızca resmî bağlantı gösteriliyor."
+        "bulunamadı" in e -> "Resmî sayfada şu an katalog bulunamadı. Her güncellemede yeniden aranıyor."
+        else -> "Son okuma başarısız oldu; bir sonraki güncellemede yeniden denenecek."
+    }
+}
+
 class SettingsScreen(a: MainActivity) : Screen(a) {
     override val tab: Tab get() = Tab.HOME
 
@@ -431,6 +502,11 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             }, lp(dp(40), dp(40), l = dp(8)))
             st.addView(r)
         }
+
+        // ---- Veri
+        val data = section("Veri kaynakları", Icon.GLOBE)
+        val errs = f.stores.count { it.status == "error" }
+        valueRow(data, "Kaynak durumu", if (errs > 0) "$errs hata" else "Tümü çalışıyor") { a.push(SourceStatusScreen(a)) }
 
         // ---- Hakkında
         val about = section("Hakkında", Icon.INFO)

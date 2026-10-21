@@ -105,6 +105,16 @@ object Notifier {
         } catch (e: Exception) { AppLog.e("notify.eval", e.message); null }
     }
 
+    /** Ön planda yeni veri geldiğinde: yeni kataloglar görülmüş sayılır (sonra aynı katalog için bildirim gelmez). */
+    fun markSeenInForeground(ctx: Context, feed: Feed, now: OffsetDateTime = OffsetDateTime.now()) {
+        try {
+            val us = UserStore(ctx)
+            val seen = us.seenCatalogs() ?: emptySet()
+            us.markCatalogsSeen(Digest.fresh(feed, seen, now).map { it.id })
+            ctx.getSystemService(NotificationManager::class.java)?.cancel(NOTIFY_ID)
+        } catch (e: Exception) { }
+    }
+
     /** Arka plan kontrollerini (yeniden) planlar. Bildirim kapalıysa iptal eder. */
     fun schedule(ctx: Context) {
         try {

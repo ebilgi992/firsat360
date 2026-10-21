@@ -1,3 +1,34 @@
+# Mağaza kaynakları — 0.7.0 (21.10.2026)
+
+Yalnızca resmî kaynaklar kullanılır. Akakçe, Cimri gibi toplayıcıların ve haber sitelerinin görselleri kopyalanmaz.
+Instagram kullanılmaz: kullanım koşulları izinsiz otomatik toplamayı yasaklıyor ve içerik çoğunlukla girişe bağlı.
+
+| Mağaza | Kaynak | Yöntem | Durum (21.10.2026 çalıştırması) |
+|---|---|---|---|
+| BİM | bim.com.tr aktüel + afişler + ürün sayfaları | HTML | Çalışıyor; görseller 0.7 düzeltmesiyle ürün sayfasından |
+| ŞOK | sokmarket.com.tr indirimli ürünler + kampanyalar + ürün sayfaları | HTML | Çalışıyor; ad/görsel hatası 0.7'de düzeltildi |
+| Migros | migros.com.tr JSON + Migroskop PDF | JSON/PDF | Çalışıyor (%100 görsel) |
+| A101 | a101.com.tr | HTML | **403: GitHub sunucularını engelliyor.** Aşılmaz; son kayıtlı veri |
+| Tarım Kredi | tkkoop.com.tr haftalık kampanyalar | HTML | Çalışıyor; sahte görsel 0.7'de kaldırıldı |
+| Hakmar | hakmar.com.tr/indirim | HTML (broşür görselleri) | Çalışıyor |
+| Watsons, Metro | Publitas | sayfa görselleri | Çalışıyor |
+| Bizim Toptan | bizimtoptan.com.tr/pages/katalog | flipbook | Çalışıyor |
+| Gratis | gratis.com/gratis-katalog → online.fliphtml5.com/gratiscom/… | flipbook | Bağlantı gömülü veride; 0.7'de bulunuyor (canlıda doğrulanacak) |
+| Rossmann (yeni) | rossmann.com.tr/kataloglar | keşif motoru | Canlıda ilk çalıştırmada doğrulanacak |
+| Onur Market (yeni) | kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz?region=istanbul/bursa/trakya | keşif + tarayıcı | İnsertler JavaScript ile yükleniyor |
+| CarrefourSA (yeni) | carrefoursa.com | keşif motoru | Ayrı broşür sayfası bulunamadı; yalnızca broşür adlı görsel/PDF kabul |
+| File Market (yeni) | filemarket.com.tr | keşif motoru | robots.txt otomatik erişimi kısıtlıyor olabilir → izin yoksa çalışmaz |
+| Özdilek, OLI, Sembol | — | — | Resmî broşür kaynağı bulunamadı; eklenmedi |
+
+## Değerlendirilen GitHub/hazır projeler
+| Proje | Sonuç |
+|---|---|
+| apify.com/caulleonard/tr-aktuel-scraper | Ücretli (kayıt başına ücret), lisans belirtilmemiş → kullanılmadı. Not: ŞOK kampanya bağlantılarını ana sayfadan keşfediyor, A101 verisini sayfa içi JSON'dan okuyor — ikisi bizde zaten var. |
+| github.com/dursunkatar/UcuzUrunum | C#, lisanssız (tüm hakları saklı), 8 commit, bakım görmüyor → kullanılmadı. |
+| Playwright (Microsoft, Apache-2.0) | Entegre edildi: JavaScript ile yüklenen broşür sayfaları için isteğe bağlı tarayıcı motoru. |
+
+---
+
 # Kaynak envanteri — Beta 0.4.0 (10 market)
 
 ## 0.4.0 eklemeleri (13.10.2026, ~17:30–20:35 Europe/Istanbul, WebFetch)

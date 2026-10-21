@@ -99,6 +99,8 @@ def test_store_last_check_is_latest_snapshot(two_days):
     sf, _, _ = two_days
     with sf() as s:
         for st in s.scalars(select(Store)):
+            if st.status == "never_run":
+                continue  # 0.7'de eklenen mağazaların anlık görüntüsü yok (yalnızca canlı keşif)
             assert st.last_success_at.astimezone().date() >= date(2026, 10, 13)
 
 

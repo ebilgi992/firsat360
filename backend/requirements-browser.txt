@@ -1,0 +1,1 @@
+playwright==1.56.0  # isteğe bağlı: JavaScript ile yüklenen broşür sayfaları (Apache-2.0)

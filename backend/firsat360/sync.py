@@ -228,6 +228,8 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
             report["errors"].append(f"ürün sayfaları: {exc.__class__.__name__}: {exc}")
         finally:
             client.close()
+    # 2c) Kalite ajanları + orkestratör: denetle → düzelt → yeniden denetle → raporla
+    report["quality"] = run_quality(sf, connectors if live else {}, settings, now, transport, sleep)
     # 3) Yeni katalog tespiti ve duyuru (tek işlem)
     with sf() as s:
         fresh, silent, bootstrap = detect_new_catalogs(s, settings, now)
@@ -273,10 +275,55 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
         path = export_feed(s, feed_path or settings.feed_export_path, today=now.astimezone(TR).date())
         report["feed"] = str(path)
         status_path = Path(path).with_name("status.json")
-        status_path.write_text(json.dumps(status_dict(s), ensure_ascii=False, indent=1), encoding="utf-8")
+        st = status_dict(s)
+        if report.get("quality"):
+            from .quality import compact
+            st["quality"] = compact(report["quality"])
+        status_path.write_text(json.dumps(st, ensure_ascii=False, indent=1), encoding="utf-8")
         report["status"] = str(status_path)
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     return report
+
+
+def run_quality(sf: sessionmaker, connectors: dict, settings: Settings, now: datetime, transport=None,
+                sleep=None, github=None) -> dict | None:
+    from .connectors.base import PoliteClient
+    from .httpcache import ConditionalCache
+    from .pipeline import run_all
+    from .productpages import verify_product_pages
+    from .quality import Context, GitHubReports, orchestrate, write_step_summary
+    kw = {"sleep": sleep} if sleep is not None else {}
+    client = None
+
+    def get_client():
+        nonlocal client
+        if client is None:
+            client = PoliteClient(settings.user_agent, settings.request_timeout_s, settings.min_request_interval_s,
+                                  transport=transport, cache=ConditionalCache(sf, settings.http_cache_dir), **kw)
+        return client
+
+    def retry_store(sid: str) -> dict:
+        if sid not in connectors:
+            return {"ok": False, "error": "bağlayıcı yok"}
+        r = run_all(sf, {sid: connectors[sid]}, settings, trigger="retry", transport=transport, only=[sid], sleep=sleep)
+        return r[0] if r else {"ok": False}
+
+    def reverify(stores: tuple[str, ...]) -> dict:
+        return verify_product_pages(sf, get_client(), settings.product_pages_per_store, now, stores=stores)
+
+    ctx = Context(sf=sf, today=now.astimezone(TR).date(), now=now,
+                  retry_store=retry_store if connectors else None, reverify=reverify if connectors else None,
+                  github=github if github is not None else GitHubReports.from_env())
+    try:
+        rep = orchestrate(ctx)
+        write_step_summary(rep)
+        return rep
+    except Exception as exc:  # noqa: BLE001 — kalite adımı günlük yayını asla durdurmaz
+        log.warning("kalite adımı başarısız: %s", exc)
+        return None
+    finally:
+        if client is not None:
+            client.close()
 
 
 def import_new_snapshots(sf: sessionmaker, dirs) -> dict:

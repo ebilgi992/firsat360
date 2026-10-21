@@ -415,9 +415,12 @@ def test_flipbook_parsers():
 
 # ------------------------------------------------------------------ ürün sayfası görsel doğrulaması
 def test_product_page_image_rules():
-    ok = page_row("bim", "https://www.bim.com.tr/p", '<meta property="og:image" content="https://cdn1.bim.com.tr/x.jpg">'
+    img = "https://cdn1.bim.com.tr/uploads/aktuel-urunler/1692_buyuk_543X467_7_x.jpg"
+    ok = page_row("bim", "https://www.bim.com.tr/p", f'<meta property="og:image" content="{img}">'
                   '<h1>AYÇİÇEK YAĞI 5 L</h1><main>445,00 ₺</main>')
-    assert ok.image_url == "https://cdn1.bim.com.tr/x.jpg" and ok.page_name == "AYÇİÇEK YAĞI 5 L"
+    assert ok.image_url == img and ok.page_name.split("\n")[0] == "AYÇİÇEK YAĞI 5 L"
+    banner = page_row("bim", "https://www.bim.com.tr/p", '<meta property="og:image" content="https://cdn1.bim.com.tr/x.jpg">')
+    assert banner.image_url is None  # ürün görseli kalıbına uymayan (afiş/genel) görsel kabul edilmez
     foreign = page_row("bim", "https://www.bim.com.tr/p", '<meta property="og:image" content="https://baska.site/x.jpg">')
     assert foreign.image_url is None  # mağazanın kendi alan adı değil → kabul edilmez
 
@@ -433,13 +436,13 @@ def test_verify_product_pages_applies_verified_image(sf, settings):
     def handler(request):
         if request.url.path == "/robots.txt":
             return httpx.Response(200, text="User-agent: *\nDisallow:\n")
-        return httpx.Response(200, text='<meta property="og:image" content="https://cdn1.bim.com.tr/dogru.jpg">'
+        return httpx.Response(200, text='<meta property="og:image" content="https://cdn1.bim.com.tr/uploads/aktuel-urunler/1692_buyuk_543X467_1_dogru.jpg">'
                                         '<h1>AYÇİÇEK YAĞI 5 L</h1><main>100,00 ₺</main>')
     client = PoliteClient("t", min_interval_s=0, transport=httpx.MockTransport(handler), sleep=lambda s: None)
     out = verify_product_pages(sf, client, now=NOW, stores=("bim",))
     with sf() as s:
         o = s.scalars(select(Offer)).one()
-        assert o.image_status == "verified" and o.image_url == "https://cdn1.bim.com.tr/dogru.jpg"
+        assert o.image_status == "verified" and o.image_url == "https://cdn1.bim.com.tr/uploads/aktuel-urunler/1692_buyuk_543X467_1_dogru.jpg"
     assert out["bim"]["pages"] == 1
 
 
@@ -508,3 +511,27 @@ def test_migroskop_pdf_probe_same_issue_only():
         return httpx.Response(404)
     c2 = MigroskopConnector().fetch(_client(no_pdf), NOW).catalogs[0]
     assert c2.pdf_url is None and c2.kind == "flipbook"  # uygulamada resmî sayfası açılır
+
+
+def test_daily_deals_rotate_each_day(sf):
+    """Günün İndirimleri her gün değişir: yeterli aday varken dün gösterilenler bugün tekrar edilmez."""
+    with sf() as s:
+        ensure_stores(s)
+        for st in ("bim", "sok", "a101"):
+            res = ConnectorResult(store_id=st, method="live_html", observed_at=NOW)
+            res.catalogs.append(CatalogData(id=f"{st}-c", title="t", kind="discount_list", official_url="u"))
+            for i in range(40):
+                res.offers.append(OfferData(name=f"{st} ürün {i}", price=Decimal("50"), price_text="50 ₺",
+                                            source_url="u", catalog_id=f"{st}-c",
+                                            store_declared_old_price=Decimal(str(70 + i)),
+                                            image_url=f"https://cdn1.bim.com.tr/{st}{i}.jpg", image_status="listing"))
+            ingest(s, res)
+        s.commit()
+        days = [set(daily_deals(s, date(2026, 10, d), now=NOW, limit=12, per_store=4)["offer_ids"])
+                for d in (14, 15, 16)]
+    assert all(len(x) == 12 for x in days)
+    assert not (days[0] & days[1]) and not (days[1] & days[2])  # ardışık günlerde ortak ürün yok
+    # Aynı gün iki kez hesaplanınca aynı sonuç (sabah/akşam çalıştırması)
+    with sf() as s:
+        again = set(daily_deals(s, date(2026, 10, 14), now=NOW, limit=12, per_store=4)["offer_ids"])
+    assert again == days[0]

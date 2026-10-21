@@ -43,6 +43,9 @@ def validate_offer(o) -> str | None:
     """Yayına engel bir sorun varsa açıklamasını döner."""
     if not o.name or len(o.name) < 2:
         return "ad yok"
+    from .imagematch import is_junk_name
+    if is_junk_name(o.name):
+        return f"ad yerine şablon metni okundu: {o.name!r}"
     if o.price is None:
         return "fiyat ayrıştırılamadı"
     if o.price <= 0 or o.price > MAX_PLAUSIBLE_PRICE:
@@ -138,10 +141,21 @@ def ingest(session: Session, result: ConnectorResult, trigger: str = "schedule")
         offer.product_url = o.product_url
         # Görsel dosyası kopyalanmaz; yalnızca mağazanın resmî CDN adresi saklanır. Gösterim, mağaza bazlı
         # image_policy ile feed üretiminde açılıp kapatılır.
-        if o.image_url or offer.image_status != "verified":
-            # Doğrulanmış ürün sayfası görseli, kaynağı görselsiz bir sonraki okumada silinmez.
+        if o.image_url and not (offer.image_status == "verified" and offer.image_url):
             offer.image_url, offer.image_large_url = o.image_url, o.image_large_url or o.image_url
-            offer.image_status = o.image_status or ("listing" if o.image_url else "none")
+            offer.image_status = o.image_status or "listing"
+        elif not offer.image_url and o.product_url:
+            # Kaynakta bu okumada görsel yoksa: aynı resmî ürün sayfasına sahip önceki kayıttaki görseli kullan
+            # (aynı ürün yeni bir kataloğa geçtiğinde görsel kaybolmasın). Görselsiz okuma mevcut görseli silmez.
+            prev = session.scalars(select(Offer).where(Offer.product_url == o.product_url, Offer.id != oid,
+                                                       Offer.image_url.is_not(None))
+                                   .order_by(Offer.last_seen_at.desc()).limit(1)).first()
+            if prev is not None:
+                offer.image_url, offer.image_large_url = prev.image_url, prev.image_large_url or prev.image_url
+                offer.image_status, offer.image_page_url = prev.image_status, prev.image_page_url
+                offer.image_checked_at = prev.image_checked_at
+            elif not offer.image_status:
+                offer.image_status = "none"
         offer.image_rights = "official_cdn_link" if offer.image_url else "none"
         offer.valid_from, offer.valid_to = o.valid_from, o.valid_to
         offer.last_seen_at = obs
@@ -166,6 +180,20 @@ def ingest(session: Session, result: ConnectorResult, trigger: str = "schedule")
             for st in stale:
                 st.published = False
                 delisted += 1
+        # Kaynaktaki katalog listesinden tamamen kalkan veya süresi (1 gün tolerans) dolan kataloglar: ürünleri
+        # yayından alınır. (Önceden yalnızca bu çalıştırmada okunan kataloglara bakılıyordu; eski BİM sekmeleri
+        # kaynaktan kalktığı hâlde ürünleri yayında kalıyordu.)
+        listed = {c.id for c in result.catalogs}
+        today_tr = _tr_day(obs)
+        if listed:
+            for st in session.scalars(select(Offer).where(Offer.store_id == result.store_id,
+                                                          Offer.published.is_(True))).all():
+                # Anlık görüntü (manual_snapshot) yalnızca bazı sayfaları içerebilir → "kalktı" çıkarımı yalnızca canlı okumada.
+                gone = result.method != "manual_snapshot" and st.catalog_id and st.catalog_id not in listed
+                expired = st.valid_to is not None and (today_tr - st.valid_to).days > 1
+                if gone or expired:
+                    st.published = False
+                    delisted += 1
     notes = [f"{delisted} ürün kaynakta artık yok → yayından kaldırıldı"] if delisted else []
     if duplicates:
         log.info("%s: %d mükerrer kayıt atlandı", result.store_id, duplicates)

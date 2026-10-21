@@ -344,6 +344,22 @@ def parse_flipbook_index(html: str, base_url: str, store_id: str, observed: date
         slug = re.sub(r"[^a-z0-9]+", "-", href.lower().split("//", 1)[-1])[-40:].strip("-")
         out.append(CatalogData(id=f"{store_id}-{slug}", title=title, kind="flipbook", official_url=href,
                                valid_from=start, valid_to=end, cover_url=img))
+    if not out:
+        # Bağlantı <a> olarak değil, sayfanın gömülü verisinde (Next.js/Nuxt JSON, CMS bloğu) olabilir (Gratis):
+        # ham HTML'de kaçışlı biçimler dahil flipbook adresleri aranır.
+        raw = html.replace("\\u002F", "/").replace("\\/", "/").replace("&amp;", "&")
+        page_title = clean(text_of(tree.css_first("h1"))) or None
+        for m in re.finditer(r"https?://[A-Za-z0-9.-]+/[^\s\"'<>\\]+", raw):
+            href = m.group(0).rstrip(".,;)")
+            if not any(h in _host(href) for h in FLIPBOOK_HOSTS) or href in seen or IMG_EXT.search(href):
+                continue
+            if _host(href) in ("fliphtml5.com",) or href.rstrip("/").count("/") < 3:
+                continue  # yalnızca alan adı (yayın değil)
+            seen.add(href)
+            start, end = parse_tr_range(page_title or "", observed)
+            slug = re.sub(r"[^a-z0-9]+", "-", href.lower().split("//", 1)[-1])[-40:].strip("-")
+            out.append(CatalogData(id=f"{store_id}-{slug}", title=page_title or "Katalog", kind="flipbook",
+                                   official_url=href, valid_from=start, valid_to=end))
     return out
 
 

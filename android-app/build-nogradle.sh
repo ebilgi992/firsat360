@@ -7,8 +7,8 @@
 # Çıktı: build-nogradle/FIRSAT360-<sürüm>-debug.apk  (minSdk 26, targetSdk 36)
 set -euo pipefail
 cd "$(dirname "$0")"
-VERSION_NAME="${VERSION_NAME:-0.6.1-beta}"
-VERSION_CODE="${VERSION_CODE:-8}"
+VERSION_NAME="${VERSION_NAME:-0.7.0-beta}"
+VERSION_CODE="${VERSION_CODE:-10}"
 # RELEASE=1: debug imzası atılmaz; imzasız release APK + Google Play için AAB üretilir. RELEASE_KEYSTORE verilirse
 # (RELEASE_KEY_ALIAS, RELEASE_STORE_PASS, RELEASE_KEY_PASS ortam değişkenleriyle) ikisi de yükleme anahtarıyla imzalanır.
 # Parolalar komut satırına/günlüğe yazılmaz (apksigner/jarsigner "env:" ile okur).

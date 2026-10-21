@@ -3,4 +3,7 @@
      boşsa uygulama içindeki veriyle çalışır. Kullanıcıya gösterilmez ve değiştirilemez. -->
 <resources>
     <string name="feed_url" translatable="false"></string>
+    <!-- "Hatalı bilgi bildir": GitHub'da önceden doldurulmuş issue formu. Günlük çalıştırmadaki kalite orkestratörü
+         "[Hatalı veri]" başlıklı bildirimleri okur, ürünü resmî sayfasından yeniden doğrular ve yanıtlar. -->
+    <string name="report_url" translatable="false">https://github.com/ebilgi992/firsat360/issues/new</string>
 </resources>

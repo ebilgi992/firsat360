@@ -25,6 +25,29 @@ DISCOUNT_CATALOG_ID = "sok-indirimli"
 CAMPAIGN_RE = re.compile(r"-prm-[0-9a-f-]{8,}")
 PRODUCT_RE = re.compile(r"-p-\d+$")
 TITLE_PRICE_RE = re.compile(r"(\d+[.,]\d{2})\s*TL", re.I)
+JUNK_NAMES = {"product-thumb", "product thumb", "product-image", "image", "img", "thumbnail", "urun", "ürün"}
+SOK_IMG_RE = re.compile(r"product-assets/", re.I)
+
+
+def card_name(card, a) -> str | None:
+    """Ürün adı: görselin alt metni (anlamlıysa) → başlık → bağlantı metni → bağlantının title özniteliği.
+    'product-thumb' gibi şablon metinleri ad sayılmaz."""
+    cands = []
+    for img in card.css("img[alt]"):
+        cands.append(img.attributes.get("alt"))
+    cands += [text_of(card.css_first("h1, h2, h3, h4, h5")), a.attributes.get("title"), text_of(a)]
+    for c in cands:
+        c = clean(c)
+        if c and c.lower() not in JUNK_NAMES and not price_tokens(c) and len(c) >= 3:
+            return c
+    return None
+
+
+def card_image(card) -> str | None:
+    u = find_image(card, "product-assets", pattern=SOK_IMG_RE)
+    return urljoin(BASE, u) if u else None
+
+
 VALID_FROM_RE = re.compile(r"Kampanya\s+(\d{1,2}\s+\S+)\s+tarihinden itibaren", re.I)
 
 
@@ -45,10 +68,7 @@ def parse_discount_list(html: str) -> tuple[list[OfferData], int]:
         if card is None:
             continue
         seen.add(full)
-        img = card.css_first("img[alt]")
-        name = (img.attributes.get("alt") if img is not None else None) or text_of(card.css_first("h2, h3, h4"))
-        if not name or name.lower() == "product-thumb":
-            name = text_of(card.css_first("h2, h3, h4")) or text_of(a)
+        name = card_name(card, a)
         struck, plain = [], []
         for el in card.css("*"):
             toks = price_tokens(el.text(deep=False).strip())
@@ -68,7 +88,7 @@ def parse_discount_list(html: str) -> tuple[list[OfferData], int]:
         if not name or price is None:
             rejected += 1
             continue
-        image = find_image(card, "product-assets")
+        image = card_image(card)
         offers.append(OfferData(name=clean(name), price=price, price_text=format_try(price), source_url=DISCOUNT_URL,
                                 image_url=image, image_large_url=image, image_status="listing" if image else None,
                                 catalog_id=DISCOUNT_CATALOG_ID, product_url=full, channel="online",
@@ -151,8 +171,8 @@ def parse_campaign_page(html: str, url: str, title: str, observed) -> tuple[Cata
         if card is None:
             continue
         seen.add(full)
-        img = card.css_first("img[alt]")
-        name = (img.attributes.get("alt") if img is not None else None) or text_of(card.css_first("h2, h3, h4"))
+        name = card_name(card, a)
+        image = card_image(card)
         toks = price_tokens(text_of(card))
         listed = parse_price(toks[0]) if toks else None
         price = title_price if title_price is not None else listed
@@ -164,6 +184,7 @@ def parse_campaign_page(html: str, url: str, title: str, observed) -> tuple[Cata
                                 price_text=f"{title_price} TL" if title_price is not None else toks[0],
                                 store_declared_old_price=old, condition=condition, source_url=url,
                                 catalog_id=cid, product_url=full, channel="magaza",
+                                image_url=image, image_large_url=image, image_status="listing" if image else None,
                                 valid_from=catalog.valid_from, valid_to=catalog.valid_to))
     return catalog, offers, rejected
 

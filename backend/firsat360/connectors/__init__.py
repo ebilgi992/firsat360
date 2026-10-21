@@ -1,11 +1,14 @@
 from .a101 import A101Connector
 from .bim import BimConnector
+from .discovery import SOURCES as DISCOVERY_SOURCES
+from .discovery import DiscoveryConnector
 from .extra import (A101_AFIS_URL, CompositeConnector, FlipbookConnector, FlipbookIndexConnector, FuncConnector,
                     HakmarConnector, MigroskopConnector, PublitasConnector, TkkoopConnector, parse_a101_afis)
 from .migros import MigrosConnector
 from .sok import SokConnector
 
-ALL_STORES = ("a101", "bim", "sok", "migros", "tkkoop", "hakmar", "watsons", "metro", "bizimtoptan", "gratis")
+ALL_STORES = ("a101", "bim", "sok", "migros", "tkkoop", "hakmar", "watsons", "metro", "bizimtoptan", "gratis",
+              "rossmann", "onur", "carrefoursa", "file")
 
 
 def live_connectors(max_pages: int = 8):
@@ -23,4 +26,6 @@ def live_connectors(max_pages: int = 8):
         "metro": PublitasConnector("metro", "https://brosurler.metro-tr.com/"),
         "bizimtoptan": FlipbookIndexConnector("bizimtoptan", "https://www.bizimtoptan.com.tr/pages/katalog"),
         "gratis": FlipbookIndexConnector("gratis", "https://www.gratis.com/gratis-katalog"),
+        # Alternatif toplama motoru: statik tarama → tarayıcıyla açma → bulunamadıysa raporla
+        **{sid: DiscoveryConnector(src) for sid, src in DISCOVERY_SOURCES.items()},
     }

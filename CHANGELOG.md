@@ -1,5 +1,31 @@
 # Değişiklik günlüğü
 
+## 0.7.0-beta — 21 Ekim 2026
+Canlı veritabanı (21.10.2026 04:49 çalıştırması) incelenerek bulunan kök nedenler düzeltildi.
+- **Ürün görselleri (kök neden):** ürün sayfası okuyucusu görseli yalnızca og:image/JSON-LD'de arıyordu; BİM, ŞOK ve TK
+  sayfalarında bunlar yok. Artık mağazaya özel ana görsel kalıbıyla sayfadaki tüm görseller (gecikmeli yükleme öznitelikleri,
+  srcset, noscript, stil içi, `/_next/image` sarmalayıcısı) taranıyor; en sık geçen/en büyük boyutlu ana görsel seçiliyor.
+- **Görsel silme hatası:** detay sayfası okunamayınca resmî listedeki doğru görsel siliniyordu → korunuyor.
+- **Sahte "doğrulanmış" görsel:** TK'da 212 ürüne sitenin genel paylaşım klasörü (`/storage/assets/images/seo/`) görsel diye
+  bağlanmıştı → kalıp dışı og:image reddediliyor; kalite ajanı mevcutları kaldırdı.
+- **BİM afişleri:** aynı klasördeki reklam afişleri ürüne bağlanabiliyordu → yalnızca `<anahtar>_kucuk/_buyuk_` ürün görseli kabul.
+- **ŞOK adları:** kampanya ürünleri "product-thumb" adıyla kaydediliyordu → gerçek ad; şablon adlar reddediliyor; kampanya
+  ürünlerinin görselleri de okunuyor.
+- **Kaldırılan sayfalar:** ana sayfaya yönlendirilen ürün sayfası "kaldırılmış" sayılır; oradaki görsel/ad eşleştirilmez.
+- **Eski kataloglar:** kaynaktan kalkan veya süresi dolan katalogların ürünleri yayından alınıyor (163 TK + 49 BİM ürünü yayındaydı).
+- **Günün İndirimleri her gün değişiyor:** aday havuzu genişledi (satıştaki aktüel ürünler), havuz güne göre gruplara bölünüp
+  sırayla gösteriliyor; ardışık günlerde ortak ürün yok (yeterli aday varken). Mağaza başına üst sınır korunuyor.
+- **Kalite ajanları + orkestratör** (`backend/firsat360/quality.py`): kaynak, katalog, ürün görseli, veri kalitesi, Günün
+  İndirimleri ve kullanıcı bildirimi ajanları her çalıştırmada denetler → orkestratör düzeltir → yeniden denetler → rapor
+  (status.json, Actions özeti, açık kalan hata varsa tek bir "Otomatik kalite raporu" issue'su).
+- **"Hatalı bilgi bildir"** (ürün ekranı): önceden doldurulmuş GitHub bildirimi; günlük çalıştırma ürünü resmî sayfasından
+  yeniden doğrular, sonucu bildirime yazar ve kapatır.
+- **Kaynak durumu ekranı** (Ayarlar → Veri kaynakları): mağaza bazlı durum, son başarılı okuma, ürün görseli oranı, anlaşılır hata.
+- **Yeni mağazalar (alternatif toplama motoru):** Rossmann, Onur Market (İstanbul/Bursa/Trakya), CarrefourSA, File Market.
+  Sıralı kaynak keşfi: statik HTML (PDF/flipbook/broşür görseli) → başsız Chromium (JavaScript ile yüklenen sayfalar) → bulunamazsa
+  uydurma yok, denemeler raporlanır. robots.txt'ye uyulur; 403/CAPTCHA/giriş aşılmaz.
+- **Gratis:** katalog bağlantısı sayfanın gömülü verisinde de aranıyor.
+
 ## 0.6.1-beta — 14 Ekim 2026
 - **Tamamen ücretsiz, sunucusuz:** yönetim paneli, HTTP API, sunucu zamanlayıcısı, Docker/Caddy yapılandırması
   kaldırıldı. Veri hattı yalnızca GitHub Actions'ta çalışır; uzaktan ayarlar `config/app_config.json` dosyasından.

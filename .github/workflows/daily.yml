@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  issues: write        # kalite orkestratörü: rapor issue'su + "[Hatalı veri]" bildirimlerine yanıt
   pages: write
   id-token: write
 
@@ -31,7 +32,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 170
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -57,6 +58,12 @@ jobs:
       - name: Bağımlılıklar
         run: pip install -r backend/requirements.txt
 
+      - name: Tarayıcı motoru (isteğe bağlı; kurulamazsa yalnızca statik tarama yapılır)
+        continue-on-error: true
+        run: |
+          pip install -r backend/requirements-browser.txt
+          python -m playwright install --with-deps chromium
+
       - name: Günlük senkronizasyon
         working-directory: backend
         env:
@@ -67,13 +74,14 @@ jobs:
           LOG_MAX_BYTES: "5242880"
           LOG_KEEP_DAYS: "7"
           NOTIFY_TIME: ${{ vars.NOTIFY_TIME || '09:00' }}
-          SCRAPER_USER_AGENT: ${{ vars.SCRAPER_USER_AGENT || 'FIRSAT360Bot/0.5 (+https://github.com/firsat360)' }}
+          SCRAPER_USER_AGENT: ${{ vars.SCRAPER_USER_AGENT || 'FIRSAT360Bot/0.7 (+https://github.com/ebilgi992/firsat360)' }}
           MIN_REQUEST_INTERVAL_S: "3"
-          PRODUCT_PAGES_PER_STORE: ${{ vars.PRODUCT_PAGES_PER_STORE || '150' }}
+          PRODUCT_PAGES_PER_STORE: ${{ vars.PRODUCT_PAGES_PER_STORE || '400' }}
           NTFY_URL: ${{ vars.NTFY_URL }}
           NTFY_TOPIC: ${{ vars.NTFY_TOPIC }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # yalnızca bu deponun issue'ları (Actions'ın kendi geçici anahtarı)
         run: |
           set -o pipefail
           ARGS=""

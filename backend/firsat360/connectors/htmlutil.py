@@ -66,9 +66,51 @@ def img_src(node: Node | None) -> str | None:
     return None
 
 
-def find_image(card: Node, must_contain: str, exclude: tuple[str, ...] = ()) -> str | None:
+_URL_IN_TEXT = re.compile(r"""(?:https?:)?//[^\s"'<>()\\]+|/[^\s"'<>()\\]+""")
+_IMG_EXT = re.compile(r"\.(?:jpe?g|png|webp|avif)(?:[?#]|$)", re.I)
+
+
+def unwrap_image_url(u: str | None) -> str | None:
+    """Görsel optimizasyon sarmalayıcılarını çözer: ``/_next/image?url=<kodlu>`` → asıl adres; HTML varlıkları."""
+    if not u:
+        return None
+    from urllib.parse import parse_qs, unquote, urlparse
+    u = u.strip().replace("&amp;", "&")
+    if "/_next/image" in u and "url=" in u:
+        inner = parse_qs(urlparse(u).query).get("url", [None])[0]
+        if inner:
+            u = unquote(inner)
+    return u
+
+
+def all_image_urls(node: Node | None) -> list[str]:
+    """Bir düğümün içindeki TÜM görsel adresleri, belge sırasıyla: bilinen gecikmeli yükleme öznitelikleri, srcset'in
+    her öğesi, bilinmeyen öznitelikler (data-* vb.), stil içi background-image ve <noscript> içeriği.
+    Sitenin hangi gecikmeli yükleme kitaplığını kullandığını bilmeden de görsel bulunur."""
+    if node is None:
+        return []
+    from urllib.parse import unquote
+    raw = unquote(node.html or "").replace("&amp;", "&")
+    out: list[str] = []
+    for m in _URL_IN_TEXT.finditer(raw):
+        u = m.group(0).rstrip(".;,")
+        if _IMG_EXT.search(u) or "/_next/image" in u or "/cdn-cgi/image/" in u:
+            u = unwrap_image_url(u)
+            if u and u not in out and not u.startswith("data:"):
+                out.append(u)
+    return out
+
+
+def find_image(card: Node, must_contain: str, exclude: tuple[str, ...] = (), pattern: re.Pattern | None = None) -> str | None:
+    """Karttaki ürün görseli. Önce normal <img>/<source> öznitelikleri, bulunamazsa kartın tüm HTML'i taranır
+    (gecikmeli yüklenen ve <noscript> içindeki görseller)."""
+    def ok(u: str | None) -> bool:
+        return bool(u) and must_contain in u and not any(x in u for x in exclude) and (pattern is None or bool(pattern.search(u)))
     for img in card.css("img, source"):
-        u = img_src(img)
-        if u and must_contain in u and not any(x in u for x in exclude):
+        u = unwrap_image_url(img_src(img))
+        if ok(u):
+            return u
+    for u in all_image_urls(card):
+        if ok(u):
             return u
     return None

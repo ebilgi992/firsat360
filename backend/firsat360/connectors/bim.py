@@ -19,6 +19,9 @@ AFIS_URL = BASE + "/Categories/680/afisler.aspx"
 AFIS_KEY_RE = re.compile(r"Bim_AfisKey=(\d+)")
 KEY_RE = re.compile(r"Bim_AktuelTarihKey=(\d+)")
 DETAIL_RE = re.compile(r"/aktuel-urunler/[^/]+/aktuel\.aspx")
+# Ürün görseli dosya adı kalıbı: <katalog anahtarı>_kucuk_… (liste) / _buyuk_… (detay). Aynı klasördeki reklam
+# afişleri (ör. "986_aycicek-yagi-…-hc.jpg") bu kalıba uymaz → ürüne yanlış görsel bağlanmaz.
+PRODUCT_IMG_RE = re.compile(r"/uploads/aktuel-urunler/\d+_(?:kucuk|buyuk)_", re.I)
 
 
 def parse_tabs(html: str, observed: date) -> list[CatalogData]:
@@ -92,7 +95,7 @@ def parse_products(html: str, page_url: str, catalog_id: str | None) -> tuple[li
                 link = urljoin(BASE, href)
                 break
         variant = _variant_text(card)
-        image = find_image(card, "/uploads/aktuel-urunler/")
+        image = find_image(card, "/uploads/aktuel-urunler/", pattern=PRODUCT_IMG_RE)
         image = urljoin(BASE, image) if image else None
         key = (brand, name, variant, price)
         if key in seen:

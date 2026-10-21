@@ -43,10 +43,10 @@ def test_attach_afis_links_to_product_catalog_or_creates_poster_catalog():
 
 @pytest.mark.fixture_data
 def test_product_images_from_listing_cards():
-    bim_html = """<div class="product"><a href="/aktuel-urunler/x-1-1/aktuel.aspx"><img data-src="https://cdn1.bim.com.tr/uploads/aktuel-urunler/1_x.jpg"></a>
+    bim_html = """<div class="product"><a href="/aktuel-urunler/x-1-1/aktuel.aspx"><img data-src="https://cdn1.bim.com.tr/uploads/aktuel-urunler/1692_kucuk_543X467_9034_27_0117_vector-smart-object.jpg"></a>
       <h2 class="subTitle">Marka</h2><h2 class="title">Ürün</h2><div class="quantify">10,<span>00</span> ₺</div></div>"""
     offers, _ = parse_products(bim_html, "https://www.bim.com.tr/x", "bim-1")
-    assert offers[0].image_url == "https://cdn1.bim.com.tr/uploads/aktuel-urunler/1_x.jpg"
+    assert offers[0].image_url.endswith("/1692_kucuk_543X467_9034_27_0117_vector-smart-object.jpg")
     sok_html = """<div><a href="/milka-oreo-300-g-p-7196"><img alt="Milka Oreo 300 g"
       src="https://images.ceptesok.com/cdn-cgi/image/width=600/product-assets/sub-folder/abc.png"></a><span>199,00₺</span></div>"""
     offers, _ = parse_discount_list(sok_html)

@@ -78,16 +78,46 @@ STORES = {
         "legal_note": "robots.txt (13.10.2026): /search, /cart, /checkout ve filtre parametreleri yasak; "
                       "/gratis-katalog yasak değil. Katalog fliphtml5 üzerinde; yalnızca kapak + resmî bağlantı.",
     },
+    "rossmann": {
+        "name": "Rossmann",
+        "official_url": "https://www.rossmann.com.tr/",
+        "catalog_url": "https://www.rossmann.com.tr/kataloglar",
+        "legal_note": "robots.txt (21.10.2026): hesap/sepet/arama/filtre yolları yasak; /kataloglar CMS sayfası. "
+                      "Alternatif toplama motoru (statik → tarayıcı). Kullanım koşulları henüz okunmadı.",
+    },
+    "onur": {
+        "name": "Onur Market",
+        "official_url": "https://kurumsal.onurmarket.com/",
+        "catalog_url": "https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz",
+        "legal_note": "İnsertler resmî kurumsal sitede bölge bazlı (İstanbul, Bursa, Trakya), JavaScript ile yükleniyor "
+                      "(21.10.2026). robots.txt okunamadı → her çalıştırmada yeniden kontrol edilir.",
+    },
+    "carrefoursa": {
+        "name": "CarrefourSA",
+        "official_url": "https://www.carrefoursa.com/",
+        "catalog_url": "https://www.carrefoursa.com/",
+        "legal_note": "Resmî sitede 'Katalog Ürünleri' bölümü var; ayrı broşür sayfası bulunamadı (21.10.2026). "
+                      "Keşif motoru yalnızca broşür adlı görsel/PDF kabul eder.",
+    },
+    "file": {
+        "name": "File Market",
+        "official_url": "https://www.filemarket.com.tr/",
+        "catalog_url": "https://www.filemarket.com.tr/",
+        "legal_note": "robots.txt otomatik erişimi kısıtlıyor (21.10.2026 gözlemi); bağlayıcı robots.txt izin "
+                      "vermezse çalışmaz ve durumu raporlar.",
+    },
 }
 
 # Uygulamadaki mağaza rengi ve kısa ad (logo kopyalanmaz; yalnızca renkli monogram).
 STORE_STYLE = {
     "a101": ("#00A0E3", "A101"), "bim": ("#E30613", "BİM"), "sok": ("#F2B600", "ŞOK"), "migros": ("#F27A00", "M"),
     "tkkoop": ("#0B8A3E", "TK"), "hakmar": ("#D7141A", "H"), "watsons": ("#00A3AD", "W"), "metro": ("#00327D", "MT"),
-    "bizimtoptan": ("#E2001A", "BZ"), "gratis": ("#E6007E", "G"),
+    "bizimtoptan": ("#E2001A", "BZ"), "gratis": ("#E6007E", "G"), "rossmann": ("#C3002F", "R"),
+    "onur": ("#E30613", "O"), "carrefoursa": ("#004E9F", "C"), "file": ("#E4002B", "F"),
 }
 STORE_KIND = {"tkkoop": "market", "hakmar": "market", "watsons": "kozmetik", "metro": "toptan",
-              "bizimtoptan": "toptan", "gratis": "kozmetik"}
+              "bizimtoptan": "toptan", "gratis": "kozmetik", "rossmann": "kozmetik", "onur": "market",
+              "carrefoursa": "market", "file": "market"}
 
 # Europe/Istanbul saatine göre günde iki kontrol (sabah ve akşam). Dakikalar sunucu yükünü dağıtmak için kaydırıldı.
 DEFAULT_SCHEDULE = {
@@ -117,7 +147,8 @@ class Settings:
     alert_webhook_url: str = field(default_factory=lambda: os.getenv("ALERT_WEBHOOK_URL", ""))
     enabled_live_stores: tuple[str, ...] = field(default_factory=lambda: tuple(
         s for s in os.getenv(
-        "LIVE_STORES", "a101,bim,sok,migros,tkkoop,hakmar,watsons,metro,bizimtoptan,gratis").split(",") if s))
+        "LIVE_STORES", "a101,bim,sok,migros,tkkoop,hakmar,watsons,metro,bizimtoptan,gratis,rossmann,onur,carrefoursa,file")
+        .split(",") if s))
 
     # ---- günlük senkronizasyon, duyuru ve push
     http_cache_dir: str = field(default_factory=lambda: os.getenv("HTTP_CACHE_DIR", str(ROOT / "backend" / "data" / "http-cache")))
@@ -136,7 +167,7 @@ class Settings:
     keep_price_history_days: int = field(default_factory=lambda: int(os.getenv("KEEP_PRICE_HISTORY_DAYS", "180")))
     keep_run_log_days: int = field(default_factory=lambda: int(os.getenv("KEEP_RUN_LOG_DAYS", "60")))
 
-    product_pages_per_store: int = field(default_factory=lambda: int(os.getenv("PRODUCT_PAGES_PER_STORE", "150")))
+    product_pages_per_store: int = field(default_factory=lambda: int(os.getenv("PRODUCT_PAGES_PER_STORE", "400")))
 
     @property
     def push_enabled(self) -> bool:

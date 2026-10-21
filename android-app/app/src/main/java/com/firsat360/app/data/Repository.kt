@@ -83,7 +83,9 @@ class Repository(private val ctx: Context) {
             var parsed: Feed? = null
             if (r.status == FeedFetch.Status.UPDATED && r.text != null) {
                 parsed = try { Feed.parse(r.text) } catch (e: Exception) { null }
-                if (parsed != null) Notifier.evaluate(ctx, parsed)
+                // Uygulama açıkken bildirim gösterilmez: kullanıcı yeni katalogları zaten ekranda görür.
+                // Bildirim yalnızca arka planda, ayarlanan saatte (Notifier.runCheck) gelir.
+                if (parsed != null) Notifier.markSeenInForeground(ctx, parsed)
             }
             val err = if (r.status == FeedFetch.Status.FAILED) {
                 if (!Sync.online(ctx)) "İnternet bağlantısı yok. Son kaydedilen fırsatlar gösteriliyor."
