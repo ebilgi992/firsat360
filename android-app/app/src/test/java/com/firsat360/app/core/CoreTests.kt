@@ -400,6 +400,12 @@ fun main(args: Array<String>) {
     val dupUrl = listOf(onurCats[0], onurCats[0].copy(id = "onur-istanbul-944b", officialUrl = "https://kurumsal.onurmarket.com/y"))
     check("dedupe.sameContentDifferentUrl", CatalogRules.collapse(dupUrl, "istanbul").size == 1)
 
+    // köprü: PDF tarih metni (ŞOK kurumsal)
+    check("trdates.single", TrDates.range("21 - 27 Ekim 2026", d21) == (LocalDate.of(2026, 10, 21) to LocalDate.of(2026, 10, 27)))
+    check("trdates.twoMonths", TrDates.range("24 Eylül - 07 Ekim 2026", d21) == (LocalDate.of(2026, 9, 24) to LocalDate.of(2026, 10, 7)))
+    check("trdates.noYear", TrDates.range("16 Ekim - 1 Kasım", d21) == (LocalDate.of(2026, 10, 16) to LocalDate.of(2026, 11, 1)))
+    check("trdates.none", TrDates.range("Haftanın Fırsatları", d21) == null)
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)

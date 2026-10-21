@@ -88,7 +88,7 @@ class SourceAgent:
         with ctx.sf() as s:
             for st in s.scalars(select(Store).where(Store.enabled.is_(True))):
                 if st.status != "error":
-                    continue
+                    continue  # client_bridge: sunucu kaynağı değil, denetlenmez
                 err = (st.last_error or "")[:200]
                 blocked = "403" in err or "robots" in err.lower() or "aşılmaya çalışılmadı" in err
                 fix = None

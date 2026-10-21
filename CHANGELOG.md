@@ -1,5 +1,20 @@
 # Değişiklik günlüğü
 
+## 1.4.0 — 21 Ekim 2026
+- **İstemci Katalog Köprüsü (6 market):** A101, ŞOK, Migros (Migroskop), Gratis, CarrefourSA ve Rossmann broşürleri
+  artık sunucuda kazınmıyor. `config/client_bridge.json` (`"client_rendered": true`) → feed `client_bridge` alanı →
+  uygulama market kartına dokunulunca resmî sayfayı cihazda yükleme katmanının arkasında açar, siteye özel betik
+  (`assets/bridge/<profil>.js`) broşürü okur ve doğrudan yerel okuyucuya geçer:
+  - A101 afişleri (Next.js gömülü verisi + DOM), Migroskop Cover/Ad sayfaları, FlipHTML5 kitaplarının (CarrefourSA,
+    Gratis) tam sayfa listesi → yerel tam ekran galeri;
+  - ŞOK resmî PDF'leri (başlık + tarih) → yerel PDF okuyucu (birden çok broşürde seçim);
+  - Gratis/Rossmann mağaza sayfası → resmî katalog görüntüleyicisine (izinli alanlar, en çok 2 adım) geçiş.
+  Doğrulama sayfaları otomatik geçilmez (kullanıcı tamamlar). Okunan sayfalar cihazda 3 gün saklanır → sonraki açılış anında.
+- Market ekranında **"Güncel broşürü aç"**; durum etiketi "Resmî broşür". Sunucu bu marketler için hata değil
+  `client_bridge` durumu yazar; ürün fiyatları (ŞOK, Migros) sunucuda toplanmaya devam eder.
+- **React Native başvuru bileşeni** `clients/react-native/` (`CatalogBridge.tsx`, `targetMarket` prop'u): aynı betikler
+  `postMessage` sarmalayıcısıyla (`scripts/gen_rn_bridge.py` üretir), yerel FlatList galeri ve react-native-pdf.
+
 ## 1.3.0 — 21 Ekim 2026
 - **Kesintisiz yerel geçiş (A101, CarrefourSA):** kullanıcı kartı açar → resmî sayfa WebView'de, üstünde
   "Resmî siteden güncel broşürler alınıyor…" katmanı (+ "Sayfayı göster") → enjekte betik sayfayı kaydırıp büyük dikey

@@ -232,9 +232,13 @@ fun minuteLabel(m: Int): String = String.format(java.util.Locale.ROOT, "%02d.%02
 
 /** Raf kartı: güncel broşür varsa onun kapağı; yoksa mağazanın resmî broşür sayfası (uygulama içinde tam ekran). */
 fun MainActivity.shelfCard(e: com.firsat360.app.core.ShelfEntry): View {
-    val c = e.catalog ?: Catalog(id = "web-${e.store.id}", storeId = e.store.id, title = "Güncel broşür ve afişler",
-        kind = "flipbook", validFrom = null, validTo = null, officialUrl = e.store.brochureUrl ?: e.store.catalogUrl,
-        sourceMethod = "official_page", observedAt = null, offerCount = 0)
+    val cached = if (e.bridge != null) com.firsat360.app.data.DeviceBrochures.get(this, e.store.id) else null
+    val c = e.catalog ?: Catalog(id = "web-${e.store.id}", storeId = e.store.id,
+        title = if (e.bridge != null) "Güncel broşür" else "Güncel broşür ve afişler",
+        kind = "flipbook", validFrom = null, validTo = null,
+        officialUrl = e.bridge?.url ?: e.store.brochureUrl ?: e.store.catalogUrl,
+        sourceMethod = "official_page", observedAt = null, offerCount = 0,
+        coverUrl = cached?.pages?.firstOrNull())
     val card = catalogCard(c, e.store.name, today) { openBrochure(e) }
     if (e.others > 0) card.addView(text("+${e.others} katalog daha", 11.5f, Theme.p.accent, Theme.semibold, 1),
         lp(l = dp(12), b = dp(12)))
@@ -248,16 +252,24 @@ fun MainActivity.openBrochure(e: com.firsat360.app.core.ShelfEntry) {
         c != null && c.hasPages && com.firsat360.app.data.ImageLoader.enabled -> openReader(c.id)
         c != null && c.hasPdf -> push(PdfScreen(this, c.id))
         c != null && !c.webOnly -> openCatalog(c.id)
-        else -> {
-            // Bu cihazda son 3 günde resmî sayfadan toplanmış sayfalar varsa doğrudan okuyucu; yoksa resmî sayfa
-            val cached = com.firsat360.app.data.DeviceBrochures.get(this, e.store.id)
-            if (cached != null && com.firsat360.app.data.ImageLoader.enabled) {
-                val ps = cached.pages.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", cached.sourceUrl, true) }
-                push(CatalogReaderScreen(this, null, 0, null, "${e.store.name} broşür", extraPages = ps))
-            } else push(WebScreen(this, c?.officialUrl ?: e.store.brochureUrl ?: e.store.catalogUrl,
-                "${e.store.name} broşür", catalog = true, storeId = e.store.id))
-        }
+        else -> openBridge(e.store, e.bridge, c?.officialUrl)
     }
+}
+
+/**
+ * İstemci katalog köprüsü: market kartına dokunulunca. Bu cihazda son 3 günde resmî sayfadan okunmuş sayfalar varsa
+ * doğrudan yerel okuyucu; yoksa resmî sayfa yükleme katmanıyla açılır, profil betiği broşürü okur ve yerel okuyucuya geçer.
+ */
+fun MainActivity.openBridge(store: com.firsat360.app.core.Store, bridge: com.firsat360.app.core.BridgeEntry?, fallbackUrl: String? = null) {
+    val cached = com.firsat360.app.data.DeviceBrochures.get(this, store.id)
+    if (cached != null && com.firsat360.app.data.ImageLoader.enabled) {
+        val ps = cached.pages.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", cached.sourceUrl, true) }
+        push(CatalogReaderScreen(this, null, 0, null, "${store.name} broşür", extraPages = ps))
+        return
+    }
+    push(WebScreen(this, bridge?.url ?: fallbackUrl ?: store.brochureUrl ?: store.catalogUrl, "${store.name} broşür",
+        catalog = true, storeId = store.id, profile = bridge?.profile ?: "generic",
+        allowedHosts = bridge?.allowedHosts ?: emptyList()))
 }
 
 /** Raf sırası: yukarı/aşağı ile taşınır, "Varsayılan" büyüklük sırasına döner. Yalnızca cihazda saklanır. */

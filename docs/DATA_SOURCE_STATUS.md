@@ -1,4 +1,21 @@
-# Veri kaynağı durumu — 1.1.0 (canlı veritabanı, 21.10.2026 17:15 UTC)
+# Veri kaynağı durumu
+
+## 1.4.0 — İstemci Katalog Köprüsü
+
+Bu 6 marketin **broşürleri sunucuda kazınmaz** (`config/client_bridge.json`, `"client_rendered": true`); sunucu
+durumu `client_bridge` yazar (hata değil). Uygulama resmî sayfayı kullanıcı dokunduğunda cihazda açar ve broşürü
+yerel okuyucuya aktarır. Ürün fiyatı toplama (ŞOK, Migros sanal market) sunucuda sürer.
+
+| Market | Resmî sayfa | Profil | Uygulamada |
+|---|---|---|---|
+| A101 | https://www.a101.com.tr/afisler | a101 | afiş görselleri → okuyucu |
+| ŞOK | https://kurumsal.sokmarket.com.tr/tr/firsatlar | sok | resmî PDF → PDF okuyucu |
+| Migros | https://migroskop.migros.com.tr/migroskop | migroskop | Migroskop sayfaları → okuyucu (money.com.tr PDF arşivi sunucuda kalır) |
+| Gratis | https://www.gratis.com/gratis-katalog | fliphtml5 | FlipHTML5 kitabı → okuyucu |
+| CarrefourSA | https://katalog.carrefoursa.com/books/mwis | fliphtml5 | FlipHTML5 kitabı → okuyucu |
+| Rossmann | https://www.rossmann.com.tr/kataloglar | generic | flipbook/PDF/büyük görseller → okuyucu |
+
+## 1.1.0 (canlı veritabanı, 21.10.2026 17:15 UTC)
 
 Güncel tablo her çalıştırmada üretilir: `status.json` (GitHub Pages) ve uygulamada Ayarlar → Kaynak durumu.
 Kurtarma ayrıntıları: `CATALOG_RECOVERY_REPORT.md`. Zamanlama: 08:05 ve 00:05 (İstanbul). Şimdi dene: Actions → gunluk-veri → stores.

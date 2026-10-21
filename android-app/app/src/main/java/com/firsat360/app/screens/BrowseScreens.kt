@@ -71,11 +71,11 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
             val info = a.card()
             val row = a.hbox()
             val statusLabel = when (store.status) {
-                "ok", "partial" -> "Güncel"; "link_only" -> "Katalog"
+                "ok", "partial" -> "Güncel"; "link_only" -> "Katalog"; "client_bridge" -> "Resmî broşür"
                 "error" -> "Güncelleniyor"; else -> "Yakında"
             }
             val (fg, bg) = when (store.status) {
-                "ok", "partial", "link_only" -> Theme.p.ok to Theme.p.okSoft
+                "ok", "partial", "link_only", "client_bridge" -> Theme.p.ok to Theme.p.okSoft
                 else -> Theme.p.warn to Theme.p.warnSoft
             }
             row.addView(a.pill(statusLabel, fg, bg))
@@ -86,6 +86,10 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
                 info.addView(a.notice(Icon.CLOCK, "Bu marketin son güncellemesi gecikti; gösterilen fırsatlar " +
                     "${Dates.relative(store.lastSuccessAt, a.now)} alındı. Fiyatlar değişmiş olabilir.", Theme.p.warn, Theme.p.warnSoft),
                     lp(t = dp(10)))
+            }
+            a.feed.clientBridge[store.id]?.let { br ->
+                // İstemci köprüsü: resmî broşür sayfası cihazda açılır, sayfalar doğrudan yerel okuyucuya aktarılır
+                info.addView(a.button("Güncel broşürü aç", Icon.CATALOG, true) { a.openBridge(store, br) }, lp(MATCH, WRAP, t = dp(12)))
             }
             val btns = a.hbox()
             btns.addView(a.button("Resmî sayfa", Icon.GLOBE, false) { a.openWeb(store.catalogUrl, store.name) }, lp(0, WRAP, weight = 1f))

@@ -263,7 +263,9 @@ fun siteFamily(host: String?): String? {
 }
 
 class WebScreen(a: MainActivity, private val url: String, private val title: String,
-                private val catalog: Boolean = false, private val storeId: String? = null) : Screen(a) {
+                private val catalog: Boolean = false, private val storeId: String? = null,
+                /** Köprü okuma profili (assets/bridge/<profile>.js) ve izinli alan adı aileleri (feed client_bridge). */
+                private val profile: String = "generic", private val allowedHosts: List<String> = emptyList()) : Screen(a) {
     override val tab: Tab get() = Tab.STORES
     private var web: WebView? = null
 
@@ -345,7 +347,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     // Akış (kullanıcı market kartına dokunduğunda başlar):
     //  1. Resmî sayfa bu WebView'de, kullanıcının kendi bağlantısıyla açılır; üstünde yerel bir yükleme katmanı
     //     ("Resmî siteden güncel broşürler alınıyor…") ve "Sayfayı göster" düğmesi vardır (kullanıcı her an siteyi görebilir).
-    //  2. Sayfa yüklenince EXTRACT_JS çalıştırılır: tembel yüklenen görseller için sayfa adım adım kaydırılır, ardından
+    //  2. Sayfa yüklenince assets/bridge/common.js + <profil>.js çalıştırılır: tembel yüklenen görseller için sayfa adım adım kaydırılır, ardından
     //     büyük ve dikey (broşür/afiş sayfası oranında) görsellerin en yüksek çözünürlüklü adresi toplanır.
     //  3. Görsel sayısı art arda iki ölçümde sabitse (≥2 sayfa) WebView kapanır ve yerel tam ekran okuyucu açılır.
     //  4. Bot sınaması / doğrulama sayfası görülürse katman kalkar: kullanıcı adımı KENDİSİ tamamlar (otomatik çözülmez);
@@ -391,7 +393,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     private fun poll(view: WebView) {
         if (handedOff || web == null) { extracting = false; return }
         try {
-            view.evaluateJavascript(EXTRACT_JS) { raw -> onExtracted(view, raw) }
+            view.evaluateJavascript(com.firsat360.app.data.BridgeScripts.get(a, profile)) { raw -> onExtracted(view, raw) }
         } catch (e: Exception) { extracting = false; hideOverlay(null) }
     }
 
@@ -402,16 +404,34 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
             if (inner == null) null else com.firsat360.app.core.Json.parse(inner) as? Map<*, *>
         } catch (e: Exception) { null }
         polls++
-        if (res?.get("challenge") == true) {
-            // Doğrulama sayfası: otomatik geçilmez. Kullanıcı görür ve kendisi tamamlar.
-            extracting = false
-            hideOverlay("Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.")
-            return
+        when (res?.get("type")) {
+            "challenge" -> {
+                // Doğrulama sayfası: otomatik geçilmez. Kullanıcı görür ve kendisi tamamlar; sayfa yenilenince sürer.
+                extracting = false
+                hideOverlay("Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.")
+                return
+            }
+            "pdf" -> {
+                val items = ((res["items"] as? List<*>) ?: emptyList<Any>()).mapNotNull { it as? Map<*, *> }
+                    .mapNotNull { m -> val u = m["url"] as? String
+                        if (u != null && u.startsWith("https://") && hostAllowed(u)) Triple(u, (m["title"] as? String).orEmpty(), (m["dates"] as? String).orEmpty()) else null }
+                    .distinctBy { it.first }
+                if (items.isNotEmpty()) { handOffPdf(items); return }
+            }
+            "navigate" -> {
+                val to = res["url"] as? String
+                if (to != null && to.startsWith("https://") && hostAllowed(to) && to != view.url && navigations < 2) {
+                    navigations++; lastCount = -1; polls = 0
+                    overlayText?.text = "Resmî katalog açılıyor…"
+                    extracting = false
+                    view.loadUrl(to)  // onPageFinished → okuma yeniden başlar
+                    return
+                }
+            }
         }
-        val base = siteFamily(Uri.parse(view.url ?: url).host)
         val pages = ((res?.get("urls") as? List<*>) ?: emptyList<Any>()).mapNotNull { it as? String }
-            .filter { u -> u.startsWith("https://") && siteFamily(Uri.parse(u).host) == base }
-            .distinctBy { it.substringBefore('?') }.take(80)
+            .filter { it.startsWith("https://") && hostAllowed(it) }.distinct()
+        if (pages.size > collected.size) collected = pages
         // Geçiş: sayfanın sonuna ulaşıldı VE son iki ölçüm aynı (tembel görseller yüklendi) → eksik sayfa kalmaz.
         val atEnd = res?.get("end") == true
         if (pages.size >= 2 && pages.size == lastCount && atEnd) { handOff(pages); return }
@@ -426,6 +446,37 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
             return
         }
         view.postDelayed({ poll(view) }, POLL_MS)
+    }
+
+    private var navigations = 0
+
+    /** Görsel/PDF/gezinme hedefi izinli mi: feed'deki alan adı aileleri; yoksa açılan sayfanın kendi ailesi. */
+    private fun hostAllowed(u: String): Boolean {
+        val fam = siteFamily(Uri.parse(u).host) ?: return false
+        val allowed = if (allowedHosts.isNotEmpty()) allowedHosts.mapNotNull { siteFamily(it) }
+            else listOfNotNull(siteFamily(Uri.parse(url).host))
+        return fam in allowed
+    }
+
+    /** PDF broşür(ler): tek ise doğrudan yerel PDF okuyucu; birden çoksa kısa seçim listesi. */
+    private fun handOffPdf(items: List<Triple<String, String, String>>) {
+        if (handedOff) return
+        handedOff = true; extracting = false
+        fun open(i: Int) {
+            val (u, t, d) = items[i]
+            val range = com.firsat360.app.core.TrDates.range(d, a.today)
+            val c = com.firsat360.app.core.Catalog("bridge-${storeId ?: "x"}-${u.hashCode().toUInt()}", storeId ?: "",
+                t.ifBlank { title }, "pdf", range?.first?.toString(), range?.second?.toString(), url, "client_bridge",
+                null, 0, pdfUrl = u)
+            a.replaceTop(PdfScreen(a, c.id, c))
+        }
+        if (items.size == 1) { open(0); return }
+        try {
+            android.app.AlertDialog.Builder(a).setTitle(title)
+                .setItems(items.map { (_, t, d) -> listOf(t, d).filter { it.isNotBlank() }.joinToString(" · ") }.toTypedArray()) { _, i -> open(i) }
+                .setOnCancelListener { handedOff = false; hideOverlay(null) }
+                .show()
+        } catch (e: Exception) { open(0) }
     }
 
     /** Yerel okuyucuya geçiş: WebView yığından çıkar, yerine okuyucu açılır (geri → bir önceki ekran). */
@@ -452,29 +503,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         private const val POLL_MS = 900L
         private const val MAX_POLLS = 16  // ≈ 15 sn
 
-        /**
-         * Sayfada çalışan tek seferlik okuma betiği (her ölçümde yeniden çalışır, durum tutmaz):
-         *  - Doğrulama/bot sınaması sayfası tespiti (Cloudflare "challenge", Turnstile, reCAPTCHA çerçevesi) → {challenge:true}
-         *  - Tembel yükleme için sayfayı aşağı kaydırma (her çağrıda bir ekran; görseller yüklendikçe ölçüm büyür)
-         *  - Aday: <img> (currentSrc, srcset'in en genişi, data-src/data-original/data-lazy) ve <picture><source srcset>
-         *  - Filtre: yüklenmiş ve ≥500 px genişlik, yükseklik ≥ genişliğin 0,9'u (broşür/afiş sayfası; bant/logo değil)
-         *  - Belge sırası korunur (sayfa sırası).
-         */
-        const val EXTRACT_JS = """(function(){try{
-var d=document,t=(d.title||'').toLowerCase();
-if(t.indexOf('just a moment')>=0||t.indexOf('attention required')>=0||d.querySelector('#challenge-form,#cf-challenge-running,.cf-turnstile,iframe[src*="challenges.cloudflare.com"],iframe[src*="recaptcha"]'))return JSON.stringify({challenge:true});
-window.scrollBy(0,window.innerHeight*1.5);
-var se=d.scrollingElement||d.documentElement,end=(window.scrollY+window.innerHeight)>=(se.scrollHeight-20);
-function best(img){var s=img.getAttribute('srcset')||img.getAttribute('data-srcset')||'',b=null,bw=0;
-s.split(',').forEach(function(p){var q=p.trim().split(/\s+/);if(!q[0])return;var w=parseInt(q[1]||'0',10)||1;if(w>=bw){bw=w;b=q[0];}});
-var u=b||img.currentSrc||img.src||img.getAttribute('data-src')||img.getAttribute('data-original')||img.getAttribute('data-lazy')||'';
-try{return [new URL(u,location.href).href,bw];}catch(e){return ['',0];}}
-var out=[],seen={};
-Array.prototype.forEach.call(d.images,function(img){var w=img.naturalWidth,h=img.naturalHeight;if(!img.complete||!w||!h)return;
-var r=best(img),u=r[0],size=Math.max(w,r[1]);
-if(size<500||h<w*0.9||!u||u.indexOf('data:')===0||seen[u])return;seen[u]=1;out.push(u);});
-return JSON.stringify({urls:out,end:end,n:d.images.length});
-}catch(e){return JSON.stringify({urls:[],end:true,error:String(e)});}})()"""
+        // Okuma betikleri: assets/bridge/*.js (React Native bileşeniyle ortak). Testler: backend/tests/test_bridge_scripts.py
     }
 
     override fun onBack(): Boolean {

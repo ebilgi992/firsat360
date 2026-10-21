@@ -1,3 +1,21 @@
+# Katalog kurtarma raporu — 1.4.0 (21.10.2026)
+
+## 1.4.0 — İstemci Katalog Köprüsü
+Sunucu tarafı broşür kazıma bu 6 kaynak için tamamen kaldırıldı; broşür kullanıcının cihazında, resmî sayfadan okunur.
+
+| Market | Resmî sayfa | Bulgu (21.10.2026) | Profil → sonuç | Durum |
+|---|---|---|---|---|
+| A101 | /afisler | Next.js; afişler gömülü veride (`__NEXT_DATA__`/`self.__next_f`, kaçışlı `\/`) | `a101` → galeri | Chromium PASS · cihaz BLOCKED |
+| ŞOK | kurumsal /tr/firsatlar | Resmî PDF'ler (ör. `…21-27ekimhaftaninfirsatlari.pdf`, `…24-27haftasonufirsatlari.pdf`) | `sok` → PDF okuyucu, tarih TrDates ile | Chromium PASS · cihaz BLOCKED |
+| Migros | migroskop.migros.com.tr | `migroskop-assets…/migrosdigitalinsert/…/(Cover\|Ad)/` | `migroskop` → galeri | Chromium PASS · cihaz BLOCKED |
+| Gratis | /gratis-katalog | Kitap online.fliphtml5.com'da | `fliphtml5` → navigate → galeri | Chromium PASS · cihaz BLOCKED |
+| CarrefourSA | katalog.carrefoursa.com/books/mwis | FlipHTML5 ("16 Ekim – 1 Kasım"); sayfa listesi `fliphtml5_pages` | `fliphtml5` → galeri | Chromium PASS · cihaz BLOCKED |
+| Rossmann | /kataloglar | Flipbook/PDF/büyük görsel | `generic` | Chromium PASS · cihaz BLOCKED |
+
+Doğrulama sayfası çıkarsa betik `challenge` döndürür; uygulama sayfayı kullanıcıya gösterir, otomatik çözmez.
+
+---
+
 # Katalog kurtarma raporu — 1.3.0 (21.10.2026)
 
 ## 1.3.0

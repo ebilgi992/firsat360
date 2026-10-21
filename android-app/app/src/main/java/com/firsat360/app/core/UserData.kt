@@ -97,7 +97,7 @@ object Watch {
 
 
 /** Ana sayfadaki "Market broşürleri" rafının bir kartı: mağaza + en iyi güncel broşürü (yoksa resmî broşür sayfası). */
-data class ShelfEntry(val store: Store, val catalog: Catalog?, val others: Int)
+data class ShelfEntry(val store: Store, val catalog: Catalog?, val others: Int, val bridge: BridgeEntry? = null)
 
 object Shelf {
     /** Kullanıcının kaydettiği sıra önce; listede olmayan mağazalar büyüklük sırasıyla sona eklenir. */
@@ -125,6 +125,10 @@ object Shelf {
     fun build(feed: Feed, saved: List<String>, today: java.time.LocalDate,
               region: String = CatalogRules.DEFAULT_REGION): List<ShelfEntry> =
         order(feed, saved).mapNotNull { s ->
+            val bridge = feed.clientBridge[s.id]
+            // İstemci köprüsündeki market: raf kartı resmî sayfadan cihazda okunan güncel broşürü açar (sunucu kataloğu
+            // seçilmez; o marketin diğer resmî katalogları "Diğer kataloglar"da kalır).
+            if (bridge != null) return@mapNotNull ShelfEntry(s, null, 0, bridge)
             val (c, others) = best(feed, s.id, today, region)
             if (c == null && s.brochureUrl.isNullOrBlank()) null else ShelfEntry(s, c, others)
         }
@@ -195,4 +199,37 @@ object CatalogRules {
     /** Bu katalog grubunun mevcut bölgeleri (bölge seçici için). */
     fun regions(feed: Feed, c: Catalog): List<String> =
         feed.catalogs.filter { it.groupKey == c.groupKey }.mapNotNull { it.region }.distinct()
+}
+
+/** Türkçe tarih aralığı metni → (başlangıç, bitiş). "21 - 27 Ekim 2026", "24 Eylül - 07 Ekim 2026", "21-27 Ekim". */
+object TrDates {
+    private val months = listOf("ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül",
+        "ekim", "kasım", "aralık")
+    private fun month(s: String): Int? {
+        val k = s.lowercase(java.util.Locale.forLanguageTag("tr"))
+        val i = months.indexOfFirst { k.startsWith(it.take(3)) }
+        return if (i >= 0) i + 1 else null
+    }
+
+    fun range(text: String?, today: LocalDate): Pair<LocalDate, LocalDate>? {
+        val t = text?.trim() ?: return null
+        val two = Regex("""(\d{1,2})\s+(\p{L}+)\s*-\s*(\d{1,2})\s+(\p{L}+)(?:\s+(20\d\d))?""").find(t)
+        val one = Regex("""(\d{1,2})\s*-\s*(\d{1,2})\s+(\p{L}+)(?:\s+(20\d\d))?""").find(t)
+        return try {
+            when {
+                two != null -> {
+                    val (d1, m1, d2, m2, y) = two.destructured
+                    val ye = y.toIntOrNull() ?: today.year
+                    val mm1 = month(m1) ?: return null; val mm2 = month(m2) ?: return null
+                    LocalDate.of(if (mm1 > mm2) ye - 1 else ye, mm1, d1.toInt()) to LocalDate.of(ye, mm2, d2.toInt())
+                }
+                one != null -> {
+                    val (d1, d2, m, y) = one.destructured
+                    val mm = month(m) ?: return null; val ye = y.toIntOrNull() ?: today.year
+                    LocalDate.of(ye, mm, d1.toInt()) to LocalDate.of(ye, mm, d2.toInt())
+                }
+                else -> null
+            }
+        } catch (e: Exception) { null }
+    }
 }

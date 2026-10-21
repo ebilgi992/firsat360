@@ -1,5 +1,17 @@
 # Test raporu
 
+## 1.4.0 (21.10.2026) — İstemci Katalog Köprüsü
+| Test | Sonuç | Kanıt |
+|---|---|---|
+| Köprü betikleri gerçek Chromium'da (ŞOK PDF+tarih, FlipHTML5 tam liste, Gratis → kitap, Migroskop Cover/Ad, A101 Next verisi, genel dikey sayfalar, 5 profilde doğrulama sayfası) | PASS | `tests/test_bridge_scripts.py` |
+| React Native `postMessage` sarmalayıcısı Android dönüşüyle aynı sonucu veriyor (7 sayfa) | PASS | `test_react_native_wrapper_posts_same_result` |
+| 6 market `client_rendered`, feed `client_bridge` güvenli (https, profil dosyası var), RN betik paketi güncel | PASS | `tests/test_client_bridge_config.py` |
+| Backend pytest (tam) | PASS | 176 geçti, 2 atlandı (PostgreSQL) |
+| Çekirdek (JVM), 0.6.1 başvuru feed'i — `trdates.*` dahil | PASS | 172/172 |
+| RN bileşeni tür denetimi | PASS | `npx tsc --noEmit` (react-native 0.76.5, webview 13.12.5, pdf 6.7.5) |
+| Debug + release APK/AAB, zip testi, gizli anahtar taraması, `assets/bridge/*.js` APK'da | PASS | `dist/FIRSAT360-1.4.0*` |
+| Cihazda resmî sayfadan köprü akışı (6 market), RN uygulamasında çalıştırma | BLOCKED | cihaz/emülatör ve RN projesi yok |
+
 ## 1.2.0 (21.10.2026)
 | Market | Test | Sonuç | Kanıt |
 |---|---|---|---|

@@ -1,0 +1,12 @@
+{
+  "_aciklama": "İstemci tarafı katalog köprüsü: bu broşür kaynakları sunucuda KAZINMAZ. Uygulama resmî sayfayı kullanıcının cihazında, kullanıcı dokunduğunda açar; android-app/app/src/main/assets/bridge/<profile>.js ile sayfadaki broşür görsellerini/PDF'lerini okur ve yerel okuyucuda gösterir. allowed_hosts: köprünün gezinebileceği ve görsel/PDF kabul edeceği alan adı aileleri.",
+  "version": 1,
+  "markets": {
+    "a101":        {"url": "https://www.a101.com.tr/afisler", "profile": "a101", "allowed_hosts": ["a101.com.tr"], "client_rendered": true},
+    "sok":         {"url": "https://kurumsal.sokmarket.com.tr/tr/firsatlar", "profile": "sok", "allowed_hosts": ["sokmarket.com.tr"], "client_rendered": true},
+    "migros":      {"url": "https://migroskop.migros.com.tr/migroskop", "profile": "migroskop", "allowed_hosts": ["migros.com.tr"], "client_rendered": true},
+    "gratis":      {"url": "https://www.gratis.com/gratis-katalog", "profile": "fliphtml5", "allowed_hosts": ["gratis.com", "fliphtml5.com"], "client_rendered": true},
+    "carrefoursa": {"url": "https://katalog.carrefoursa.com/books/mwis", "profile": "fliphtml5", "allowed_hosts": ["carrefoursa.com", "fliphtml5.com"], "client_rendered": true},
+    "rossmann":    {"url": "https://www.rossmann.com.tr/kataloglar", "profile": "generic", "allowed_hosts": ["rossmann.com.tr", "fliphtml5.com", "publitas.com", "issuu.com", "heyzine.com", "flipsnack.com"], "client_rendered": true}
+  }
+}

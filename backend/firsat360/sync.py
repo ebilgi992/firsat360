@@ -229,6 +229,8 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
             report["errors"].append(f"ürün sayfaları: {exc.__class__.__name__}: {exc}")
         finally:
             client.close()
+    # 2a') İstemci köprüsündeki broşür kaynakları: sunucuda bağlayıcısı yok → durum açıkça "client_bridge"
+    mark_client_bridged(sf, connectors)
     # 2c) Kalite ajanları + orkestratör: denetle → düzelt → yeniden denetle → raporla
     report["quality"] = run_quality(sf, connectors if live else {}, settings, now, transport, sleep)
     # 3) Yeni katalog tespiti ve duyuru (tek işlem)
@@ -284,6 +286,19 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
         report["status"] = str(status_path)
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     return report
+
+
+def mark_client_bridged(sf: sessionmaker, connectors: dict) -> None:
+    from .connectors import CLIENT_BRIDGED
+    with sf() as s:
+        for sid in CLIENT_BRIDGED:
+            if sid in connectors:
+                continue  # ürün/fiyat bağlayıcısı olan mağazanın durumu kendi taramasından gelir
+            st = s.get(Store, sid)
+            if st is not None:
+                st.status, st.last_error = "client_bridge", None
+                st.status_message = "Broşür, uygulamada kullanıcı açtığında resmî sayfadan okunur (sunucu taraması yok)"
+        s.commit()
 
 
 def run_quality(sf: sessionmaker, connectors: dict, settings: Settings, now: datetime, transport=None,

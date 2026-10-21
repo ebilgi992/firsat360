@@ -101,7 +101,9 @@ class CatalogListScreen(a: MainActivity, private val newOnly: Boolean) : Screen(
  * Resmî PDF katalog (ör. Migroskop): kullanıcı açtığında indirilir (ilerleme gösterilir, iptal edilebilir), Android'in
  * kendi PdfRenderer'ı ile sayfa sayfa gösterilir. Bellek: yalnızca görünen sayfalar çizilir (küçük LRU).
  */
-class PdfScreen(a: MainActivity, private val catalogId: String) : Screen(a) {
+class PdfScreen(a: MainActivity, private val catalogId: String,
+                /** Feed'de olmayan, köprünün resmî sayfadan bulduğu PDF (ör. ŞOK "Haftanın Fırsatları"). */
+                private val adhoc: com.firsat360.app.core.Catalog? = null) : Screen(a) {
     override val tab: Tab get() = Tab.STORES
     @Volatile private var cancelled = false
     private var renderer: PdfRenderer? = null
@@ -117,7 +119,7 @@ class PdfScreen(a: MainActivity, private val catalogId: String) : Screen(a) {
         // Ekran yeniden gösterildiğinde (geri dönüş) kaynaklar yeniden açılır
         cancelled = false
         if (worker.isShutdown) worker = Executors.newSingleThreadExecutor()
-        val c = a.feed.catalog(catalogId) ?: return a.emptyState(Icon.CATALOG, "Katalog bulunamadı", "")
+        val c = adhoc ?: a.feed.catalog(catalogId) ?: return a.emptyState(Icon.CATALOG, "Katalog bulunamadı", "")
         val root = a.vbox().apply { setBackgroundColor(0xFF0B0D12.toInt()) }
         val bar = a.hbox().apply { setPadding(dp(10), dp(10), dp(10), dp(10)) }
         bar.addView(a.iconButton(Icon.CLOSE, 0xFFF2F3F7.toInt(), 0x33FFFFFF, "Kapat") { a.onBackPressedCompat() }

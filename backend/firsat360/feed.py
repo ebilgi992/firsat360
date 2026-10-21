@@ -113,6 +113,22 @@ def _aware(d):
     return d if d is None or d.tzinfo else d.replace(tzinfo=timezone.utc)
 
 
+def client_bridge() -> dict:
+    """config/client_bridge.json → feed'deki "client_bridge" (statik eşleme; sunucu bu adresleri hiç açmaz)."""
+    p = Path(__file__).resolve().parents[2] / "config" / "client_bridge.json"
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for sid, m in (data.get("markets") or {}).items():
+        url = str(m.get("url") or "")
+        if url.startswith("https://") and m.get("client_rendered") and re.fullmatch(r"[a-z0-9]+", str(m.get("profile", ""))):
+            out[sid] = {"url": url, "profile": m["profile"], "allowed_hosts": [str(h) for h in m.get("allowed_hosts", [])],
+                        "client_rendered": True}
+    return out
+
+
 def build_feed(session: Session, today: date | None = None, include_expired: bool = False) -> dict:
     today = today or datetime.now(timezone.utc).date()
     stores = session.scalars(select(Store).order_by(Store.id)).all()
@@ -168,6 +184,7 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
                    sorted(offers, key=lambda o: (o.store_id, o.catalog_id or "", o.name))],
         # Günün İndirimleri (otomatik seçim) ve yeni katalog duyuruları (bildirimler bunlardan üretilir)
         "daily_deals": _deals(session, today),
+        "client_bridge": client_bridge(),
         "announcements": _announcements(session),
         # Uzaktan yapılandırma (yönetim panelinden): reklam alanları vb. Gizli bilgi içermez.
         "app_config": _app_config(session),

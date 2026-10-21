@@ -8,6 +8,7 @@ from .migros import MigrosConnector
 from .onur import OnurConnector
 from .sok import SokConnector
 
+CLIENT_BRIDGED = ("a101", "sok", "migros", "gratis", "carrefoursa", "rossmann")  # broşürü istemci köprüsünde
 ALL_STORES = ("a101", "bim", "sok", "migros", "tkkoop", "hakmar", "watsons", "metro", "bizimtoptan", "gratis",
               "rossmann", "onur", "carrefoursa", "file")
 
@@ -19,19 +20,18 @@ def live_connectors(max_pages: int = 8):
 
 def _base_connectors(max_pages: int):
     return {
-        "a101": CompositeConnector("a101", [A101Connector(),
-                                            FuncConnector("a101", A101_AFIS_URL, parse_a101_afis)]),
+        # Broşür kaynakları istemci köprüsünde (config/client_bridge.json): A101 afişleri, Migroskop dijital, Gratis,
+        # CarrefourSA ve Rossmann sunucuda KAZINMAZ. Ürün/fiyat kaynakları ve köprüde olmayan resmî kataloglar sürer.
+        "a101": A101Connector(),
         "bim": BimConnector(max_pages=max_pages),  # aktüel ürünler + afişler
         "sok": SokConnector(max_pages=max_pages),  # haftanın fırsatları + kampanya görselleri
-        "migros": CompositeConnector("migros", [MigrosConnector(max_pages=max_pages),
-                                                MigroskopConnector(), MoneyCatalogsConnector()]),
+        "migros": CompositeConnector("migros", [MigrosConnector(max_pages=max_pages), MoneyCatalogsConnector()]),
         "tkkoop": TkkoopConnector(),
         "hakmar": HakmarConnector(),
         "watsons": PublitasConnector("watsons", "https://katalog.watsons.com.tr/"),
         "metro": PublitasConnector("metro", "https://brosurler.metro-tr.com/"),
         "bizimtoptan": FlipbookIndexConnector("bizimtoptan", "https://www.bizimtoptan.com.tr/pages/katalog"),
-        "gratis": FlipbookIndexConnector("gratis", "https://www.gratis.com/gratis-katalog"),
         # Alternatif toplama motoru: statik tarama → tarayıcıyla açma → bulunamadıysa raporla
-        **{sid: DiscoveryConnector(src) for sid, src in DISCOVERY_SOURCES.items()},
+        **{sid: DiscoveryConnector(src) for sid, src in DISCOVERY_SOURCES.items() if sid not in CLIENT_BRIDGED},
         "onur": OnurConnector(),  # kampanya sayfalarındaki resmî insert PDF'leri
     }

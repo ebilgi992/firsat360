@@ -51,6 +51,12 @@ data class Catalog(
 }
 
 /** Sunucunun her gün otomatik seçtiği "Günün İndirimleri". */
+/**
+ * İstemci katalog köprüsü (feed "client_bridge"): broşürü sunucuda okunmayan market için resmî sayfa adresi, okuma
+ * profili (assets/bridge/<profile>.js) ve köprünün gezinip görsel/PDF kabul edebileceği alan adı aileleri.
+ */
+data class BridgeEntry(val url: String, val profile: String, val allowedHosts: List<String>)
+
 data class DailyDeals(val date: String?, val title: String, val note: String, val offerIds: List<String>)
 
 /**
@@ -104,6 +110,7 @@ data class Feed(
     val sponsored: List<Sponsored> = emptyList(), val adsActive: Boolean = false, val affiliateActive: Boolean = false,
     val dailyDeals: DailyDeals? = null, val announcements: List<Announcement> = emptyList(),
     val ads: AdsConfig = AdsConfig(),
+    val clientBridge: Map<String, BridgeEntry> = emptyMap(),
 ) {
     /** Günün İndirimleri ürünleri (feed sırasıyla; artık listede olmayanlar atlanır). */
     val dealOffers: List<Offer> by lazy { dailyDeals?.offerIds?.mapNotNull { offer(it) } ?: emptyList() }
@@ -197,9 +204,15 @@ data class Feed(
             val ads = if (ac == null) AdsConfig() else AdsConfig(ac.bool("enabled"), ac.bool("home_banner"),
                 ac.bool("list_banner"), if (ac.containsKey("native_every")) ac.int("native_every").coerceIn(0, 50) else 0,
                 if (ac.containsKey("test_mode")) ac.bool("test_mode") else true)
+            val bridge = (root.obj("client_bridge") ?: emptyMap()).mapNotNull { (sid, v) ->
+                val m = v as? Map<String, Any?> ?: return@mapNotNull null
+                val url = m.str("url")?.takeIf { it.startsWith("https://") } ?: return@mapNotNull null
+                val profile = m.str("profile")?.takeIf { it.matches(Regex("[a-z0-9]{1,20}")) } ?: "generic"
+                sid to BridgeEntry(url, profile, m.list("allowed_hosts").mapNotNull { (it as? String)?.lowercase() })
+            }.toMap()
             return Feed(schema, root.str("generated_at"), mode, root.str("notice"), labels, cats, stores,
                 catalogs, offers, skipped, sponsored, money?.obj("ads")?.bool("active") ?: false,
-                money?.obj("affiliate")?.bool("active") ?: false, dd, anns, ads)
+                money?.obj("affiliate")?.bool("active") ?: false, dd, anns, ads, bridge)
         }
     }
 }

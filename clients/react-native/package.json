@@ -1,0 +1,26 @@
+{
+  "name": "firsat360-catalog-bridge",
+  "version": "1.4.0",
+  "private": true,
+  "description": "FIRSAT360 istemci katalog köprüsü (React Native başvuru bileşeni): resmî broşür sayfası → postMessage → yerel galeri/PDF",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "gen": "python ../../scripts/gen_rn_bridge.py"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.73",
+    "react-native-webview": ">=13",
+    "react-native-pdf": ">=6",
+    "react-native-blob-util": ">=0.19"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "react": "18.3.1",
+    "react-native": "0.76.5",
+    "react-native-pdf": "6.7.5",
+    "react-native-webview": "13.12.5",
+    "typescript": "5.6.3"
+  }
+}

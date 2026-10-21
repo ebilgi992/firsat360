@@ -12,15 +12,15 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-KT = ROOT / "android-app/app/src/main/java/com/firsat360/app/screens/DetailScreens.kt"
+BRIDGE = ROOT / "android-app/app/src/main/assets/bridge"
 
 pytestmark = pytest.mark.skipif(
     not Path("/opt/pw-browsers").exists() or importlib.util.find_spec("playwright") is None
     or importlib.util.find_spec("PIL") is None, reason="Chromium/Pillow yok")
 
 
-def _js() -> str:
-    return re.search(r'const val EXTRACT_JS = """(.*?)"""', KT.read_text(encoding="utf-8"), re.S).group(1)
+def _js() -> str:  # uygulamanın çalıştırdığı genel profil (common.js + generic.js)
+    return (BRIDGE / "common.js").read_text(encoding="utf-8") + "\n" + (BRIDGE / "generic.js").read_text(encoding="utf-8")
 
 
 @pytest.fixture()
@@ -56,7 +56,7 @@ def test_extracts_lazy_portrait_pages_in_order_after_reaching_end(site):
         last, result = -1, None
         for _ in range(16):  # uygulamadaki MAX_POLLS ile aynı
             r = json.loads(pg.evaluate(_js()))
-            n = len(r["urls"])
+            n = len(r.get("urls", []))
             if n >= 2 and n == last and r["end"]:
                 result = r["urls"]
                 break
@@ -66,4 +66,4 @@ def test_extracts_lazy_portrait_pages_in_order_after_reaching_end(site):
         challenge = json.loads(pg.evaluate(_js()))
         b.close()
     assert [u.rsplit("/", 1)[-1] for u in result] == ["p1.jpg", "p2.jpg", "p3.jpg"]  # afiş bandı/logo yok, sıra doğru
-    assert challenge == {"challenge": True}  # doğrulama sayfası tanınır → kullanıcıya gösterilir, çözülmez
+    assert challenge == {"type": "challenge"}  # doğrulama sayfası tanınır → kullanıcıya gösterilir, çözülmez
