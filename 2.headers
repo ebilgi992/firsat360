@@ -1,0 +1,18 @@
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Date: Wed, 21 Oct 2026 18:06:09 GMT
+Server: Microsoft-IIS/10.0
+Cache-Control: no-cache, no-store
+Pragma: no-cache
+Set-Cookie: .AspNetCore.Antiforgery.cdV5uW_Ejgc=CfDJ8Mc0TpBk2aFJp10ha3z52qKdYErHI70CVaCAwSG9POAvXi1WfGWOHceWVK_ROcMM6ksYRK0UAwSM_S4uK0SbT2oUFboonqpLcNQRrkLVStSlkYsZLv94-EMkqBLY5LqyvlJ8jetsDuAHcsgUySVy8Ew; path=/; secure; samesite=strict; httponly
+Set-Cookie: ARRAffinity=f62f7bdc1c4c12879ab977dcbcb994db8abcd73ba4ba610a4536de6d070e9ac3;Path=/;HttpOnly;Secure;Domain=www.money.com.tr
+Set-Cookie: ARRAffinitySameSite=f62f7bdc1c4c12879ab977dcbcb994db8abcd73ba4ba610a4536de6d070e9ac3;Path=/;HttpOnly;SameSite=None;Secure;Domain=www.money.com.tr
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' data: *.bkrtx.com *.bluekai.com *.clarity.ms *.doubleclick.net *.efilli.com *.facebook.com *.facebook.net *.cloudflare.com *.google-analytics.com *.google.com *.google.com.tr *.googleapis.com *.googletagmanager.com *.gstatic.com *.hotjar.com *.hotjar.io *.maxcdn.com *.migros.com.tr *.money.com.tr *.moneypay.com.tr moneyclubkart.azureedge.net wss://ws.hotjar.com blob: *.migrosone.com *.tiktok.com *.hcaptcha.com; frame-ancestors 'self' *.migros.com.tr *.money.com.tr *.moneypay.com.tr moneyclubkart.azureedge.net *.migrosone.com *.hcaptcha.com
+Permissions-Policy: geolocation=()
+Set-Cookie: cookiesession1=678A3E205912827B80024EDDDE2D865F;Expires=Thu, 21 Oct 2027 18:06:09 GMT;Path=/;Secure;HttpOnly
+content-length: 220354
+
