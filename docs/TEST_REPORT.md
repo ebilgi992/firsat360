@@ -1,5 +1,26 @@
 # Test raporu
 
+## 1.2.0 (21.10.2026)
+| Market | Test | Sonuç | Kanıt |
+|---|---|---|---|
+| A101 | Sunucuda gerçek katalog | BLOCKED | 17:15 UTC: `/aldin-aldin`, `/afisler` → 403, Cloudflare sınaması; robots.txt izin veriyor, engel IP tabanlı |
+| A101 | Cihazda resmî sayfadan sayfa toplama | BLOCKED (cihaz yok) | kod: `WebScreen.collectPages`, `DeviceBrochures` |
+| CarrefourSA | Sunucuda gerçek katalog | BLOCKED | robots.txt dahil 403 (Cloudflare); resmî sitede broşür bölümü yok (WebFetch: yalnızca "Katalog Ürünleri" menü etiketleri) |
+| File | Afişler doğru sınıflandırılıyor | PASS | `test_file_posters_are_not_brochures`; feed'de `kind=poster` |
+| Onur | Mükerrer gösterim giderildi | PASS | `onur.noGroupDup`, `onur.oneCardPerInsert`, `onur.userRegion`, `onur.bursa` |
+| Onur | Süresi dolan insert çıkarılıyor | PASS | `onur.expiredRemoved` (22.10'da yalnızca 944 kalır) |
+| BİM | Regresyon | PASS | 12 güncel sayfalı aktüel feed'de |
+| Migroskop | Regresyon | PASS | 160 sayfa feed'de |
+| ŞOK | Regresyon | PASS | 112 ürün, %100 görsel |
+| Hakmar, Metro | Regresyon | PASS | 2 + 1 sayfalı broşür |
+| Merkezi durum kuralı | PASS | `state.expiring/active/expired/unknownNotExpiring/upcoming` |
+| Aynı içerik farklı adres → tek kart | PASS | `dedupe.sameContentDifferentUrl` |
+| Kontrollü geri çekilme | PASS | `test_backoff_after_three_blocked_runs` |
+| Backend pytest | PASS | 150 geçti, 2 atlandı |
+| Çekirdek (JVM) | PASS | 168/168 |
+| Debug + release APK/AAB | PASS | `dist/FIRSAT360-1.2.0*` |
+| Uygulama ekranları, PDF açma, okuyucu | BLOCKED | cihaz/emülatör yok |
+
 ## 1.1.0 (21.10.2026)
 | Market | Gerçek katalog bulundu mu | Sayfa/PDF | Doğrulandı mı | Uygulamada açılıyor mu | Güncel mi |
 |---|---|---|---|---|---|

@@ -560,6 +560,16 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
 
         // ---- Veri
         val data = section("Veri kaynakları", Icon.GLOBE)
+        val regionNames = linkedMapOf("istanbul" to "İstanbul", "bursa" to "Bursa", "trakya" to "Trakya")
+        valueRow(data, "Bölge (bölgesel broşürler)", regionNames[a.user.region] ?: a.user.region) {
+            try {
+                val keys = regionNames.keys.toList()
+                android.app.AlertDialog.Builder(a).setTitle("Bölgenizi seçin")
+                    .setSingleChoiceItems(regionNames.values.toTypedArray(), keys.indexOf(a.user.region).coerceAtLeast(0)) { d, i ->
+                        a.user.region = keys[i]; d.dismiss(); a.toast("Bölge: ${regionNames[keys[i]]}"); a.refreshCurrent()
+                    }.show()
+            } catch (e: Exception) { }
+        }
         val errs = f.stores.count { it.status == "error" }
         valueRow(data, "Kaynak durumu", if (errs > 0) "$errs hata" else "Tümü çalışıyor") { a.push(SourceStatusScreen(a)) }
 

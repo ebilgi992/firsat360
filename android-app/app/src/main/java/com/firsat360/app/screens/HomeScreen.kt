@@ -84,7 +84,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         }
 
         // ---- Market broşürleri: Türkiye'nin büyük zincirleri her zaman, kullanıcının sırasıyla
-        val home = com.firsat360.app.core.HomeCatalogs.build(f, a.user.chainOrder, a.today, a.user.favoriteStores())
+        val home = com.firsat360.app.core.HomeCatalogs.build(f, a.user.chainOrder, a.today, a.user.favoriteStores(), a.user.region)
         val shelf = home.shelf
         if (shelf.isNotEmpty()) {
             col.addView(a.sectionHeader("Market broşürleri", "Sırala") { a.push(ShelfOrderScreen(a)) })

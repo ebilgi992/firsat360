@@ -31,6 +31,7 @@ class CatalogData:
     # [{"url": tam boy, "thumb_url": küçük, "caption": açıklama, "link": sayfaya özel resmî bağlantı, "verified": bool}]
     pages: list[dict] = field(default_factory=list)
     pdf_url: str | None = None  # mağazanın yayımladığı resmî PDF (uygulama istek üzerine açar, kopyalanmaz)
+    region: str | None = None   # bölgesel yayın kimliği (yoksa tüm Türkiye)
 
 
 @dataclass

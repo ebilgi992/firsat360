@@ -283,6 +283,7 @@ fun Context.catalogCard(c: Catalog, storeName: String, today: LocalDate, wide: B
         frame.addView(pill("YENİ", 0xFFFFFFFF.toInt(), Theme.p.accent, 10f, Theme.bold),
             FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.START).apply { setMargins(dp(8), dp(8), 0, 0) })
     val count = when {
+        c.isPoster -> if (c.hasPages) "${c.pages.size} afiş" else "Afiş"
         c.hasPdf -> "PDF"
         c.hasPages -> "${c.pages.size} sayfa"
         c.offerCount > 0 -> "${c.offerCount} ürün"

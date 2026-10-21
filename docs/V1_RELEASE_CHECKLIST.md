@@ -1,15 +1,15 @@
-# Yayın kontrol listesi — 1.1.0 (versionCode 13)
+# Yayın kontrol listesi — 1.2.0 (versionCode 14)
 
 | Madde | Durum |
 |---|---|
-| Sürüm 1.1.0 (versionCode 13) — build.gradle.kts, BuildInfo.kt, build-nogradle.sh | ✅ |
-| Debug APK (`dist/FIRSAT360-1.1.0.apk`, proje debug anahtarı — eski sürümün üzerine kurulur) | ✅ |
-| Release APK + AAB (`dist/FIRSAT360-1.1.0-release-unsigned.*`) | ✅ imzasız — `tools/sign-release.sh` ile **sizin yükleme anahtarınızla** imzalanmalı |
+| Sürüm 1.2.0 (versionCode 14) — build.gradle.kts, BuildInfo.kt, build-nogradle.sh | ✅ |
+| Debug APK (`dist/FIRSAT360-1.2.0.apk`, proje debug anahtarı — eski sürümün üzerine kurulur) | ✅ |
+| Release APK + AAB (`dist/FIRSAT360-1.2.0-release-unsigned.*`) | ✅ imzasız — `tools/sign-release.sh` ile **sizin yükleme anahtarınızla** imzalanmalı |
 | İmza anahtarı depoda yok | ✅ |
 | Gizlilik politikası (docs/privacy.html → GitHub Pages) | ⚠️ iletişim e-postası yer tutucu, doldurulmalı |
 | Veri güvenliği beyanı: hesap yok, kişisel veri toplanmaz, favoriler cihazda | ✅ (Play formu sizin tarafınızdan doldurulur) |
 | İzinler: INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED | ✅ |
-| Veritabanı geçişi | ✅ gerekmez — şema değişikliği yok (yeni alanlar feed'de, mevcut sütunlardan) |
+| Veritabanı geçişi | ✅ `catalogs.region` sütunu açılışta otomatik eklenir (`db.make_session_factory` → ADD COLUMN, geri alınabilir: sütun yok sayılır) |
 | Geri dönüş planı | `git revert 1.0.0 commit'i` → Actions → Run workflow; uygulama tarafında önceki APK (0.8.0) üzerine kurulamaz (versionCode düşük) → kaldır/kur |
 | Cihaz/emülatör testi | ❌ BLOCKED — yapılmadı |
 | Google Play yükleme | ❌ yapılmadı (hesap + yükleme anahtarı sizde; 12 test kullanıcısı / 14 gün kuralı) |

@@ -79,9 +79,9 @@ class CatalogListScreen(a: MainActivity, private val newOnly: Boolean) : Screen(
 
     override fun create(): View {
         val f = a.feed
-        val cats = (if (newOnly) Digest.newToday(f, a.now) else f.catalogs.filter {
+        val cats = com.firsat360.app.core.CatalogRules.collapse(if (newOnly) Digest.newToday(f, a.now) else f.catalogs.filter {
             it.kind != "link_only" && Dates.status(it.validFrom, it.validTo, a.today).kind != ValidityKind.EXPIRED
-        }).sortedByDescending { it.firstSeenAt ?: it.validFrom ?: "" }
+        }, a.user.region).sortedByDescending { it.firstSeenAt ?: it.validFrom ?: "" }
         val outer = a.vbox().apply { setBackgroundColor(Theme.p.bg) }
         outer.addView(a.topBar(if (newOnly) "Yeni kataloglar" else "Tüm kataloglar"))
         val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(28)) }

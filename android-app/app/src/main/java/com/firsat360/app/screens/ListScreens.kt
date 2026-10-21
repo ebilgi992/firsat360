@@ -185,7 +185,7 @@ class FavoritesScreen(a: MainActivity, private var section: Int = 0) : Screen(a)
 
 /** Ana sayfa için öne çıkan kataloglar (kapaklı). */
 fun MainActivity.featuredCatalogRow(): View? {
-    val cats = Watch.featuredCatalogs(feed, today, user.favoriteStores()).take(12)
+    val cats = Watch.featuredCatalogs(feed, today, user.favoriteStores(), user.region).take(12)
     if (cats.isEmpty()) return null
     val row = hbox(android.view.Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), dp(4)) }
     for (c in cats) row.addView(catalogCard(c, feed.store(c.storeId)?.name ?: "", today) { openCatalog(c.id) })

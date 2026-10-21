@@ -1,5 +1,13 @@
 # Değişiklik günlüğü
 
+## 1.2.0 — 21 Ekim 2026
+- **Merkezi katalog durumu** (`CatalogRules.state`: yaklaşan/geçerli/bitmek üzere/bitti/bilinmiyor) tüm bölümlerde tek kural.
+- **Bölgesel kataloglar:** `catalogs.region` + feed `group`; aynı insertin bölge kopyaları tek kart (kullanıcının bölgesi);
+  Ayarlar → Bölge; market ekranında bölge çipleri. Onur'un ana sayfada 6 kart olarak tekrarlanması giderildi.
+- **File afişleri** `poster` türünde ("N afiş"), bitmek üzere/bugün başlayan bölümlerine girmez.
+- **Kontrollü geri çekilme:** son 3 deneme erişim engeliyse kaynak 20 saat denenmez.
+- **Proje becerileri** (`.claude/skills/`): kaynak keşfi, dosya doğrulama, mükerrerlik, hata teşhisi, uçtan uca test.
+
 ## 1.1.0 — 21 Ekim 2026
 - **Onur Market:** resmî insert PDF'leri (3 bölge, kampanya sayfalarından); PDF imzası doğrulanır, geçmiş insertler alınmaz.
 - **File Market:** doğru resmî alan adı (file.com.tr) ve resmî ürün afişleri.

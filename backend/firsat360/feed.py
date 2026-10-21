@@ -1,6 +1,9 @@
 """Uygulamanın okuduğu JSON akışı (feed). API ve statik dışa aktarma aynı fonksiyonu kullanır."""
 from __future__ import annotations
 
+import hashlib
+import re
+
 import json
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -88,6 +91,15 @@ def offer_dict(o: Offer, history: list[PriceObservation] | None = None, images: 
 STALE_DAYS = 2
 
 
+def catalog_group(c: Catalog) -> str:
+    """Aynı yayının farklı kopyaları (bölge sürümleri, farklı adresler) için ortak anahtar: mağaza + bölge eki
+    çıkarılmış normalleştirilmiş başlık + geçerlilik tarihleri. Uygulama aynı gruptan tek kart gösterir."""
+    from .normalize import fold
+    title = re.sub(r"\s*·\s*[^·]+$", "", c.title) if c.region else c.title
+    key = f"{c.store_id}|{fold(title)}|{c.valid_from or ''}|{c.valid_to or ''}"
+    return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:12]
+
+
 def is_stale(c: Catalog, store: Store | None, catalogs_with_offers: set) -> bool:
     """Kaynakta artık listelenmeyen katalog: mağazanın son başarılı okumasından STALE_DAYS gün önce son görülmüş
     ve yayında ürünü yok. (Ör. eski anlık görüntüden kalan, yeni sayısıyla mükerrer görünen Migroskop kaydı.)"""
@@ -147,6 +159,8 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
             "offer_count": counts.get(c.id, 0),
             "first_seen_at": _iso(c.first_seen_at), "last_checked_at": _iso(c.last_checked_at),
             "pdf_url": c.pdf_url if _images_allowed(store_by_id.get(c.store_id)) else None,
+            "region": c.region,
+            "group": catalog_group(c),
             "cover_url": c.cover_url if _images_allowed(store_by_id.get(c.store_id)) else None,
             "pages": catalog_pages(c, _images_allowed(store_by_id.get(c.store_id))),
         } for c in sorted(catalogs, key=lambda c: (c.store_id, c.valid_from or date.min), reverse=False)],

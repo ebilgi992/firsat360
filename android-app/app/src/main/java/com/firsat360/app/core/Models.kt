@@ -35,7 +35,13 @@ data class Catalog(
     val pdfUrl: String? = null,
     /** Kataloğun kaynakta ilk görüldüğü an (yayımlanma) ve son kontrol. */
     val firstSeenAt: String? = null, val lastCheckedAt: String? = null,
+    /** Bölgesel yayın (ör. Onur: istanbul/bursa/trakya); null = tüm Türkiye. */
+    val region: String? = null,
+    /** Aynı yayının kopyaları (bölge sürümleri) için ortak anahtar; uygulama gruptan tek kart gösterir. */
+    val group: String? = null,
 ) {
+    val groupKey: String get() = group ?: id
+    val isPoster: Boolean get() = kind == "poster"
     val hasPages: Boolean get() = pages.isNotEmpty()
     val hasPdf: Boolean get() = pdfUrl != null
     /** Okunabilir içerik: sayfa görselleri, PDF veya ürün listesi. */
@@ -143,7 +149,7 @@ data class Feed(
                         CatalogPage(u, pm.str("thumb_url")?.takeIf { it.startsWith("https://") }, pm.str("caption"),
                             pm.str("link"), pm.bool("verified"))
                     }, m.str("pdf_url")?.takeIf { it.startsWith("https://") }, m.str("first_seen_at"),
-                    m.str("last_checked_at"))
+                    m.str("last_checked_at"), m.str("region"), m.str("group"))
             }
             var skipped = 0
             val offers = root.list("offers").mapNotNull { it as? Map<String, Any?> }.mapNotNull { m ->

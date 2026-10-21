@@ -69,6 +69,8 @@ class Catalog(Base):
     first_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Bölgesel yayın (ör. Onur: istanbul/bursa/trakya). Aynı insertin bölge kopyaları uygulamada TEK kartta birleşir.
+    region: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class Offer(Base):

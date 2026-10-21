@@ -370,6 +370,36 @@ fun main(args: Array<String>) {
     check("home.startingToday", home.startingToday.all { Dates.date(it.validFrom) == today13 })
     check("home.endingSoon", home.endingSoon.all { val t = Dates.date(it.validTo)!!; !t.isBefore(today13) && t.toEpochDay() - today13.toEpochDay() <= 2 })
 
+    // 1.2: merkezi durum kuralı + Onur bölge kopyaları (21.10.2026 canlı veriyle aynı yapı)
+    val d21 = LocalDate.of(2026, 10, 21)
+    fun onur(id: String, t: String, r: String, f: String, to: String, g: String) = Catalog(id, "onur", "$t · $r", "pdf", f, to,
+        "https://kurumsal.onurmarket.com/x", "live_html", null, 0, "https://kurumsal.onurmarket.com/c.jpg",
+        pdfUrl = "https://kurumsal.onurmarket.com/download/$id.pdf", region = r.lowercase().replace("İ", "i").replace("ı", "i"), group = g)
+    val onurCats = listOf(
+        onur("onur-istanbul-944", "Çok Al Az Öde", "istanbul", "2026-10-13", "2026-10-26", "g944"),
+        onur("onur-istanbul-959", "Taze Ürünler", "istanbul", "2026-10-15", "2026-10-21", "g959"),
+        onur("onur-bursa-945", "Çok Al Az Öde", "bursa", "2026-10-13", "2026-10-26", "g944"),
+        onur("onur-bursa-957", "Taze Ürünler", "bursa", "2026-10-15", "2026-10-21", "g959"),
+        onur("onur-trakya-947", "Çok Al Az Öde", "trakya", "2026-10-13", "2026-10-26", "g944"),
+        onur("onur-trakya-956", "Taze Ürünler", "trakya", "2026-10-15", "2026-10-21", "g959"))
+    val onurStore = Store("onur", "Onur Market", "u", "u", "ok", null, null, null, null, null, chainRank = 8)
+    val oFeed = feed.copy(stores = feed.stores + onurStore, catalogs = onurCats)
+    val oh = HomeCatalogs.build(oFeed, emptyList(), d21, emptySet(), "istanbul")
+    check("onur.noGroupDup", oh.allGroups.size == oh.allGroups.toSet().size) { oh.allGroups.toString() }
+    check("onur.oneCardPerInsert", oh.allIds.size == 2) { oh.allIds.toString() }
+    check("onur.userRegion", oh.allIds.all { it.startsWith("onur-istanbul-") }) { oh.allIds.toString() }
+    check("onur.bursa", HomeCatalogs.build(oFeed, emptyList(), d21, emptySet(), "bursa").allIds.all { it.startsWith("onur-bursa-") })
+    check("state.expiring", CatalogRules.state(onurCats[1], d21) == CatalogState.EXPIRING_SOON)
+    check("state.active", CatalogRules.state(onurCats[0], d21) == CatalogState.ACTIVE)
+    check("state.expired", CatalogRules.state(onurCats[1], d21.plusDays(1)) == CatalogState.EXPIRED)
+    check("state.unknownNotExpiring", CatalogRules.state(onurCats[0].copy(validFrom = null, validTo = null), d21) == CatalogState.UNKNOWN)
+    check("state.upcoming", CatalogRules.state(onurCats[0], LocalDate.of(2026, 10, 1)) == CatalogState.UPCOMING)
+    val expiredGone = HomeCatalogs.build(oFeed, emptyList(), LocalDate.of(2026, 10, 22), emptySet(), "istanbul")
+    check("onur.expiredRemoved", expiredGone.allIds == listOf("onur-istanbul-944")) { expiredGone.allIds.toString() }
+    // aynı yayın farklı adreslerden (farklı id, aynı grup) → tek kart
+    val dupUrl = listOf(onurCats[0], onurCats[0].copy(id = "onur-istanbul-944b", officialUrl = "https://kurumsal.onurmarket.com/y"))
+    check("dedupe.sameContentDifferentUrl", CatalogRules.collapse(dupUrl, "istanbul").size == 1)
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)

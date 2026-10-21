@@ -49,6 +49,7 @@ class StoreSource:
     hosts: tuple[str, ...]                 # kabul edilen içerik alan adları (mağazanın kendi alanları/CDN'i)
     render: bool = True                    # statik HTML'de bulunamazsa tarayıcıyla dene
     min_width: int = 500
+    page_kind: str = "aktuel"              # görsel sayfalı yayının türü: aktuel (broşür) | poster (tek tek ürün afişi)
 
 
 @dataclass
@@ -220,14 +221,14 @@ def merge_rendered(found: Found, html: str, responses: list[dict], base_url: str
 
 
 def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx: int,
-                default_title: str = "Broşür") -> list[CatalogData]:
+                default_title: str = "Broşür", page_kind: str = "aktuel") -> list[CatalogData]:
     out: list[CatalogData] = []
     slug = re.sub(r"[^a-z0-9]+", "-", (urlparse(page_url).path + "-" + (urlparse(page_url).query or "")).lower()).strip("-")[-30:]
     title = found.title or default_title
     start, end = parse_tr_range(title, observed)
     if found.images:
         pages = [{"url": u, "thumb_url": u, "page": i + 1, "verified": True} for i, u in enumerate(found.images[:60])]
-        out.append(CatalogData(id=f"{store_id}-{slug or idx}"[:64], title=title, kind="aktuel", official_url=page_url,
+        out.append(CatalogData(id=f"{store_id}-{slug or idx}"[:64], title=title, kind=page_kind, official_url=page_url,
                                valid_from=start, valid_to=end, pages=pages, cover_url=pages[0]["url"]))
     for j, pdf in enumerate(found.pdfs[:5]):
         name = urlparse(pdf).path.rsplit("/", 1)[-1]
@@ -303,7 +304,8 @@ class DiscoveryConnector(Connector):
                 if bad:
                     attempts.append(f"{bad} görsel doğrulanamadı (HTML/hata/boş)")
                 found.images = ok
-            res.catalogs += to_catalogs(self.store_id, url, found, observed_at.date(), i, self.src.title)
+            res.catalogs += to_catalogs(self.store_id, url, found, observed_at.date(), i, self.src.title,
+                                        self.src.page_kind)
         if not res.catalogs:
             raise ConnectorError(f"{self.src.title}: hiçbir resmî kaynakta broşür bulunamadı · denemeler: "
                                  + " | ".join(attempts))
@@ -322,5 +324,6 @@ SOURCES = {
                                hosts=("carrefoursa.com",)),
     # Kök neden: resmî alan adı file.com.tr (filemarket.com.tr değil). Resmî sitede broşür sayfası yok; ana sayfadaki
     # "AFIS" adlı resmî ürün afişleri (uploads/file/banner/…AFIS…) gösterilir.
-    "file": StoreSource("file", "File Market ürün afişleri", ["https://www.file.com.tr/"], hosts=("file.com.tr",)),
+    "file": StoreSource("file", "File Market ürün afişleri", ["https://www.file.com.tr/"], hosts=("file.com.tr",),
+                        page_kind="poster"),
 }

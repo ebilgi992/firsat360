@@ -1,3 +1,16 @@
+# Katalog kurtarma raporu — 1.2.0 (21.10.2026)
+
+## 1.2.0 yeniden doğrulama (17:15 UTC canlı çalıştırma)
+- A101: 403 devam ediyor (Cloudflare, `cf-mitigated: challenge`). Alternatifler: site haritasında afiş/katalog adresi yok
+  (16 alt harita: kategori/kampanya/ürün); görsel CDN'i robots ile kapalı; resmî Instagram yalnızca anahtarlı resmî API ile
+  okunabilir (kullanıcı anahtar eklemiyor). → Sunucuda **BLOCKED**, cihaz yolu var.
+- CarrefourSA: robots.txt dahil 403. Resmî web sitesinde broşür/katalog yayını bulunamadı; Cimri'deki CarrefourSA broşürleri
+  kaynak göstermiyor (izin bilinmiyor → kullanılmadı). → **BLOCKED**.
+- Onur: 6 PDF, bölge kopyaları artık `region` + `group` ile tek kartta. File: afişler `poster` türünde.
+- Tekrarlanan engel için kontrollü geri çekilme: son 3 deneme engelse kaynak 20 saat denenmez.
+
+---
+
 # Katalog kurtarma raporu — 1.1.0 (21.10.2026)
 
 Kanıt: GitHub Actions "Şimdi dene" çalıştırmaları 39640218389 ve 39641952548 (yalnızca A101, CarrefourSA, File, Onur),

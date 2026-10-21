@@ -78,8 +78,9 @@ object Watch {
         }
 
     /** Öne çıkan kataloglar: bugün/yakında geçerli, sayfası veya ürünü olan; yakın tarihli önce. */
-    fun featuredCatalogs(feed: Feed, today: LocalDate, favStores: Set<String> = emptySet()): List<Catalog> {
-        val sorted = feed.catalogs.filter { c ->
+    fun featuredCatalogs(feed: Feed, today: LocalDate, favStores: Set<String> = emptySet(),
+                         region: String = CatalogRules.DEFAULT_REGION): List<Catalog> {
+        val sorted = CatalogRules.collapse(feed.catalogs, region).filter { c ->
             c.kind != "link_only" && (c.readable || c.coverUrl != null) &&
                 Dates.status(c.validFrom, c.validTo, today).kind != ValidityKind.EXPIRED
         }.sortedWith(compareBy<Catalog>({ if (it.storeId in favStores) 0 else 1 },
@@ -108,8 +109,9 @@ object Shelf {
     }
 
     /** Broşür olarak gösterilecek en iyi katalog: sayfa görselli/PDF > ürün listeli > diğer; satışta olan > yakında. */
-    fun best(feed: Feed, storeId: String, today: java.time.LocalDate): Pair<Catalog?, Int> {
-        val list = feed.catalogs.filter { c ->
+    fun best(feed: Feed, storeId: String, today: java.time.LocalDate,
+             region: String = CatalogRules.DEFAULT_REGION): Pair<Catalog?, Int> {
+        val list = CatalogRules.collapse(feed.catalogs, region).filter { c ->
             c.storeId == storeId && c.kind != "link_only" &&
                 Dates.status(c.validFrom, c.validTo, today).kind != ValidityKind.EXPIRED
         }
@@ -120,9 +122,10 @@ object Shelf {
         return pick to (list.size - if (pick != null) 1 else 0)
     }
 
-    fun build(feed: Feed, saved: List<String>, today: java.time.LocalDate): List<ShelfEntry> =
+    fun build(feed: Feed, saved: List<String>, today: java.time.LocalDate,
+              region: String = CatalogRules.DEFAULT_REGION): List<ShelfEntry> =
         order(feed, saved).mapNotNull { s ->
-            val (c, others) = best(feed, s.id, today)
+            val (c, others) = best(feed, s.id, today, region)
             if (c == null && s.brochureUrl.isNullOrBlank()) null else ShelfEntry(s, c, others)
         }
 }
@@ -136,21 +139,60 @@ data class HomeCatalogs(val shelf: List<ShelfEntry>, val startingToday: List<Cat
                         val others: List<Catalog>) {
     val allIds: List<String> get() = shelf.mapNotNull { it.catalog?.id } + startingToday.map { it.id } +
         endingSoon.map { it.id } + others.map { it.id }
+    val allGroups: List<String> get() = shelf.mapNotNull { it.catalog?.groupKey } + startingToday.map { it.groupKey } +
+        endingSoon.map { it.groupKey } + others.map { it.groupKey }
 
     companion object {
-        fun build(feed: Feed, saved: List<String>, today: LocalDate, favStores: Set<String> = emptySet()): HomeCatalogs {
-            val shelf = Shelf.build(feed, saved, today)
-            val used = shelf.mapNotNull { it.catalog?.id }.toMutableSet()
-            val visible = Watch.featuredCatalogs(feed, today, favStores)
-            val starting = visible.filter { Dates.date(it.validFrom) == today && it.id !in used }
-            used += starting.map { it.id }
-            val ending = visible.filter { c ->
-                val t = Dates.date(c.validTo)
-                t != null && !t.isBefore(today) && java.time.temporal.ChronoUnit.DAYS.between(today, t) <= 2 && c.id !in used
-            }.sortedBy { Dates.date(it.validTo) }
-            used += ending.map { it.id }
-            val others = visible.filter { it.id !in used }
+        fun build(feed: Feed, saved: List<String>, today: LocalDate, favStores: Set<String> = emptySet(),
+                  region: String = CatalogRules.DEFAULT_REGION): HomeCatalogs {
+            val shelf = Shelf.build(feed, saved, today, region)
+            // Kimlik VE grup birlikte izlenir: bir yayının hiçbir kopyası ikinci bir bölümde görünmez.
+            val used = shelf.mapNotNull { it.catalog?.groupKey }.toMutableSet()
+            val visible = Watch.featuredCatalogs(feed, today, favStores, region)
+            val starting = visible.filter { it.groupKey !in used && !it.isPoster && Dates.date(it.validFrom) == today &&
+                CatalogRules.state(it, today) != CatalogState.EXPIRED }
+            used += starting.map { it.groupKey }
+            val ending = visible.filter { it.groupKey !in used && CatalogRules.state(it, today) == CatalogState.EXPIRING_SOON }
+                .sortedBy { Dates.date(it.validTo) }
+            used += ending.map { it.groupKey }
+            val others = visible.filter { it.groupKey !in used }
             return HomeCatalogs(shelf, starting, ending, others)
         }
     }
+}
+
+
+/** Kataloğun TEK temel durumu (Türkiye tarihine göre). Tüm bölümler bu kuralı kullanır; ikinci bir durum sistemi yok. */
+enum class CatalogState { UPCOMING, ACTIVE, EXPIRING_SOON, EXPIRED, UNKNOWN }
+
+object CatalogRules {
+    const val DEFAULT_REGION = "istanbul"
+    /** "Süresi dolmak üzere": bitiş tarihi BİLİNEN ve bugünden en fazla bu kadar gün sonra olan geçerli kataloglar. */
+    const val EXPIRING_DAYS = 2L
+
+    fun state(c: Catalog, today: LocalDate): CatalogState {
+        val f = Dates.date(c.validFrom)
+        val t = Dates.date(c.validTo)
+        return when {
+            t != null && t.isBefore(today) -> CatalogState.EXPIRED
+            f != null && f.isAfter(today) -> CatalogState.UPCOMING
+            t != null && java.time.temporal.ChronoUnit.DAYS.between(today, t) <= EXPIRING_DAYS -> CatalogState.EXPIRING_SOON
+            f != null || t != null -> CatalogState.ACTIVE
+            else -> CatalogState.UNKNOWN  // tarih yok: süre hesabı yapılmaz, "bitmek üzere" sayılmaz
+        }
+    }
+
+    /**
+     * Aynı yayının kopyalarını (bölge sürümleri, farklı adresler) tek karta indirger. Kullanıcının bölgesine ait kopya,
+     * yoksa bölgesiz kopya, yoksa ilk kopya seçilir. Sıra korunur (grubun ilk görüldüğü yer).
+     */
+    fun collapse(list: List<Catalog>, region: String = DEFAULT_REGION): List<Catalog> {
+        val groups = LinkedHashMap<String, MutableList<Catalog>>()
+        for (c in list) groups.getOrPut(c.groupKey) { ArrayList() }.add(c)
+        return groups.values.map { g -> g.firstOrNull { it.region == region } ?: g.firstOrNull { it.region == null } ?: g[0] }
+    }
+
+    /** Bu katalog grubunun mevcut bölgeleri (bölge seçici için). */
+    fun regions(feed: Feed, c: Catalog): List<String> =
+        feed.catalogs.filter { it.groupKey == c.groupKey }.mapNotNull { it.region }.distinct()
 }

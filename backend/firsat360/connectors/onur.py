@@ -71,7 +71,7 @@ def parse_campaign(html: str, page_url: str, region: str, observed) -> list[Cata
         cover = covers.get(no)
         out.append(CatalogData(id=f"onur-{region}-{no}", title=f"{title} · {REGION_NAMES.get(region, region)}", kind="pdf",
                                official_url=page_url, valid_from=start, valid_to=end_d,
-                               pdf_url=urljoin(BASE + "/", m_pdf.group(0)), cover_url=cover))
+                               pdf_url=urljoin(BASE + "/", m_pdf.group(0)), cover_url=cover, region=region))
     return out
 
 

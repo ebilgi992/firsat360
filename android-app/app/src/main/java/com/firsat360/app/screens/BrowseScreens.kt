@@ -99,9 +99,26 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
             header.addView(info, lp(l = dp(20), r = dp(20), t = dp(14)))
         }
 
-        val catalogs = f.catalogs.filter { it.storeId == storeId }
+        // Süresi dolmuşlar çıkarılır; bölge kopyaları kullanıcının bölgesine göre tek karta indirgenir.
+        val all = f.catalogs.filter { it.storeId == storeId &&
+            com.firsat360.app.core.CatalogRules.state(it, a.today) != com.firsat360.app.core.CatalogState.EXPIRED }
+        val catalogs = com.firsat360.app.core.CatalogRules.collapse(all, a.user.region)
         if (catalogs.isNotEmpty()) {
             header.addView(a.sectionHeader("Kataloglar"))
+            val regions = all.mapNotNull { it.region }.distinct()
+            if (regions.size > 1) {
+                val names = mapOf("istanbul" to "İstanbul", "bursa" to "Bursa", "trakya" to "Trakya")
+                val chips = a.hbox().apply { setPadding(dp(20), 0, dp(20), dp(10)) }
+                for (r in regions) {
+                    val on = r == a.user.region
+                    chips.addView(a.pill(names[r] ?: r, if (on) 0xFFFFFFFF.toInt() else Theme.p.text2,
+                        if (on) Theme.p.accent else Theme.p.surface2, 13f, Theme.semibold).apply {
+                        contentDescription = "Bölge: ${names[r] ?: r}"
+                        onTap { a.user.region = r; a.refreshCurrent() }
+                    }, lp(WRAP, WRAP, r = dp(8)))
+                }
+                header.addView(chips)
+            }
             val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), 0) }
             for (c in catalogs.sortedWith(compareBy<com.firsat360.app.core.Catalog> { it.kind == "link_only" }.thenBy { it.validFrom ?: "" }))
                 row.addView(a.catalogCard(c, store?.name ?: "", a.today) { a.openCatalog(c.id) })

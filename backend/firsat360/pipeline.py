@@ -79,6 +79,7 @@ def ingest(session: Session, result: ConnectorResult, trigger: str = "schedule")
             cat.pages_json = _json.dumps(c.pages, ensure_ascii=False) if c.pages else None
         if c.pdf_url:
             cat.pdf_url = c.pdf_url
+        cat.region = c.region
         # Yayın izi: ilk görülme bir kez yazılır (eski anlık görüntü sonradan içe aktarılırsa daha erken olanı kalır).
         if cat.first_seen_at is None or _aware(cat.first_seen_at) > obs:
             cat.first_seen_at = obs
@@ -301,10 +302,33 @@ def run_all(sf: sessionmaker, connectors: dict, settings: Settings, trigger: str
         for sid, conn in connectors.items():
             if only and sid not in only:
                 continue
+            if trigger == "schedule":
+                wait = blocked_backoff(sf, sid)
+                if wait:
+                    out.append({"store": sid, "ok": False, "skipped": wait})
+                    continue
             out.append(run_store(sf, sid, conn, client, trigger, alert=alert))
     finally:
         client.close()
     return out
+
+
+BLOCK_MARKERS = ("403", "429", "robots.txt izin vermiyor", "aşılmaya çalışılmadı")
+
+
+def blocked_backoff(sf: sessionmaker, store_id: str, now: datetime | None = None) -> str | None:
+    """Kontrollü geri çekilme: son 3 deneme de erişim engeli (403/429/robots) ile bittiyse kaynak günde en fazla bir
+    kez denenir; aynı engel her çalıştırmada tekrarlanıp sunucuya yük bindirilmez. Elle "Şimdi dene" bunu atlar."""
+    now = now or utcnow()
+    with sf() as s:
+        runs = s.scalars(select(SourceRun).where(SourceRun.store_id == store_id, SourceRun.trigger != "snapshot")
+                         .order_by(SourceRun.started_at.desc()).limit(3)).all()
+    if len(runs) < 3 or any(r.ok or not any(m in (r.error or "") for m in BLOCK_MARKERS) for r in runs):
+        return None
+    last = _aware(runs[0].started_at)
+    if last and (now - last) < timedelta(hours=20):
+        return f"geri çekilme: son 3 deneme erişim engeli; sonraki deneme {(last + timedelta(hours=20)).isoformat()}"
+    return None
 
 
 def import_snapshot(sf: sessionmaker, results: list[ConnectorResult]) -> list[dict]:
