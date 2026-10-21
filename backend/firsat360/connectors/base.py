@@ -186,9 +186,16 @@ class PoliteClient:
     def probe(self, url: str) -> dict:
         """Dosyanın GERÇEK türünü doğrular: GET ile yalnızca ilk baytlar okunur (sihirli sayı), bağlantı kapatılır.
         Bazı sunucular HEAD'e yanlış yanıt verir (File: sonsuz 302). Dönüş: {ok, kind, status, type, size}.
-        kind: jpeg | png | webp | gif | pdf | html | unknown."""
-        self.ensure_allowed(url)
-        check_public_url(url)
+        kind: jpeg | png | webp | gif | pdf | html | unknown | robots | error.
+        robots.txt izin vermiyorsa dosya İNDİRİLMEZ ve hata fırlatılmaz: {ok: False, kind: "robots"} döner
+        (çağıran taraf kendi güvenli yedeğine geçer; bir doğrulama adımı tüm mağaza taramasını düşürmez)."""
+        try:
+            self.ensure_allowed(url)
+            check_public_url(url)
+        except RobotsDisallowed:
+            return {"ok": False, "kind": "robots", "status": None, "type": "", "size": 0}
+        except ConnectorError as exc:
+            return {"ok": False, "kind": "error", "status": None, "type": "", "size": 0, "error": str(exc)[:120]}
         self._wait(urlparse(url).netloc)
         self.requests_made += 1
         try:

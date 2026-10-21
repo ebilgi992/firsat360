@@ -42,3 +42,31 @@ def test_sok_new_card_layout_banners():
     assert len(pages) == 1 and pages[0]["caption"] == "Ücretsiz Teslimat"
     assert pages[0]["url"] == "https://images.ceptesok.com/promotion-assets/sub-folder/1c219942.jpg"
     assert "width=512" in pages[0]["thumb_url"] and pages[0]["link"].endswith("-prm-c1f73e10-3cf9-4ef1-a954-32fa6dcdb901")
+
+
+def test_probe_respects_robots_without_failing_the_store():
+    """ŞOK görsel sunucusu robots.txt ile botlara kapalı: doğrulama indirmez, hata fırlatmaz, küçük boya düşülür."""
+    from datetime import datetime, timezone
+    import httpx
+    from firsat360.connectors.base import PoliteClient
+    from firsat360.connectors.sok import SokConnector
+    asked = []
+
+    def handler(req):
+        u = str(req.url)
+        if req.url.host == "images.ceptesok.com":
+            if req.url.path == "/robots.txt":
+                return httpx.Response(200, text="User-agent: *\nDisallow: /")
+            asked.append(u)
+            return httpx.Response(200, content=b"\xff\xd8\xff")
+        if req.url.path == "/robots.txt":
+            return httpx.Response(200, text="")
+        if "kampanyalar" in u:
+            return httpx.Response(200, text=SOK)
+        return httpx.Response(200, text="<html></html>")
+    client = PoliteClient("t", min_interval_s=0, transport=httpx.MockTransport(handler), sleep=lambda s: None)
+    assert client.probe("https://images.ceptesok.com/promotion-assets/x.jpg")["kind"] == "robots"
+    res = SokConnector(max_pages=0).fetch(client, datetime(2026, 10, 21, tzinfo=timezone.utc))
+    gal = next(c for c in res.catalogs if c.id == "sok-kampanya-gorselleri")
+    assert not asked  # görsel sunucusuna hiç istek yapılmadı
+    assert "width=512" in gal.pages[0]["url"]  # sitenin gösterdiği resmî küçük boy
