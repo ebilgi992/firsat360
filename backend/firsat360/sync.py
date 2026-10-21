@@ -21,7 +21,7 @@ import httpx
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .config import ROOT, Settings
+from .config import RETIRED_STORES, ROOT, Settings
 from .db import (AnnouncedCatalog, Announcement, Catalog, Offer, PriceObservation, SourceRun, Store,
                  SyncRun)
 
@@ -231,6 +231,7 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
             client.close()
     # 2a') İstemci köprüsündeki broşür kaynakları: sunucuda bağlayıcısı yok → durum açıkça "client_bridge"
     mark_client_bridged(sf, connectors)
+    retire_stores(sf)
     # 2c) Kalite ajanları + orkestratör: denetle → düzelt → yeniden denetle → raporla
     report["quality"] = run_quality(sf, connectors if live else {}, settings, now, transport, sleep)
     # 3) Yeni katalog tespiti ve duyuru (tek işlem)
@@ -262,7 +263,7 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
         report["pruned"] = prune(s, settings, now)
         s.commit()
     with sf() as s:
-        stores = s.scalars(select(Store)).all()
+        stores = [st for st in s.scalars(select(Store)).all() if st.id not in RETIRED_STORES]
         ok = sum(1 for st in stores if st.status in ("ok", "partial", "link_only"))
         failed = sum(1 for st in stores if st.status == "error")
         run = s.get(SyncRun, run_id)
@@ -286,6 +287,19 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
         report["status"] = str(status_path)
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     return report
+
+
+def retire_stores(sf) -> None:
+    """Kaldırılan marketler (config.RETIRED_STORES): veritabanı kaydı silinmez (geçmiş korunur) ama devre dışı
+    bırakılır; durum ekranına, sayımlara, kalite denetimine ve feed'e girmez."""
+    with sf() as s:
+        for sid in RETIRED_STORES:
+            st = s.get(Store, sid)
+            if st is not None and (st.enabled or st.status != "retired"):
+                st.enabled = False
+                st.status = "retired"
+                st.status_message = "Uygulamadan kaldırıldı"
+        s.commit()
 
 
 def mark_client_bridged(sf: sessionmaker, connectors: dict) -> None:
@@ -375,14 +389,11 @@ def status_dict(session: Session) -> dict:
     return {
         "stores": [{"id": s.id, "name": s.name, "status": s.status, "last_checked_at": iso(s.last_checked_at),
                     "last_success_at": iso(s.last_success_at), "last_error": (s.last_error or "")[:300] or None}
-                   for s in session.scalars(select(Store).order_by(Store.id))],
+                   for s in session.scalars(select(Store).order_by(Store.id)) if s.id not in RETIRED_STORES],
         "runs": [{"started_at": iso(r.started_at), "finished_at": iso(r.finished_at), "trigger": r.trigger,
                   "ok_stores": r.ok_stores, "failed_stores": r.failed_stores, "new_catalogs": r.new_catalogs,
                   "announcement_id": r.announcement_id} for r in runs],
     }
-
-
-from .config import RETIRED_STORES  # noqa: E402
 
 
 def announcements_for_feed(session: Session, now: datetime, days: int = 14) -> list[dict]:

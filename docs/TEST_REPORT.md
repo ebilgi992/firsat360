@@ -3,7 +3,7 @@
 ## 1.5.0 (22.10.2026) — yeni arayüz, Onur kaldırıldı, köprü düzeltmeleri
 | Test | Sonuç | Kanıt |
 |---|---|---|
-| Backend pytest (tam) | PASS | 175 geçti, 2 atlandı (PostgreSQL) |
+| Backend pytest (tam) | PASS | 176 geçti, 2 atlandı (PostgreSQL) |
 | Onur feed'e girmiyor (eski DB kayıtları dahil), bağlayıcısı yok | PASS | `test_retired_store_onur_not_in_feed`; gömülü feed'de 0 Onur kaydı |
 | Köprü regresyonları: görünmez reCAPTCHA doğrulama sayılmıyor, KVKK/koşullar PDF'i broşür sayılmıyor | PASS | `test_bridge_scripts.py` (20) |
 | RN `postMessage` zarfı nonce taşıyor, Android ile aynı sonuç | PASS | `test_react_native_wrapper_posts_same_result`; `tsc --noEmit` |

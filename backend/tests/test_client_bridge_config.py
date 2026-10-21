@@ -56,3 +56,18 @@ def test_retired_store_onur_not_in_feed(tmp_path):
         s.commit()
         feed = build_feed(s, today=date(2026, 10, 22))
     assert not any(x["id"] == "onur" for x in feed["stores"]) and not any(c["store_id"] == "onur" for c in feed["catalogs"])
+
+
+def test_retired_store_hidden_from_status(tmp_path):
+    from firsat360.db import Store, make_session_factory
+    from firsat360.sync import retire_stores, status_dict
+    sf = make_session_factory(f"sqlite:///{tmp_path}/s.db")
+    with sf() as s:
+        s.add(Store(id="onur", name="Onur Market", official_url="https://x", catalog_url="https://x", status="link_only"))
+        s.add(Store(id="bim", name="BİM", official_url="https://x", catalog_url="https://x", status="ok"))
+        s.commit()
+    retire_stores(sf)
+    with sf() as s:
+        assert s.get(Store, "onur").enabled is False
+        ids = [x["id"] for x in status_dict(s)["stores"]]
+    assert ids == ["bim"]
