@@ -13,8 +13,8 @@ android {
         // Google Play: 31.08.2026'dan itibaren yeni uygulama/güncellemeler API 36 hedeflemeli.
         // Kenardan kenara düzen (pencere boşlukları) ve OnBackInvokedCallback ile geri hareketi kodda ele alındı.
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.8.0-beta"
+        versionCode = 12
+        versionName = "1.0.0"
     }
 
     signingConfigs {

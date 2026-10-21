@@ -85,6 +85,22 @@ def offer_dict(o: Offer, history: list[PriceObservation] | None = None, images: 
     return d
 
 
+STALE_DAYS = 2
+
+
+def is_stale(c: Catalog, store: Store | None, catalogs_with_offers: set) -> bool:
+    """Kaynakta artık listelenmeyen katalog: mağazanın son başarılı okumasından STALE_DAYS gün önce son görülmüş
+    ve yayında ürünü yok. (Ör. eski anlık görüntüden kalan, yeni sayısıyla mükerrer görünen Migroskop kaydı.)"""
+    if c.id in catalogs_with_offers or store is None or store.last_success_at is None or c.last_checked_at is None:
+        return False
+    seen, ok = _aware(c.last_checked_at), _aware(store.last_success_at)
+    return (ok - seen).total_seconds() > STALE_DAYS * 86400
+
+
+def _aware(d):
+    return d if d is None or d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
 def build_feed(session: Session, today: date | None = None, include_expired: bool = False) -> dict:
     today = today or datetime.now(timezone.utc).date()
     stores = session.scalars(select(Store).order_by(Store.id)).all()
@@ -93,6 +109,8 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
     if not include_expired:
         offers = [o for o in offers if o.valid_to is None or o.valid_to >= today]
         catalogs = [c for c in catalogs if c.valid_to is None or c.valid_to >= today]
+        catalogs = [c for c in catalogs if not is_stale(c, {s.id: s for s in stores}.get(c.store_id),
+                                                        {o.catalog_id for o in offers})]
     # Fiyat geçmişi (gözlemler) feed'e eklenir; uygulama detay ekranında grafik/özet gösterir.
     history: dict[str, list[PriceObservation]] = {}
     for h in session.scalars(select(PriceObservation).order_by(PriceObservation.observed_at)):

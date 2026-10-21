@@ -48,3 +48,38 @@ def test_readonly_api(tmp_path):
     assert [x["id"] for x in body["catalogs"]] == ["bim-1"] and body["catalogs"][0]["pages"][0]["url"].endswith("p1.jpg")
     assert c.get("/catalogs/yok").status_code == 404
     assert c.post("/catalogs").status_code == 405  # yazma yok
+
+
+def test_magento_product_thumbnails_are_not_brochure_pages():
+    from firsat360.connectors.discovery import scan_html
+    src = StoreSource("rossmann", "R", ["https://www.rossmann.com.tr/kataloglar"], hosts=("rossmann.com.tr",))
+    html = """<img src="https://cdn.rossmann.com.tr/mnpadding/700/700/FFFFFF/media/catalog/product/6/6/660f.jpeg">
+      <img src="https://cdn.rossmann.com.tr/media/wysiwyg/katalog/ekim-katalog-sayfa1.jpg">"""
+    f = scan_html(html, src.urls[0], src)
+    assert f.images == ["https://cdn.rossmann.com.tr/media/wysiwyg/katalog/ekim-katalog-sayfa1.jpg"]
+
+
+def test_stale_catalog_hidden_from_feed():
+    from datetime import timedelta
+    from firsat360.db import Catalog, Store
+    from firsat360.feed import is_stale
+    st = Store(id="migros", name="M", official_url="u", catalog_url="u", last_success_at=NOW)
+    old = Catalog(id="a", store_id="migros", title="t", kind="flipbook", official_url="u", source_method="x",
+                  observed_at=NOW, data_mode="real", last_checked_at=NOW - timedelta(days=8))
+    fresh = Catalog(id="b", store_id="migros", title="t", kind="aktuel", official_url="u", source_method="x",
+                    observed_at=NOW, data_mode="real", last_checked_at=NOW)
+    assert is_stale(old, st, set()) and not is_stale(fresh, st, set()) and not is_stale(old, st, {"a"})
+
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1/x", "http://localhost:8080/", "http://10.0.0.5/a", "file:///etc/passwd",
+                                 "http://169.254.169.254/latest/meta-data", "http://[::1]/", "http://intranet/"])
+def test_ssrf_guard_blocks_private_targets(url):
+    from firsat360.connectors.base import ConnectorError, check_public_url
+    with pytest.raises(ConnectorError):
+        check_public_url(url)
+
+
+def test_ssrf_guard_allows_public():
+    from firsat360.connectors.base import check_public_url
+    check_public_url("https://www.bim.com.tr/x")
+    check_public_url("https://8.8.8.8/")

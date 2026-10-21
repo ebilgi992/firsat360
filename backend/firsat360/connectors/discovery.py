@@ -34,7 +34,10 @@ FLIPBOOK_HOSTS = ("publitas.com", "heyzine.com", "aflip.in", "fliphtml5.com", "i
                   "flipsnack.com", "calameo.com")
 # Yalnızca broşürü açıkça adlandıran sözcükler ("kampanya", "indirim" gibi genel afiş sözcükleri değil).
 BROCHURE_WORD = re.compile(r"(?i)insert|bro[sş]ur|katalog|catalog|aktuel|aktüel|flyer|leaflet|afis|afiş|poster")
-SKIP = re.compile(r"(?i)logo|icon|favicon|sprite|avatar|placeholder|app-?store|google-?play|banner-app|social")
+# Ürün küçük resimleri broşür sayfası değildir: Magento "/media/catalog/product/" yolundaki "catalog" sözcüğü
+# broşür sanılıyordu (Rossmann'da 24 ürün fotoğrafı "katalog sayfası" olarak alınmıştı).
+SKIP = re.compile(r"(?i)logo|icon|favicon|sprite|avatar|placeholder|app-?store|google-?play|banner-app|social|"
+                  r"/catalog/product/|/product[s]?/|/urun(?:ler)?/|/thumbnail")
 PDF_RE = re.compile(r"\.pdf(?:[?#]|$)", re.I)
 
 

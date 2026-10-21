@@ -26,6 +26,8 @@ import com.firsat360.app.ui.*
 class CatalogReaderScreen(
     a: MainActivity, private val catalogId: String?, private var index: Int = 0,
     private val single: CatalogPage? = null, private val singleTitle: String? = null,
+    /** Resmî sayfadan cihazda toplanan broşür sayfaları (feed'de olmayan, ör. A101 afişleri). */
+    private val extraPages: List<CatalogPage>? = null,
 ) : Screen(a) {
     override val tab: Tab get() = Tab.STORES
     private val dark = 0xFF0B0D12.toInt()
@@ -43,7 +45,7 @@ class CatalogReaderScreen(
     private var bars: List<View> = emptyList()
 
     private val pages: List<CatalogPage>
-        get() = single?.let { listOf(it) } ?: (a.feed.catalog(catalogId)?.pages ?: emptyList())
+        get() = extraPages ?: single?.let { listOf(it) } ?: (a.feed.catalog(catalogId)?.pages ?: emptyList())
 
     override fun create(): View {
         val f = a.feed

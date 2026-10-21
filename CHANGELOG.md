@@ -1,5 +1,17 @@
 # Değişiklik günlüğü
 
+## 1.0.0 (V1) — 21 Ekim 2026
+- **Mükerrer katalog yok:** ana sayfa bölümleri tek kaynaktan (`HomeCatalogs`) — Market broşürleri → Bugün başlayanlar →
+  Süresi dolmak üzere → Diğer kataloglar; her katalog yalnızca bir bölümde. "Son güncelleme" bilgisi rafın altında.
+- **Bayat kataloglar gizlenir:** kaynakta 2 günden uzun görülmeyen ürünsüz katalog feed'e girmez (eski Migroskop kaydı).
+- **Sahte broşür sayfası engeli:** ürün küçük resimleri (Magento `/catalog/product/`) broşür sayılmaz; kalite ajanı mevcut
+  hatalı sayfaları temizler (Rossmann).
+- **Resmî sayfadan sayfa sayfa okuma (cihazda):** A101 gibi sunucudan okunamayan marketlerde resmî afiş/broşür sayfası
+  açıldığında büyük dikey görseller toplanır; "Sayfa sayfa aç" ile yakınlaştırılabilir okuyucuda gösterilir.
+- **SSRF koruması ve yanıt boyutu sınırı** (veri hattı istemcisi), **"Şimdi dene"** (Actions → stores girdisi),
+  **market aç/kapat** (`config/sources.json`).
+- Belgeler: ROOT_CAUSE_ANALYSIS, COMPETITOR_ANALYSIS, DATA_SOURCE_STATUS, TEST_REPORT, V1_RELEASE_CHECKLIST.
+
 ## 0.8.0-beta — 21 Ekim 2026
 - **Market broşürleri rafı (ana sayfa):** Türkiye'nin büyük zincirleri (BİM, A101, ŞOK, Migros, CarrefourSA, Tarım
   Kredi, File, Hakmar, Onur…) her zaman görünür; her kartta o marketin güncel broşürü. Sayfa görselli broşür

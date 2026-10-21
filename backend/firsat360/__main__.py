@@ -36,6 +36,7 @@ def main(argv=None):
     d.add_argument("--out", default=None, help="feed.json yolu (varsayılan FEED_EXPORT_PATH)")
     d.add_argument("--no-live", action="store_true", help="Canlı kaynakları atla (yalnızca duyuru/feed)")
     d.add_argument("--no-pages", action="store_true", help="Ürün sayfası görsel doğrulamasını atla")
+    d.add_argument("--only", default="", help="Yalnızca bu marketleri tara (virgülle)")
     sv = sub.add_parser("serve")
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--port", type=int, default=8000)
@@ -59,8 +60,9 @@ def main(argv=None):
             print(export_feed(s, a.out or settings.feed_export_path))
     elif a.cmd == "daily":
         from .sync import run_daily
-        report = run_daily(sf, conns, settings, trigger="schedule", live=not a.no_live,
-                           verify_pages=not a.no_pages, feed_path=a.out)
+        only = [x for x in a.only.split(",") if x] or None
+        report = run_daily(sf, conns, settings, trigger="manual" if only else "schedule", live=not a.no_live,
+                           verify_pages=not a.no_pages, feed_path=a.out, only=only)
         print(json.dumps(report, ensure_ascii=False, indent=1, default=str))
         # Hiçbir mağaza güncellenemediyse iş akışı başarısız görünsün (izlenebilirlik); veri yine korunur.
         if report.get("ok_stores", 0) == 0:

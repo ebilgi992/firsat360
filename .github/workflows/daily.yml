@@ -1,6 +1,6 @@
 # FIRSAT360 — canlı günlük veri hattı (sunucu tarafı zamanlama)
 #
-# Günde iki kez (07:05 ve 18:05 Türkiye saati) tüm mağazaların resmî kaynaklarını kontrol eder, ürün görsellerini
+# Günde iki kez (08:05 ve 00:05 Türkiye saati) tüm mağazaların resmî kaynaklarını kontrol eder, ürün görsellerini
 # doğrular, yeni katalogları bir kez duyurur, isteğe bağlı ntfy push'u 09:00'a zamanlar ve feed.json'u GitHub Pages'te
 # yayımlar. Uygulama veriyi https://<kullanıcı>.github.io/<depo>/feed.json adresinden alır.
 #
@@ -18,6 +18,10 @@ on:
         description: "Ürün sayfası görsel doğrulamasını atla"
         type: boolean
         default: false
+      stores:
+        description: "Şimdi dene: yalnızca bu marketleri tara (virgülle, ör. bim,sok). Boş = hepsi"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -86,6 +90,11 @@ jobs:
           set -o pipefail
           ARGS=""
           if [ "${{ inputs.no_pages }}" = "true" ]; then ARGS="--no-pages"; fi
+          STORES_IN="${{ inputs.stores }}"
+          if [ -n "$STORES_IN" ]; then
+            case "$STORES_IN" in *[!a-z0-9,]*) echo "Geçersiz market listesi"; exit 1;; esac
+            ARGS="$ARGS --only $STORES_IN"
+          fi
           python -m firsat360 daily $ARGS | tee ../site-report.json
 
       - name: Gizlilik politikasını yayına ekle

@@ -1,0 +1,4 @@
+{
+  "_aciklama": "Yönetim: bir marketi geçici olarak kapatmak için kimliğini 'disabled' listesine ekleyip commit edin. Şimdi dene: Actions → gunluk-veri → Run workflow → 'stores' alanına ör. bim,sok yazın.",
+  "disabled": []
+}

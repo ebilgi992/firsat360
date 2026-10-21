@@ -126,3 +126,31 @@ object Shelf {
             if (c == null && s.brochureUrl.isNullOrBlank()) null else ShelfEntry(s, c, others)
         }
 }
+
+
+/**
+ * Ana sayfanın katalog bölümleri, her katalog EN FAZLA BİR bölümde (mükerrer kart yok). Öncelik: market broşürü rafı →
+ * bugün başlayanlar → süresi dolmak üzere (2 gün içinde) → diğer kataloglar. Yalnızca gerçek veriden; boş bölüm gösterilmez.
+ */
+data class HomeCatalogs(val shelf: List<ShelfEntry>, val startingToday: List<Catalog>, val endingSoon: List<Catalog>,
+                        val others: List<Catalog>) {
+    val allIds: List<String> get() = shelf.mapNotNull { it.catalog?.id } + startingToday.map { it.id } +
+        endingSoon.map { it.id } + others.map { it.id }
+
+    companion object {
+        fun build(feed: Feed, saved: List<String>, today: LocalDate, favStores: Set<String> = emptySet()): HomeCatalogs {
+            val shelf = Shelf.build(feed, saved, today)
+            val used = shelf.mapNotNull { it.catalog?.id }.toMutableSet()
+            val visible = Watch.featuredCatalogs(feed, today, favStores)
+            val starting = visible.filter { Dates.date(it.validFrom) == today && it.id !in used }
+            used += starting.map { it.id }
+            val ending = visible.filter { c ->
+                val t = Dates.date(c.validTo)
+                t != null && !t.isBefore(today) && java.time.temporal.ChronoUnit.DAYS.between(today, t) <= 2 && c.id !in used
+            }.sortedBy { Dates.date(it.validTo) }
+            used += ending.map { it.id }
+            val others = visible.filter { it.id !in used }
+            return HomeCatalogs(shelf, starting, ending, others)
+        }
+    }
+}

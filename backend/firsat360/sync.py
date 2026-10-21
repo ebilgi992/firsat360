@@ -182,7 +182,7 @@ def prune(session: Session, settings: Settings, now: datetime) -> dict:
 def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: str = "schedule", transport=None,
               push_transport=None, now: datetime | None = None, snapshot_root: Path | None = None,
               live: bool = True, sleep=None, feed_path: str | Path | None = None,
-              verify_pages: bool = True) -> dict:
+              verify_pages: bool = True, only: list[str] | None = None) -> dict:
     """Tek günlük çalıştırma. Tekrar çalıştırılabilir (idempotent): aynı veriyle ikinci çalıştırma bildirim üretmez."""
     from .connectors.snapshot import snapshot_dirs
     from .feed import export_feed
@@ -211,7 +211,8 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
     if live and connectors:
         try:
             report["stores"] = run_all(sf, connectors, settings, trigger=trigger, transport=transport,
-                                       only=list(settings.enabled_live_stores), sleep=sleep)
+                                       only=[x for x in (only or settings.enabled_live_stores)
+                                             if x in settings.enabled_live_stores], sleep=sleep)
         except Exception as exc:  # noqa: BLE001
             report["errors"].append(f"canlı tarama: {exc.__class__.__name__}: {exc}")
     # 2b) Ürün görselleri: her ürünün kendi resmî sayfasından otomatik doğrulama (yalnızca yeni/eskimiş olanlar)

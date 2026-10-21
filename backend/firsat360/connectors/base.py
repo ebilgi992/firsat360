@@ -65,6 +65,27 @@ class ConnectorResult:
     partial: bool = False
 
 
+MAX_RESPONSE_BYTES = 30 * 1024 * 1024
+
+
+def check_public_url(url: str) -> None:
+    """SSRF koruması: yalnızca http/https ve herkese açık adresler. localhost, özel/yerel/bağlantı-yerel IP'ler ve
+    çıplak (noktasız) ana bilgisayar adları reddedilir. Kaynak adresleri yapılandırma dosyasından gelse de uygulanır."""
+    import ipaddress
+    p = urlparse(url)
+    host = (p.hostname or "").lower()
+    if p.scheme not in ("http", "https") or not host:
+        raise ConnectorError(f"İzin verilmeyen adres: {url}")
+    if host == "localhost" or host.endswith(".localhost") or host.endswith(".local") or "." not in host:
+        raise ConnectorError(f"Yerel adrese erişim engellendi: {host}")
+    try:
+        ip = ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        return
+    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+        raise ConnectorError(f"Özel ağ adresine erişim engellendi: {host}")
+
+
 class PoliteClient:
     """robots.txt'ye uyan, istekler arası bekleyen, zaman aşımı ve sınırlı yeniden denemesi olan istemci.
 
@@ -117,9 +138,14 @@ class PoliteClient:
         self._last[host] = time.monotonic()
 
     def _raw_get(self, url: str, **kw) -> httpx.Response:
+        check_public_url(url)
         self._wait(urlparse(url).netloc)
         self.requests_made += 1
-        return self.client.get(url, **kw)
+        resp = self.client.get(url, **kw)
+        check_public_url(str(resp.url))  # yönlendirme sonrası hedef de doğrulanır
+        if len(resp.content) > MAX_RESPONSE_BYTES:
+            raise ConnectorError(f"Yanıt çok büyük ({len(resp.content) // 1048576} MB): {url}")
+        return resp
 
     def ensure_allowed(self, url: str) -> None:
         """robots.txt izin vermiyorsa RobotsDisallowed (tarayıcıyla açılacak sayfalar için ön kontrol)."""
@@ -134,6 +160,7 @@ class PoliteClient:
             rp = self._robots_for(url)
             if rp is not None and not rp.can_fetch(self.user_agent, url):
                 raise RobotsDisallowed(f"robots.txt bu adrese izin vermiyor: {url}")
+        check_public_url(url)
         try:
             self._wait(urlparse(url).netloc)
             self.requests_made += 1

@@ -151,6 +151,20 @@ DEFAULT_SCHEDULE = {
 }
 
 
+def _overrides() -> dict:
+    """config/sources.json: depo sahibinin GitHub'dan düzenlediği yönetim ayarı (market aç/kapat).
+    {"disabled": ["file"]} → o market taranmaz. Dosya yoksa/bozuksa varsayılanlar."""
+    import json
+    p = ROOT / "config" / "sources.json"
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    except ValueError:
+        return {}
+    disabled = set(data.get("disabled") or [])
+    base = os.getenv("LIVE_STORES", ",".join(STORES)).split(",")
+    return {"enabled": tuple(s for s in base if s and s not in disabled)} if disabled else {}
+
+
 @dataclass
 class Settings:
     database_url: str = field(default_factory=lambda: os.getenv("DATABASE_URL", "sqlite:///./firsat360.db"))
@@ -169,7 +183,7 @@ class Settings:
     # Kaynak hatasında yöneticiye bildirim: JSON {"text": ...} POST edilir (Slack/Discord/Telegram köprüsü vb.).
     alert_webhook_url: str = field(default_factory=lambda: os.getenv("ALERT_WEBHOOK_URL", ""))
     enabled_live_stores: tuple[str, ...] = field(default_factory=lambda: tuple(
-        s for s in os.getenv(
+        s for s in _overrides().get("enabled", ()) or os.getenv(
         "LIVE_STORES", "a101,bim,sok,migros,tkkoop,hakmar,watsons,metro,bizimtoptan,gratis,rossmann,onur,carrefoursa,file")
         .split(",") if s))
 

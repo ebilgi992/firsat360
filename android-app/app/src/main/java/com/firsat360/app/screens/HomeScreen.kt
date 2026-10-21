@@ -84,13 +84,25 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         }
 
         // ---- Market broşürleri: Türkiye'nin büyük zincirleri her zaman, kullanıcının sırasıyla
-        val shelf = com.firsat360.app.core.Shelf.build(f, a.user.chainOrder, a.today)
+        val home = com.firsat360.app.core.HomeCatalogs.build(f, a.user.chainOrder, a.today, a.user.favoriteStores())
+        val shelf = home.shelf
         if (shelf.isNotEmpty()) {
             col.addView(a.sectionHeader("Market broşürleri", "Sırala") { a.push(ShelfOrderScreen(a)) })
             val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), dp(4)) }
             for (e in shelf) row.addView(a.shelfCard(e))
             col.addView(a.hscroll(row))
+            col.addView(a.text("Son güncelleme: ${Dates.relative(f.generatedAt, a.now)} · resmî market kaynaklarından",
+                11.5f, Theme.p.text3, Theme.regular, 1), lp(l = dp(20), r = dp(20), t = dp(8)))
         }
+        fun catalogRow(title: String, list: List<Catalog>) {
+            if (list.isEmpty()) return
+            col.addView(a.sectionHeader(title))
+            val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), dp(4)) }
+            for (c in list.take(12)) row.addView(a.catalogCard(c, f.store(c.storeId)?.name ?: "", a.today) { a.openCatalog(c.id) })
+            col.addView(a.hscroll(row))
+        }
+        catalogRow("Bugün başlayanlar", home.startingToday)
+        catalogRow("Süresi dolmak üzere", home.endingSoon)
 
         // ---- Günün İndirimleri
         if (deals.isNotEmpty()) {
@@ -110,10 +122,12 @@ class HomeScreen(a: MainActivity) : Screen(a) {
                 lp(l = dp(20), r = dp(20), t = dp(10)))
         }
 
-        // ---- Kataloglar (yeni olanlar "YENİ" rozetli)
-        a.featuredCatalogRow()?.let { row ->
-            col.addView(a.sectionHeader("Kataloglar", "Tümü") { a.openCatalogList(false) })
-            col.addView(row)
+        // ---- Diğer kataloglar: yukarıdaki bölümlerde gösterilmeyenler (aynı katalog ana sayfada iki kez görünmez)
+        if (home.others.isNotEmpty()) {
+            col.addView(a.sectionHeader("Diğer kataloglar", "Tümü") { a.openCatalogList(false) })
+            val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), dp(4)) }
+            for (c in home.others.take(12)) row.addView(a.catalogCard(c, f.store(c.storeId)?.name ?: "", a.today) { a.openCatalog(c.id) })
+            col.addView(a.hscroll(row))
         }
 
         // ---- Marketler

@@ -364,6 +364,12 @@ fun main(args: Array<String>) {
         feed.catalogs.none { it.storeId == "bim" && (it.hasPages || it.hasPdf) &&
             Dates.status(it.validFrom, it.validTo, today13).kind != ValidityKind.EXPIRED })
 
+    // V1: ana sayfada aynı katalog iki kez görünmez
+    val home = HomeCatalogs.build(feed, emptyList(), today13)
+    check("home.noDuplicates", home.allIds.size == home.allIds.toSet().size) { home.allIds.groupingBy { it }.eachCount().filter { it.value > 1 }.toString() }
+    check("home.startingToday", home.startingToday.all { Dates.date(it.validFrom) == today13 })
+    check("home.endingSoon", home.endingSoon.all { val t = Dates.date(it.validTo)!!; !t.isBefore(today13) && t.toEpochDay() - today13.toEpochDay() <= 2 })
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)

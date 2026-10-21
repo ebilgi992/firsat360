@@ -254,6 +254,14 @@ class CatalogScreen(a: MainActivity, private val catalogId: String) : Screen(a) 
 }
 
 /** Resmî sayfaları uygulama içinde gösterir (katalog görselini inceleme). İçerik kopyalanmaz, kaynağında açılır. */
+/** Alan adı ailesi: "cdn2.a101.com.tr" ve "www.a101.com.tr" → "a101.com.tr" (iki parçalı Türk uzantıları dahil). */
+fun siteFamily(host: String?): String? {
+    val p = host?.lowercase()?.split('.')?.filter { it.isNotEmpty() } ?: return null
+    if (p.size < 2) return host
+    val twoLevel = p.size >= 3 && p[p.size - 2] in setOf("com", "net", "org", "gen", "biz", "info", "web", "av", "bel")
+    return p.takeLast(if (twoLevel) 3 else 2).joinToString(".")
+}
+
 class WebScreen(a: MainActivity, private val url: String, private val title: String,
                 private val catalog: Boolean = false) : Screen(a) {
     override val tab: Tab get() = Tab.STORES
@@ -309,7 +317,10 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
                     return true
                 }
                 override fun onPageStarted(view: WebView?, u: String?, favicon: Bitmap?) { progress.visibility = View.VISIBLE }
-                override fun onPageFinished(view: WebView?, u: String?) { progress.visibility = View.GONE }
+                override fun onPageFinished(view: WebView?, u: String?) {
+                    progress.visibility = View.GONE
+                    if (catalog) view?.postDelayed({ collectPages(view) }, 2500)
+                }
             })
             setWebChromeClient(object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, p: Int) { progress.progress = p }
@@ -318,8 +329,50 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
             else loadUrl(this@WebScreen.url.replaceFirst("http://", "https://"))  // DİKKAT: apply içinde "url" WebView.getUrl() olurdu (null)
         }
         web = w
-        outer.addView(w, lp(MATCH, 0, weight = 1f))
+        val frame = FrameLayout(a)
+        frame.addView(w, FrameLayout.LayoutParams(MATCH, MATCH))
+        webFrame = frame
+        outer.addView(frame, lp(MATCH, 0, weight = 1f))
         return outer
+    }
+
+    private var pagesBtn: View? = null
+    private var webFrame: FrameLayout? = null
+    private var collected: List<String> = emptyList()
+
+    /**
+     * Resmî broşür sayfası telefonda açıldıktan sonra sayfadaki BÜYÜK ve DİKEY görseller (broşür/afiş sayfaları) toplanır.
+     * Yalnızca sayfanın kendi alan adı ailesindeki görseller kabul edilir (ör. www.a101.com.tr → cdn2.a101.com.tr).
+     * Bulunursa "Sayfa sayfa aç" ile yakınlaştırılabilir okuyucuda gösterilir. Görsel kopyalanmaz; resmî adresinden yüklenir.
+     */
+    private fun collectPages(view: WebView) {
+        val js = "(function(){return JSON.stringify(Array.from(document.images).filter(function(i){" +
+            "return i.naturalWidth>=500&&i.naturalHeight>=i.naturalWidth*0.9;}).map(function(i){return i.currentSrc||i.src;}));})()"
+        try {
+            view.evaluateJavascript(js) { raw ->
+                val list = try {
+                    val inner = com.firsat360.app.core.Json.parse(raw ?: "null") as? String ?: return@evaluateJavascript
+                    (com.firsat360.app.core.Json.parse(inner) as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                } catch (e: Exception) { emptyList() }
+                val base = siteFamily(Uri.parse(view.url ?: url).host)
+                val pages = list.filter { u -> val h = Uri.parse(u).host; u.startsWith("https://") && h != null &&
+                    siteFamily(h) == base }.distinct().take(80)
+                if (pages.size >= 2 && pages != collected) {
+                    collected = pages
+                    pagesBtn?.let { webFrame?.removeView(it) }
+                    val b = a.button("Sayfa sayfa aç (${pages.size})", Icon.CATALOG, true) { openCollected() }
+                    pagesBtn = b
+                    webFrame?.addView(b, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+                        .apply { bottomMargin = dp(20) })
+                }
+            }
+        } catch (e: Exception) { }
+    }
+
+    private fun openCollected() {
+        if (collected.isEmpty()) return
+        val ps = collected.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", url, true) }
+        a.push(CatalogReaderScreen(a, null, 0, null, title, extraPages = ps))
     }
 
     override fun onBack(): Boolean {

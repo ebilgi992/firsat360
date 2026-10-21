@@ -116,9 +116,29 @@ class CatalogAgent:
             by: dict[str, int] = {}
             for o in expired:
                 by[o.store_id] = by.get(o.store_id, 0) + 1
-        return [Issue(self.name, "expired_published", "warning",
-                      f"Süresi dolmuş {n} ürün hâlâ yayında", store=sid, count=n,
-                      fix=(lambda sid=sid: self._unpublish(ctx, sid))) for sid, n in by.items()]
+        out = [Issue(self.name, "expired_published", "warning",
+                     f"Süresi dolmuş {n} ürün hâlâ yayında", store=sid, count=n,
+                     fix=(lambda sid=sid: self._unpublish(ctx, sid))) for sid, n in by.items()]
+        # Broşür sayfası olmayan görsellerle doldurulmuş katalog (ürün küçük resmi, logo): sayfalar kaldırılır.
+        from .connectors.discovery import SKIP
+        with ctx.sf() as s:
+            bad = [c.id for c in s.scalars(select(Catalog).where(Catalog.pages_json.is_not(None)))
+                   if (lambda ps: ps and sum(1 for p in ps if SKIP.search(p.get("url") or "")) * 2 > len(ps))(
+                       json.loads(c.pages_json or "[]"))]
+        if bad:
+            out.append(Issue(self.name, "fake_pages", "error", f"{len(bad)} katalogda broşür olmayan sayfa görselleri",
+                             count=len(bad), fix=lambda: self._clear_pages(ctx, bad)))
+        return out
+
+    def _clear_pages(self, ctx: Context, ids: list[str]) -> str:
+        with ctx.sf() as s:
+            for i in ids:
+                c = s.get(Catalog, i)
+                c.pages_json, c.cover_url = None, None
+                if c.kind == "aktuel" and not c.pdf_url:
+                    c.kind = "flipbook"  # uygulama resmî sayfayı tam ekran açar
+            s.commit()
+        return f"{len(ids)} katalogun hatalı sayfaları kaldırıldı ({', '.join(ids)[:120]})"
 
     def _unpublish(self, ctx: Context, sid: str) -> str:
         with ctx.sf() as s:
