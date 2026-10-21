@@ -91,3 +91,11 @@ def test_user_report_flow_via_github(tmp_path):
     closed = [c for c in calls if c[0] == "PATCH" and c[1].endswith("/issues/7") and '"closed"' in c[2]]
     assert posted and closed
     assert "yeniden doğrulandı" in json.loads(posted[0][2])["body"]
+
+
+def test_tk_pattern_accepts_subfolders_rejects_seo():
+    from firsat360.quality import IMAGE_PATTERNS
+    p = IMAGE_PATTERNS["tkkoop"]
+    assert p.search("https://www.tkkoop.com.tr/assets/images/urun/base22/123029.jpg")
+    assert p.search("https://www.tkkoop.com.tr/assets/images/urun/esk-govde-tavuk_1763707592.png")
+    assert not p.search("https://www.tkkoop.com.tr/storage/assets/images/seo/")

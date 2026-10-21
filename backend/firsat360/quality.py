@@ -41,7 +41,7 @@ log = logging.getLogger("firsat360.quality")
 IMAGE_PATTERNS = {
     "bim": re.compile(r"cdn1\.bim\.com\.tr/uploads/aktuel-urunler/\d+_(?:kucuk|buyuk)_", re.I),
     "sok": re.compile(r"images\.ceptesok\.com/.*product-assets/", re.I),
-    "tkkoop": re.compile(r"tkkoop\.com\.tr/.*assets/images/urun/[^/?#]+\.(?:jpe?g|png|webp)", re.I),
+    "tkkoop": re.compile(r"tkkoop\.com\.tr/.*assets/images/urun/(?:[^?#]+/)?[^/?#]+\.(?:jpe?g|png|webp)", re.I),
 }
 MIN_DEALS = 10
 REPORT_TITLE_PREFIX = "[Hatalı veri]"
