@@ -18,6 +18,8 @@ class Palette(
     /** Premium vurgu: koyu "mürekkep" kahraman zemini, ikinci vurgu ve altın. */
     val ink: Int = 0xFF0B0F1A.toInt(), val ink2: Int = 0xFF2A1036.toInt(), val accent2: Int = 0xFFFF7A45.toInt(),
     val gold: Int = 0xFFE9B949.toInt(), val deal: Int = 0xFFE5484D.toInt(),
+    /** Raf etiketi sarısı (fiyat etiketi, broşürlük rafı) ve üzerindeki yazı. */
+    val label: Int = 0xFFFFD60A.toInt(), val onLabel: Int = 0xFF14213D.toInt(), val labelShade: Int = 0xFFE3BC00.toInt(),
 )
 
 object Theme {
@@ -26,27 +28,35 @@ object Theme {
     lateinit var medium: Typeface
     lateinit var semibold: Typeface
     lateinit var bold: Typeface
+    /** Barlow Condensed: market tabelası sesi — fiyatlar, başlıklar, market adları. */
+    lateinit var display: Typeface
+    lateinit var displayBold: Typeface
+    lateinit var displaySemi: Typeface
     var density = 3f
 
+    // Tasarım dili: market rafı. Soğuk raf-metali grisi zemin, beyaz kâğıt yüzeyler, tükenmez kalem mavisi eylemler,
+    // raf etiketi sarısı fiyatlar/raf, kırmızı YALNIZCA indirim. (1.5.0 yeniden tasarım)
     private val light = Palette(
         dark = false,
-        bg = 0xFFF6F6F9.toInt(), surface = 0xFFFFFFFF.toInt(), surface2 = 0xFFEFF0F4.toInt(), outline = 0xFFE6E7ED.toInt(),
-        text = 0xFF0B0F1A.toInt(), text2 = 0xFF4A5063.toInt(), text3 = 0xFF8A8FA0.toInt(),
-        accent = 0xFFE11D48.toInt(), accentSoft = 0xFFFFE4EA.toInt(), onAccent = Color.WHITE,
-        warn = 0xFFB45309.toInt(), warnSoft = 0xFFFFF4E0.toInt(), ok = 0xFF0F8A5F.toInt(), okSoft = 0xFFE2F6EE.toInt(),
-        danger = 0xFFC81E3A.toInt(), dangerSoft = 0xFFFDE7EB.toInt(), ripple = 0x1F0B0F1A,
-        ink = 0xFF0B0F1A.toInt(), ink2 = 0xFF3A0F2E.toInt(), accent2 = 0xFFFF7A45.toInt(), gold = 0xFFD4A537.toInt(),
-        deal = 0xFFE5484D.toInt(),
+        bg = 0xFFE8EBEF.toInt(), surface = 0xFFFFFFFF.toInt(), surface2 = 0xFFF1F3F6.toInt(), outline = 0xFFD3D8E0.toInt(),
+        text = 0xFF14213D.toInt(), text2 = 0xFF4B5670.toInt(), text3 = 0xFF5F687D.toInt(),
+        accent = 0xFF1D3EA8.toInt(), accentSoft = 0xFFDDE4F8.toInt(), onAccent = Color.WHITE,
+        warn = 0xFF9A5B00.toInt(), warnSoft = 0xFFFFF1CC.toInt(), ok = 0xFF1E7F4F.toInt(), okSoft = 0xFFDDF2E6.toInt(),
+        danger = 0xFFD62828.toInt(), dangerSoft = 0xFFFBE2E2.toInt(), ripple = 0x2214213D,
+        ink = 0xFF14213D.toInt(), ink2 = 0xFF24345C.toInt(), accent2 = 0xFFD62828.toInt(), gold = 0xFFFFD60A.toInt(),
+        deal = 0xFFD62828.toInt(),
+        label = 0xFFFFD60A.toInt(), onLabel = 0xFF14213D.toInt(), labelShade = 0xFFDDB600.toInt(),
     )
     private val darkP = Palette(
         dark = true,
-        bg = 0xFF07080C.toInt(), surface = 0xFF11131A.toInt(), surface2 = 0xFF1A1D26.toInt(), outline = 0xFF242834.toInt(),
-        text = 0xFFF4F5F8.toInt(), text2 = 0xFFA8ADBD.toInt(), text3 = 0xFF6E7386.toInt(),
-        accent = 0xFFFF4D6D.toInt(), accentSoft = 0xFF3A1421.toInt(), onAccent = Color.WHITE,
-        warn = 0xFFFFC266.toInt(), warnSoft = 0xFF3A2C12.toInt(), ok = 0xFF45D19A.toInt(), okSoft = 0xFF12302A.toInt(),
-        danger = 0xFFFF7A86.toInt(), dangerSoft = 0xFF3A1A20.toInt(), ripple = 0x29FFFFFF,
-        ink = 0xFF151826.toInt(), ink2 = 0xFF3B1233.toInt(), accent2 = 0xFFFF8A5B.toInt(), gold = 0xFFF2C75C.toInt(),
-        deal = 0xFFFF5A61.toInt(),
+        bg = 0xFF10151F.toInt(), surface = 0xFF1A2130.toInt(), surface2 = 0xFF232B3C.toInt(), outline = 0xFF2E3850.toInt(),
+        text = 0xFFEEF1F6.toInt(), text2 = 0xFFAAB3C5.toInt(), text3 = 0xFF8A93AA.toInt(),
+        accent = 0xFF8FA8FF.toInt(), accentSoft = 0xFF22305A.toInt(), onAccent = 0xFF0E1426.toInt(),
+        warn = 0xFFFFC857.toInt(), warnSoft = 0xFF3A2E10.toInt(), ok = 0xFF5BD69A.toInt(), okSoft = 0xFF143326.toInt(),
+        danger = 0xFFFF6B6B.toInt(), dangerSoft = 0xFF3D1C20.toInt(), ripple = 0x29FFFFFF,
+        ink = 0xFF0B1019.toInt(), ink2 = 0xFF1A2440.toInt(), accent2 = 0xFFD62828.toInt(), gold = 0xFFFFD60A.toInt(),
+        deal = 0xFFD62828.toInt(),  // beyaz yazı için 5:1 (açık temayla aynı kırmızı)
+        label = 0xFFFFD60A.toInt(), onLabel = 0xFF14213D.toInt(), labelShade = 0xFFC9A700.toInt(),
     )
 
     /** Varsayılan marka renkleri; feed'deki "color" alanı geldiğinde [registerStores] ile güncellenir. */
@@ -83,15 +93,18 @@ object Theme {
         } catch (e: RuntimeException) {
             Typeface.create(Typeface.SANS_SERIF, fallback)
         }
-        regular = font("Inter-Regular.otf", Typeface.NORMAL)
-        medium = font("Inter-Medium.otf", Typeface.NORMAL)
-        semibold = font("Inter-SemiBold.otf", Typeface.BOLD)
-        bold = font("Inter-Bold.otf", Typeface.BOLD)
+        regular = font("Barlow_400Regular.ttf", Typeface.NORMAL)
+        medium = font("Barlow_500Medium.ttf", Typeface.NORMAL)
+        semibold = font("Barlow_600SemiBold.ttf", Typeface.BOLD)
+        bold = font("Barlow_700Bold.ttf", Typeface.BOLD)
+        display = font("BarlowCondensed_800ExtraBold.ttf", Typeface.BOLD)
+        displayBold = font("BarlowCondensed_700Bold.ttf", Typeface.BOLD)
+        displaySemi = font("BarlowCondensed_600SemiBold.ttf", Typeface.BOLD)
     }
 
     fun store(id: String): Int = storeColors[id] ?: p.accent
     /** Mağaza renginin üzerindeki yazı rengi: açık zeminde koyu, koyu zeminde beyaz (WCAG göreli parlaklık). */
-    fun onStore(id: String): Int = if (luminance(store(id)) > 0.4) 0xFF1A1400.toInt() else Color.WHITE
+    fun onStore(id: String): Int = if (luminance(store(id)) > 0.19) 0xFF1A1400.toInt() else Color.WHITE
 
     fun luminance(c: Int): Double {
         fun ch(v: Int): Double { val x = v / 255.0; return if (x <= 0.03928) x / 12.92 else Math.pow((x + 0.055) / 1.055, 2.4) }

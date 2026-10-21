@@ -68,50 +68,87 @@ fun View.onTap(action: () -> Unit): View {
     return this
 }
 
+// ---- Bileşenler (1.5.0 "market rafı" dili): köşeler kâğıt/etiket gibi küçük, gölge yerine düz yüzey; yuvarlak hap yok.
+
+/** Küçük etiket (raf etiketi gibi köşeli). */
 fun Context.pill(label: String, fg: Int, bg: Int, sizeSp: Float = 11.5f, face: Typeface = Theme.semibold): TextView =
     text(label, sizeSp, fg, face, lines = 1).apply {
-        setPadding(dp(8), dp(4), dp(8), dp(4))
-        background = rounded(bg, 99f)
+        setPadding(dp(7), dp(3), dp(7), dp(3))
+        background = rounded(bg, 3f)
     }
 
 fun Context.chip(label: String, selected: Boolean, accent: Int = Theme.p.accent, onClick: () -> Unit): TextView =
-    text(label, 13.5f, if (selected) Theme.p.onAccent else Theme.p.text, if (selected) Theme.semibold else Theme.medium, 1).apply {
-        setPadding(dp(14), dp(9), dp(14), dp(9))
-        background = ripple(if (selected) rounded(accent, 99f) else rounded(Theme.p.surface, 99f, Theme.p.outline), 99f)
+    text(label, 14.5f, if (selected) Theme.p.onAccent else Theme.p.text, if (selected) Theme.semibold else Theme.medium, 1).apply {
+        setPadding(dp(14), dp(14), dp(14), dp(14))
+        background = ripple(if (selected) rounded(accent, 6f) else rounded(Theme.p.surface, 6f, Theme.p.outline, 1.5f), 6f)
+        if (selected) contentDescription = "$label (seçili)"
         onTap(onClick)
     }
 
+/** Birincil: kalem mavisi dolu. İkincil: çizgili (yazı renginde ince çerçeve). */
 fun Context.button(label: String, icon: Icon?, primary: Boolean, onClick: () -> Unit): LinearLayout = hbox(Gravity.CENTER).apply {
     val fg = if (primary) Theme.p.onAccent else Theme.p.text
-    setPadding(dp(18), dp(14), dp(18), dp(14))
-    background = ripple(if (primary) rounded(Theme.p.accent, 14f) else rounded(Theme.p.surface, 14f, Theme.p.outline), 14f)
+    setPadding(dp(18), dp(13), dp(18), dp(13))
+    minimumHeight = dp(48)
+    background = ripple(if (primary) rounded(Theme.p.accent, 8f)
+        else rounded(Theme.p.surface, 8f, Theme.tint(Theme.p.text, 0.55f), 1.5f), 8f)
     if (icon != null) { addView(IconView(context, icon, fg, 20)); addView(space(dp(8))) }
-    addView(text(label, 15f, fg, Theme.semibold, 1))
+    addView(text(label, 15.5f, fg, Theme.semibold, 1))
     onTap(onClick)
 }
 
 fun Context.iconButton(icon: Icon, tint: Int = Theme.p.text, bg: Int = Theme.p.surface, desc: String, onClick: () -> Unit): FrameLayout =
     FrameLayout(this).apply {
-        val s = dp(42)
+        val s = dp(48)
         layoutParams = LinearLayout.LayoutParams(s, s)
-        background = ripple(rounded(bg, 99f, Theme.p.outline), 99f)
+        background = ripple(rounded(bg, 8f, Theme.tint(tint, 0.35f), 1.5f), 8f)
         contentDescription = desc
         addView(IconView(context, icon, tint, 22), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
         onTap(onClick)
     }
 
-fun Context.sectionHeader(title: String, action: String? = null, onAction: (() -> Unit)? = null): LinearLayout = hbox().apply {
-    setPadding(dp(20), dp(28), dp(20), dp(12))
-    addView(text(title, 19.5f, Theme.p.text, Theme.bold), lp(0, WRAP, weight = 1f))
+/** Bölüm başlığı: dar tabela harfiyle büyük, sola hizalı; eylem düz metin bağlantı. */
+fun Context.sectionHeader(title: String, action: String? = null, onAction: (() -> Unit)? = null): LinearLayout = hbox(Gravity.BOTTOM).apply {
+    setPadding(dp(20), dp(30), dp(20), dp(2))
+    addView(text(title, 25f, Theme.p.text, Theme.displayBold, 1).apply {
+        accessibilityHeading()
+    }, lp(0, WRAP, b = dp(10), weight = 1f))
     if (action != null && onAction != null) {
-        addView(text(action, 13.5f, Theme.p.accent, Theme.semibold).apply { setPadding(dp(8), dp(6), 0, dp(6)); onTap(onAction) })
+        addView(text(action, 14.5f, Theme.p.accent, Theme.semibold).apply {
+            setPadding(dp(12), dp(14), dp(4), dp(10)); minimumHeight = dp(48); gravity = Gravity.CENTER_VERTICAL
+            contentDescription = "$title: $action"; onTap(onAction) })
     }
 }
+
+fun TextView.accessibilityHeading() {
+    if (android.os.Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true
+}
+
+/**
+ * Raf etiketi fiyatı: lira büyük, kuruş üstte küçük, ₺ küçük ("299,⁹⁰ ₺" gibi). [Money.format] çıktısından üretilir.
+ */
+fun priceSpan(formatted: String): CharSequence {
+    val m = Regex("""^([\d.]+)(,\d\d)\s*₺$""").find(formatted) ?: return formatted
+    val (whole, frac) = m.destructured
+    val sb = android.text.SpannableStringBuilder(whole)
+    val s1 = sb.length
+    sb.append(frac)
+    sb.setSpan(android.text.style.RelativeSizeSpan(0.5f), s1, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    sb.setSpan(android.text.style.SuperscriptSpan(), s1, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    val s2 = sb.length
+    sb.append(" ₺")
+    sb.setSpan(android.text.style.RelativeSizeSpan(0.45f), s2, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    return sb
+}
+
+/** Fiyat metni (tabela harfi + raf etiketi biçimi). Ekran okuyucu için düz biçim içerik açıklamasında kalır. */
+fun Context.priceText(formatted: String, sizeSp: Float, color: Int = Theme.p.text): TextView =
+    text(priceSpan(formatted), sizeSp, color, Theme.display, 1).apply { contentDescription = formatted }
 
 /** Ürün görseli kullanım izni olmadığı için kategori renginde marka monogramı. */
 class Monogram(ctx: Context, sizeDp: Int) : View(ctx) {
     private val size = dp(sizeDp)
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Theme.bold }
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Theme.display }
     private var label = ""
     private var fg = 0
     fun bind(offer: Offer) {
@@ -120,7 +157,7 @@ class Monogram(ctx: Context, sizeDp: Int) : View(ctx) {
         label = TurkishText.upper(if (words.size >= 2) "${words[0][0]}${words[1][0]}" else base.take(2))
         val hue = Theme.category(offer.category)
         fg = if (Theme.p.dark) Theme.blend(hue, 0xFFFFFFFF.toInt(), 0.35f) else hue
-        background = rounded(Theme.blend(Theme.p.surface, hue, if (Theme.p.dark) 0.22f else 0.12f), sizeDp(14f))
+        background = rounded(Theme.blend(Theme.p.surface, hue, if (Theme.p.dark) 0.22f else 0.12f), sizeDp(6f))
         invalidate()
     }
     private fun sizeDp(r: Float) = r * size / dp(56).toFloat()
@@ -133,8 +170,9 @@ class Monogram(ctx: Context, sizeDp: Int) : View(ctx) {
     }
 }
 
+/** Market etiketi: marka renginde köşeli tabela, dar harf. */
 fun Context.storeBadge(storeId: String, name: String, small: Boolean = true): TextView =
-    pill(name, Theme.onStore(storeId), Theme.store(storeId), if (small) 10.5f else 12.5f, Theme.bold)
+    pill(name, Theme.onStore(storeId), Theme.store(storeId), if (small) 13f else 15f, Theme.displayBold)
 
 fun validityColor(kind: ValidityKind): Pair<Int, Int> = when (kind) {
     ValidityKind.UPCOMING -> Theme.p.accent to Theme.p.accentSoft
@@ -147,7 +185,7 @@ fun validityColor(kind: ValidityKind): Pair<Int, Int> = when (kind) {
 /** Liste satırı (ListView'da yeniden kullanılır). */
 class OfferRow(ctx: Context) : LinearLayout(ctx) {
     val mono = Monogram(ctx, 56)
-    private val photo = NetImage(ctx, 14f).apply { scaleType = android.widget.ImageView.ScaleType.FIT_CENTER }
+    private val photo = NetImage(ctx, 6f).apply { scaleType = android.widget.ImageView.ScaleType.FIT_CENTER }
     private val thumb = android.widget.FrameLayout(ctx)
     private val store: TextView
     private val validity: TextView
@@ -163,7 +201,7 @@ class OfferRow(ctx: Context) : LinearLayout(ctx) {
         setPadding(dp(14), dp(14), dp(10), dp(14))
         layoutParams = android.widget.AbsListView.LayoutParams(MATCH, WRAP)
         thumb.addView(mono, android.widget.FrameLayout.LayoutParams(dp(56), dp(56)))
-        photo.setBackgroundColor(0xFFFFFFFF.toInt())
+        photo.background = rounded(0xFFFFFFFF.toInt(), 6f)
         thumb.addView(photo, android.widget.FrameLayout.LayoutParams(dp(56), dp(56)))
         addView(thumb, LinearLayout.LayoutParams(dp(56), dp(56)))
         val mid = ctx.vbox()
@@ -182,7 +220,7 @@ class OfferRow(ctx: Context) : LinearLayout(ctx) {
         fav = IconView(ctx, Icon.HEART, Theme.p.text3, 22).apply { setPadding(0, 0, 0, 0) }
         // Hizalama 'right' kabının kendi gravity'si (END) ile sağlanır; LayoutParams'a ayrıca gravity verilmez.
         right.addView(fav, LinearLayout.LayoutParams(WRAP, WRAP))
-        price = ctx.text("", 16.5f, Theme.p.text, Theme.bold, 1, Gravity.END)
+        price = ctx.text("", 24f, Theme.p.text, Theme.display, 1, Gravity.END)
         right.addView(price, lp(WRAP, WRAP, t = dp(8)))
         old = ctx.text("", 11.5f, Theme.p.text3, Theme.medium, 1, Gravity.END).apply {
             paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
@@ -203,13 +241,13 @@ class OfferRow(ctx: Context) : LinearLayout(ctx) {
         }
         store.text = storeName
         store.setTextColor(Theme.onStore(o.storeId))
-        store.background = rounded(Theme.store(o.storeId), 99f)
+        store.background = rounded(Theme.store(o.storeId), 3f)
         val v = Dates.status(o.validFrom ?: catalog?.validFrom, o.validTo ?: catalog?.validTo, today)
         validity.text = when (v.kind) { ValidityKind.UNKNOWN -> catalog?.title ?: ""; else -> v.label }
         validity.setTextColor(if (v.kind == ValidityKind.UNKNOWN) Theme.p.text3 else validityColor(v.kind).first)
         title.text = o.displayTitle
-        sub.text = listOfNotNull(o.subtitle, o.condition?.takeIf { it.length < 40 }).joinToString(" · ").ifEmpty { o.catalogTitleFallback() }
-        price.text = Money.format(o.price)
+        sub.text = listOfNotNull(o.subtitle, o.condition?.takeIf { it.length < 40 }).joinToString(", ").ifEmpty { o.catalogTitleFallback() }
+        price.text = priceSpan(Money.format(o.price))
         if (o.storeDeclaredOldPrice != null) {
             old.visibility = VISIBLE
             old.text = Money.format(o.storeDeclaredOldPrice)
@@ -244,28 +282,20 @@ fun Context.catalogCardWidth(): Int {
  */
 fun Context.catalogCard(c: Catalog, storeName: String, today: LocalDate, wide: Boolean = false,
                         onClick: () -> Unit): LinearLayout = vbox().apply {
+    // Broşür kâğıdı: kart çerçevesi yok; kapak, ince gölgeli bir kâğıt gibi zemin üzerinde durur, bilgiler altında.
     val w = if (wide) MATCH else catalogCardWidth()
-    layoutParams = lp(w, WRAP, r = if (wide) 0 else dp(12))
-    background = ripple(rounded(Theme.p.surface, 20f, Theme.p.outline), 20f)
-    clipToOutline = true
-    outlineProvider = object : android.view.ViewOutlineProvider() {
-        override fun getOutline(view: View, outline: android.graphics.Outline) =
-            outline.setRoundRect(0, 0, view.width, view.height, dp(20).toFloat())
-    }
+    layoutParams = lp(w, WRAP, r = if (wide) 0 else dp(14))
+    background = ripple(null, 6f)
     val v = Dates.status(c.validFrom, c.validTo, today)
     contentDescription = "$storeName, ${c.title}, ${v.label}. Kataloğu açmak için dokunun"
 
-    val frame = RatioFrame(context, if (wide) 0.56f else 1.33f)
-    frame.setBackgroundColor(Theme.blend(Theme.p.surface2, Theme.store(c.storeId), if (Theme.p.dark) 0.18f else 0.10f))
-    // Yer tutucu (kapak yokken veya yüklenemezse görünür)
+    val frame = paperFrame(if (wide) 0.56f else 1.36f, Theme.blend(Theme.p.surface, Theme.store(c.storeId), if (Theme.p.dark) 0.16f else 0.07f))
+    // Yer tutucu (kapak yokken veya yüklenemezse): market tabelası şeridi + market adı
     val ph = vbox().apply {
-        setGravity(Gravity.CENTER)
-        val m = FrameLayout(context).apply { background = rounded(Theme.store(c.storeId), 16f) }
+        addView(View(context).apply { setBackgroundColor(Theme.store(c.storeId)) }, lp(MATCH, dp(10)))
         val short = Theme.storeShort[c.storeId] ?: storeName.take(2)
-        m.addView(text(short, if (short.length >= 4) 13f else 16f, Theme.onStore(c.storeId), Theme.bold),
-            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        addView(m, LinearLayout.LayoutParams(dp(52), dp(52)))
-        addView(IconView(context, if (c.hasPdf) Icon.PDF else Icon.CATALOG, Theme.p.text3, 20), lp(WRAP, WRAP, t = dp(10)))
+        addView(text(short, 26f, Theme.p.text, Theme.display, 1), lp(WRAP, WRAP, l = dp(12), t = dp(12)))  // marka rengi üst şeritte
+        addView(IconView(context, if (c.hasPdf) Icon.PDF else Icon.CATALOG, Theme.p.text3, 20), lp(WRAP, WRAP, l = dp(12), t = dp(6)))
     }
     frame.addView(ph, FrameLayout.LayoutParams(MATCH, MATCH))
     if (c.coverUrl != null && com.firsat360.app.data.ImageLoader.enabled) {
@@ -280,8 +310,8 @@ fun Context.catalogCard(c: Catalog, storeName: String, today: LocalDate, wide: B
     }
     val first = Dates.dateTime(c.firstSeenAt)
     if (first != null && java.time.Duration.between(first, java.time.OffsetDateTime.now()).toHours() in -6..48)
-        frame.addView(pill("YENİ", 0xFFFFFFFF.toInt(), Theme.p.accent, 10f, Theme.bold),
-            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.START).apply { setMargins(dp(8), dp(8), 0, 0) })
+        frame.addView(pill("Yeni", Theme.p.onLabel, Theme.p.label, 13f, Theme.displayBold),
+            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.END).apply { setMargins(0, dp(8), dp(8), 0) })
     val count = when {
         c.isPoster -> if (c.hasPages) "${c.pages.size} afiş" else "Afiş"
         c.hasPdf -> "PDF"
@@ -290,36 +320,46 @@ fun Context.catalogCard(c: Catalog, storeName: String, today: LocalDate, wide: B
         c.kind == "flipbook" -> "Katalog"
         else -> null
     }
-    if (count != null) frame.addView(pill(count, 0xFFFFFFFF.toInt(), 0x99000000.toInt(), 10.5f),
-        FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(8), dp(8)) })
-    addView(frame, LinearLayout.LayoutParams(MATCH, WRAP))
+    if (count != null) frame.addView(pill(count, 0xFFFFFFFF.toInt(), 0xCC14213D.toInt(), 12.5f, Theme.displaySemi),
+        FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(8), 0, 0, dp(8)) })
+    addView(frame, LinearLayout.LayoutParams(MATCH, WRAP).apply { setMargins(0, dp(2), 0, 0) })
 
-    val body = vbox().apply { setPadding(dp(12), dp(10), dp(12), dp(12)) }
+    val body = vbox().apply { setPadding(dp(2), dp(10), dp(2), dp(6)) }
     val top = hbox()
-    top.addView(storeBadge(c.storeId, storeName).apply { maxWidth = dp(120); ellipsize = TextUtils.TruncateAt.END })
-    top.addView(flex())
+    top.addView(text(storeName, 17f, Theme.p.text, Theme.displayBold, 1), lp(0, WRAP, weight = 1f))
     top.addView(IconView(context, when {
         c.hasPdf -> Icon.PDF; c.hasPages -> Icon.CATALOG; c.kind == "link_only" || c.kind == "flipbook" -> Icon.EXTERNAL
         else -> Icon.TAG }, Theme.p.text3, 16).apply { importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO })
     body.addView(top)
-    body.addView(text(c.title, 13.5f, Theme.p.text, Theme.semibold, 2).apply { minLines = 2 }, lp(t = dp(8)))
+    body.addView(text(c.title, 14f, Theme.p.text2, Theme.medium, 2).apply { minLines = 2 }, lp(t = dp(4)))
     val (fg, _) = validityColor(v.kind)
-    body.addView(text(v.label, 11.5f, fg, Theme.medium, 1), lp(t = dp(6)))
+    body.addView(text(v.label, 12.5f, if (v.kind == ValidityKind.ACTIVE) Theme.p.text3 else fg, Theme.semibold, 1), lp(t = dp(6)))
     addView(body)
     onTap(onClick)
+}
+
+/** Broşür kâğıdı: sabit oranlı, küçük köşeli, altında ince gölge (raftaki basılı broşür). */
+fun Context.paperFrame(ratio: Float, fill: Int): RatioFrame = RatioFrame(this, ratio).apply {
+    background = rounded(fill, 3f)
+    elevation = dp(3).toFloat()
+    clipToOutline = true
+    outlineProvider = object : android.view.ViewOutlineProvider() {
+        override fun getOutline(view: View, outline: android.graphics.Outline) =
+            outline.setRoundRect(0, 0, view.width, view.height, dp(3).toFloat())
+    }
 }
 
 /** Yükleme iskeleti: yumuşak nabız animasyonlu yer tutucular. */
 fun Context.skeleton(): LinearLayout = vbox(dp(20)).apply {
     fun block(h: Int, w: Int = MATCH, top: Int = dp(14)) = View(context).apply {
-        background = rounded(Theme.p.surface2, 12f)
+        background = rounded(Theme.p.surface2, 4f)
         layoutParams = lp(w, h, t = top)
     }
     addView(block(dp(30), dp(180), 0))
     addView(block(dp(16), dp(240)))
     addView(block(dp(48), top = dp(24)))
     val row = hbox()
-    repeat(4) { row.addView(View(context).apply { background = rounded(Theme.p.surface2, 18f) }, lp(0, dp(84), r = dp(10), weight = 1f)) }
+    repeat(3) { row.addView(View(context).apply { background = rounded(Theme.p.surface2, 3f) }, lp(0, dp(150), r = dp(12), weight = 1f)) }
     addView(row, lp(t = dp(24)))
     repeat(5) { addView(block(dp(76))) }
     val anim = ValueAnimator.ofFloat(0.45f, 1f).apply {
@@ -335,10 +375,11 @@ fun Context.skeleton(): LinearLayout = vbox(dp(20)).apply {
 fun Context.emptyState(icon: Icon, title: String, body: String, action: String? = null, onAction: (() -> Unit)? = null): LinearLayout =
     vbox(dp(32)).apply {
         setGravity(Gravity.CENTER_HORIZONTAL)
-        val circle = FrameLayout(context).apply { background = rounded(Theme.p.accentSoft, 99f) }
-        circle.addView(IconView(context, icon, Theme.p.accent, 30), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        addView(circle, LinearLayout.LayoutParams(dp(72), dp(72)))
-        addView(text(title, 18f, Theme.p.text, Theme.bold, gravity = Gravity.CENTER), lp(t = dp(18)))
+        // Boş raf: raf etiketi biçiminde simge
+        val tag = FrameLayout(context).apply { background = rounded(Theme.p.label, 4f) }
+        tag.addView(IconView(context, icon, Theme.p.onLabel, 30), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
+        addView(tag, LinearLayout.LayoutParams(dp(72), dp(56)))
+        addView(text(title, 24f, Theme.p.text, Theme.displayBold, gravity = Gravity.CENTER), lp(t = dp(18)))
         addView(text(body, 14f, Theme.p.text2, Theme.regular, gravity = Gravity.CENTER), lp(t = dp(8)))
         if (action != null && onAction != null) addView(context.button(action, null, true, onAction), lp(WRAP, WRAP, t = dp(20)))
     }
@@ -352,11 +393,11 @@ fun Context.infoRow(icon: Icon, label: String, value: String, valueColor: Int = 
     addView(col, lp(0, WRAP, l = dp(12), weight = 1f))
 }
 
-fun Context.card(pad: Int = dp(16)): LinearLayout = vbox(pad, rounded(Theme.p.surface, 20f, Theme.p.outline))
+fun Context.card(pad: Int = dp(16)): LinearLayout = vbox(pad, rounded(Theme.p.surface, 6f))
 
 fun Context.notice(icon: Icon, body: String, fg: Int, bg: Int): LinearLayout = hbox(Gravity.TOP).apply {
     setPadding(dp(14), dp(12), dp(14), dp(12))
-    background = rounded(bg, 14f)
+    background = rounded(bg, 6f)
     addView(IconView(context, icon, fg, 20))
     addView(text(body, 13f, fg, Theme.medium), lp(0, WRAP, l = dp(10), weight = 1f))
 }
@@ -364,15 +405,15 @@ fun Context.notice(icon: Icon, body: String, fg: Int, bg: Int): LinearLayout = h
 /** Izgara / liste görünüm seçici (iki simgeli küçük segment). */
 fun Context.viewToggle(grid: Boolean, onChange: (Boolean) -> Unit): LinearLayout = hbox().apply {
     setPadding(dp(3), dp(3), dp(3), dp(3))
-    background = rounded(Theme.p.surface2, 12f)
+    background = rounded(Theme.p.surface2, 8f)
     for ((g, icon, label) in listOf(Triple(true, Icon.GRID, "Izgara görünümü"), Triple(false, Icon.LIST, "Liste görünümü"))) {
         val on = g == grid
         val cell = FrameLayout(context).apply {
-            background = if (on) rounded(Theme.p.surface, 10f, Theme.p.outline) else null
+            background = if (on) rounded(Theme.p.surface, 6f, Theme.p.outline) else null
             contentDescription = label + if (on) " (seçili)" else ""
             addView(IconView(context, icon, if (on) Theme.p.text else Theme.p.text3, 18), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
             onTap { if (!on) onChange(g) }
         }
-        addView(cell, LinearLayout.LayoutParams(dp(36), dp(30)))
+        addView(cell, LinearLayout.LayoutParams(dp(48), dp(40)))
     }
 }

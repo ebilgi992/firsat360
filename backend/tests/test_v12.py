@@ -36,11 +36,11 @@ def test_backoff_after_three_blocked_runs(tmp_path):
 
 def test_regional_copies_share_group_but_different_inserts_do_not():
     def cat(i, title, region, f, t):
-        return Catalog(id=i, store_id="onur", title=title, kind="pdf", official_url="u", source_method="x",
+        return Catalog(id=i, store_id="hakmar", title=title, kind="pdf", official_url="u", source_method="x",
                        observed_at=NOW, data_mode="real", region=region, valid_from=f, valid_to=t)
-    a = cat("onur-istanbul-944", "Onur'da Çok Al Az Öde · İstanbul", "istanbul", date(2026, 10, 13), date(2026, 10, 26))
-    b = cat("onur-bursa-945", "Onur'da Çok Al Az Öde · Bursa", "bursa", date(2026, 10, 13), date(2026, 10, 26))
-    c = cat("onur-istanbul-959", "Taze Ürünlerde İndirimler · İstanbul", "istanbul", date(2026, 10, 15), date(2026, 10, 21))
+    a = cat("hakmar-istanbul-944", "Çok Al Az Öde · İstanbul", "istanbul", date(2026, 10, 13), date(2026, 10, 26))
+    b = cat("hakmar-bursa-945", "Çok Al Az Öde · Bursa", "bursa", date(2026, 10, 13), date(2026, 10, 26))
+    c = cat("hakmar-istanbul-959", "Taze Ürünlerde İndirimler · İstanbul", "istanbul", date(2026, 10, 15), date(2026, 10, 21))
     assert catalog_group(a) == catalog_group(b) != catalog_group(c)
 
 

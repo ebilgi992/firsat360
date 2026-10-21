@@ -1,5 +1,18 @@
 # Test raporu
 
+## 1.5.0 (22.10.2026) — yeni arayüz, Onur kaldırıldı, köprü düzeltmeleri
+| Test | Sonuç | Kanıt |
+|---|---|---|
+| Backend pytest (tam) | PASS | 175 geçti, 2 atlandı (PostgreSQL) |
+| Onur feed'e girmiyor (eski DB kayıtları dahil), bağlayıcısı yok | PASS | `test_retired_store_onur_not_in_feed`; gömülü feed'de 0 Onur kaydı |
+| Köprü regresyonları: görünmez reCAPTCHA doğrulama sayılmıyor, KVKK/koşullar PDF'i broşür sayılmıyor | PASS | `test_bridge_scripts.py` (20) |
+| RN `postMessage` zarfı nonce taşıyor, Android ile aynı sonuç | PASS | `test_react_native_wrapper_posts_same_result`; `tsc --noEmit` |
+| Çekirdek (JVM), yıl sonu tarih aralıkları dahil | PASS | 175/175 (`trdates.yearEndNoYear`, `trdates.crossYear*`) |
+| Bağımsız kod incelemesi (köprü) — 8 bulgu | PASS | tümü düzeltildi (CHANGELOG 1.5.0) |
+| Bağımsız arayüz/erişilebilirlik incelemesi — 10 bulgu | PASS | kontrast (market rengi yazı eşiği, text3, koyu indirim kırmızısı), 48 dp dokunma alanları, fiyat etiketi hizası, büyük yazı ölçeğinde raf şeridi |
+| Debug + release APK/AAB, min-API, gizli anahtar taraması | PASS | `dist/FIRSAT360-1.5.0*` (APK 2,5 MB) |
+| Yeni arayüzün cihazda görsel denetimi | BLOCKED | emülatör/cihaz yok; tasarım yalnızca HTML ön izlemesiyle ve kod incelemesiyle doğrulandı |
+
 ## 1.4.0 (21.10.2026) — İstemci Katalog Köprüsü
 | Test | Sonuç | Kanıt |
 |---|---|---|

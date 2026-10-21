@@ -85,13 +85,6 @@ STORES = {
         "legal_note": "robots.txt (21.10.2026): hesap/sepet/arama/filtre yolları yasak; /kataloglar CMS sayfası. "
                       "Alternatif toplama motoru (statik → tarayıcı). Kullanım koşulları henüz okunmadı.",
     },
-    "onur": {
-        "name": "Onur Market",
-        "official_url": "https://kurumsal.onurmarket.com/",
-        "catalog_url": "https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz",
-        "legal_note": "İnsertler resmî kurumsal sitede bölge+kampanya sayfalarında (İstanbul, Bursa, Trakya), resmî PDF "
-                      "olarak (21.10.2026). robots.txt yok (404) → kısıtlama yok.",
-    },
     "carrefoursa": {
         "name": "CarrefourSA",
         "official_url": "https://www.carrefoursa.com/",
@@ -108,20 +101,23 @@ STORES = {
     },
 }
 
+# Kaldırılan marketler (ör. "onur", 22.10.2026 kullanıcı isteği): veritabanında kalsalar da feed'e girmez.
+RETIRED_STORES = ("onur",)
+
 # Uygulamadaki mağaza rengi ve kısa ad (logo kopyalanmaz; yalnızca renkli monogram).
 STORE_STYLE = {
     "a101": ("#00A0E3", "A101"), "bim": ("#E30613", "BİM"), "sok": ("#F2B600", "ŞOK"), "migros": ("#F27A00", "M"),
     "tkkoop": ("#0B8A3E", "TK"), "hakmar": ("#D7141A", "H"), "watsons": ("#00A3AD", "W"), "metro": ("#00327D", "MT"),
     "bizimtoptan": ("#E2001A", "BZ"), "gratis": ("#E6007E", "G"), "rossmann": ("#C3002F", "R"),
-    "onur": ("#E30613", "O"), "carrefoursa": ("#004E9F", "C"), "file": ("#E4002B", "F"),
+    "carrefoursa": ("#004E9F", "C"), "file": ("#E4002B", "F"),
 }
 STORE_KIND = {"tkkoop": "market", "hakmar": "market", "watsons": "kozmetik", "metro": "toptan",
-              "bizimtoptan": "toptan", "gratis": "kozmetik", "rossmann": "kozmetik", "onur": "market",
+              "bizimtoptan": "toptan", "gratis": "kozmetik", "rossmann": "kozmetik",
               "carrefoursa": "market", "file": "market"}
 
 # Ana sayfadaki "Market broşürleri" varsayılan sırası: Türkiye'deki mağaza sayısına göre büyükten küçüğe
 # (kullanıcı uygulamada kendi sırasını belirleyebilir).
-CHAIN_RANK = ("bim", "a101", "sok", "migros", "carrefoursa", "tkkoop", "file", "hakmar", "onur", "bizimtoptan",
+CHAIN_RANK = ("bim", "a101", "sok", "migros", "carrefoursa", "tkkoop", "file", "hakmar", "bizimtoptan",
               "metro", "gratis", "watsons", "rossmann")
 # Mağazanın RESMÎ broşür/afiş sayfası. Broşür sayfaları veri hattında okunamıyorsa (erişim engeli, robots.txt,
 # JavaScript) uygulama bu sayfayı kendi tam ekran görüntüleyicisinde, kullanıcının cihazından açar.
@@ -134,7 +130,6 @@ BROCHURE_URLS = {
     "tkkoop": "https://www.tkkoop.com.tr/haftalik-kampanyalar",
     "file": "https://www.file.com.tr/",
     "hakmar": "https://hakmar.com.tr/indirim/",
-    "onur": "https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz?region=istanbul&campaign=istanbul-genel-insert",
     "bizimtoptan": "https://www.bizimtoptan.com.tr/pages/katalog",
     "metro": "https://brosurler.metro-tr.com/",
     "gratis": "https://www.gratis.com/gratis-katalog",
@@ -184,7 +179,7 @@ class Settings:
     alert_webhook_url: str = field(default_factory=lambda: os.getenv("ALERT_WEBHOOK_URL", ""))
     enabled_live_stores: tuple[str, ...] = field(default_factory=lambda: tuple(
         s for s in _overrides().get("enabled", ()) or os.getenv(
-        "LIVE_STORES", "a101,bim,sok,migros,tkkoop,hakmar,watsons,metro,bizimtoptan,gratis,rossmann,onur,carrefoursa,file")
+        "LIVE_STORES", "a101,bim,sok,migros,tkkoop,hakmar,watsons,metro,bizimtoptan,gratis,rossmann,carrefoursa,file")
         .split(",") if s))
 
     # ---- günlük senkronizasyon, duyuru ve push

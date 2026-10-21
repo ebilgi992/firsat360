@@ -34,8 +34,8 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
         val list = a.gridListView(grid)
         val header = a.vbox()
         header.setPadding(0, dp(18), 0, dp(10))
-        header.addView(a.text("Mağazalar", 26f, Theme.p.text, Theme.bold), lp(l = dp(20), r = dp(20)))
-        header.addView(a.text("${f.stores.size} market · ${f.offers.size} ürün · ${f.catalogs.count { it.coverUrl != null || it.hasPages }} katalog",
+        header.addView(a.text("Mağazalar", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(l = dp(20), r = dp(20)))
+        header.addView(a.text("${f.stores.size} market, ${f.offers.size} ürün, ${f.catalogs.count { it.coverUrl != null || it.hasPages }} katalog",
             12.5f, Theme.p.text2, Theme.medium), lp(l = dp(20), r = dp(20), t = dp(4)))
 
         // Mağaza çipleri (yatay kaydırma): rozet + ad + ürün sayısı
@@ -47,13 +47,13 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
             val n = f.offers.count { it.storeId == sid }
             val chip = a.hbox().apply {
                 setPadding(dp(6), dp(6), dp(14), dp(6))
-                background = ripple(if (on) rounded(Theme.store(sid), 99f) else rounded(Theme.p.surface, 99f, Theme.p.outline), 99f)
-                val dot = FrameLayout(a).apply { background = rounded(if (on) Theme.tint(0xFFFFFFFF.toInt(), 0.25f) else Theme.store(sid), 99f) }
-                dot.addView(a.text(Theme.storeShort[sid] ?: s.shortLabel, 10f, if (on) Theme.onStore(sid) else Theme.onStore(sid), Theme.bold, 1),
+                background = ripple(if (on) rounded(Theme.store(sid), 6f) else rounded(Theme.p.surface, 6f, Theme.p.outline, 1.5f), 6f)
+                val dot = FrameLayout(a).apply { background = rounded(if (on) Theme.tint(0xFFFFFFFF.toInt(), 0.25f) else Theme.store(sid), 2f) }
+                dot.addView(a.text(Theme.storeShort[sid] ?: s.shortLabel, 12f, Theme.onStore(sid), Theme.display, 1),
                     FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
                 addView(dot, LinearLayout.LayoutParams(dp(30), dp(30)))
                 val col = a.vbox()
-                col.addView(a.text(s.name, 13.5f, if (on) Theme.onStore(sid) else Theme.p.text, Theme.semibold, 1))
+                col.addView(a.text(s.name, 16f, if (on) Theme.onStore(sid) else Theme.p.text, Theme.displayBold, 1))
                 col.addView(a.text(if (n > 0) "$n ürün" else "katalog", 11f,
                     if (on) Theme.tint(Theme.onStore(sid), 0.8f) else Theme.p.text3, Theme.medium, 1))
                 addView(col, lp(WRAP, WRAP, l = dp(8)))
@@ -177,15 +177,14 @@ class SearchScreen(a: MainActivity, initialCategory: String? = null) : Screen(a)
         val header = a.vbox()
         header.setPadding(0, dp(18), 0, dp(8))
         val titleRow = a.hbox()
-        titleRow.addView(a.text("Ara", 26f, Theme.p.text, Theme.bold), lp(0, WRAP, weight = 1f))
+        titleRow.addView(a.text("Ara", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(0, WRAP, weight = 1f))
         header.addView(titleRow, lp(l = dp(20), r = dp(20)))
 
         val box = a.hbox().apply {
             setPadding(dp(14), dp(2), dp(4), dp(2))
-            background = rounded(Theme.p.surface, 18f, Theme.p.outline)
-            elevation = dp(1).toFloat()
+            background = rounded(Theme.p.surface, 8f, Theme.p.text, 1.5f)
         }
-        box.addView(IconView(a, Icon.SEARCH, Theme.p.text2, 20))
+        box.addView(IconView(a, Icon.SEARCH, Theme.p.text, 20))
         val inp = EditText(a).apply {
             setText(query)
             hint = "Ürün, marka veya market (ör. bim süt)"
@@ -220,9 +219,9 @@ class SearchScreen(a: MainActivity, initialCategory: String? = null) : Screen(a)
             inp.setText(""); inp.requestFocus()
             (a.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
                 .showSoftInput(inp, 0)
-        }.apply { background = rounded(Theme.p.surface2, 99f); visibility = if (query.isEmpty()) View.GONE else View.VISIBLE }
+        }.apply { background = rounded(Theme.p.surface2, 6f); visibility = if (query.isEmpty()) View.GONE else View.VISIBLE }
         clearBtn = clear
-        box.addView(clear, lp(dp(36), dp(36)))
+        box.addView(clear, lp(dp(48), dp(48)))
         header.addView(box, lp(l = dp(20), r = dp(20), t = dp(14)))
 
         // Mağaza filtreleri + sıralama
@@ -304,16 +303,16 @@ class SearchScreen(a: MainActivity, initialCategory: String? = null) : Screen(a)
             val nc = f.catalogs.count { it.storeId == s.id && it.kind != "link_only" }
             val card = a.hbox().apply {
                 setPadding(dp(14), dp(12), dp(14), dp(12))
-                background = ripple(rounded(Theme.p.surface, 18f, Theme.p.outline), 18f)
+                background = ripple(rounded(Theme.p.surface, 8f), 8f)
                 contentDescription = "${s.name} marketini aç"
                 addView(FrameLayout(a).apply {
-                    background = rounded(Theme.store(s.id), 12f)
-                    addView(a.text(Theme.storeShort[s.id] ?: s.shortLabel, 12.5f, Theme.onStore(s.id), Theme.bold),
+                    background = rounded(Theme.store(s.id), 4f)
+                    addView(a.text(Theme.storeShort[s.id] ?: s.shortLabel, 15f, Theme.onStore(s.id), Theme.display),
                         FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
                 }, LinearLayout.LayoutParams(dp(42), dp(42)))
                 val t = a.vbox()
-                t.addView(a.text(s.name, 15.5f, Theme.p.text, Theme.bold, 1))
-                t.addView(a.text("$n fırsat · $nc katalog", 12.5f, Theme.p.text2, Theme.medium, 1), lp(t = dp(2)))
+                t.addView(a.text(s.name, 19f, Theme.p.text, Theme.displayBold, 1))
+                t.addView(a.text("$n fırsat, $nc katalog", 12.5f, Theme.p.text2, Theme.medium, 1), lp(t = dp(2)))
                 addView(t, lp(0, WRAP, l = dp(12), weight = 1f))
                 addView(IconView(a, Icon.CHEVRON, Theme.p.text3, 18))
                 onTap { a.openStore(s.id) }
@@ -326,7 +325,7 @@ class SearchScreen(a: MainActivity, initialCategory: String? = null) : Screen(a)
             for (c in r.catalogs) cr.addView(a.catalogCard(c, f.store(c.storeId)?.name ?: "", a.today) { a.openCatalog(c.id) })
             dyn.addView(a.hscroll(cr))
         }
-        countView?.text = if (query.isBlank() && stores.isEmpty() && category == null) "Tüm fırsatlar · ${items.size} ürün"
+        countView?.text = if (query.isBlank() && stores.isEmpty() && category == null) "Tüm fırsatlar: ${items.size} ürün"
             else "${items.size} ürün bulundu"
         val e = empty ?: return
         e.removeAllViews()

@@ -2,7 +2,7 @@
  * adlı afiş görselleri — tarayıcı zaten yüklemiştir, ek istek yok. 2) Yoksa DOM'daki büyük dikey görseller. */
 (function () { try {
   if (F360.challenge()) return F360.out({ type: 'challenge' });
-  var re = /https?:\\?\/\\?\/[a-z0-9.-]*a101\.com\.tr(?:\\?\/[^"'\s\\]*)*?\.(?:jpe?g|png|webp)/gi, found = [], seen = {};
+  var re = /https?:\\?\/\\?\/[a-z0-9.-]*a101\.com\.tr\\?\/[^"'\s<>]{0,400}?\.(?:jpe?g|png|webp)/gi, found = [], seen = {};
   var blobs = [];
   var nd = document.getElementById('__NEXT_DATA__'); if (nd) blobs.push(nd.textContent || '');
   try { (self.__next_f || []).forEach(function (x) { if (x && x[1]) blobs.push(String(x[1])); }); } catch (e) {}

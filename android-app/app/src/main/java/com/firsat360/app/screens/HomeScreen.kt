@@ -34,28 +34,24 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val col = a.vbox()
         col.setPadding(0, 0, 0, dp(32))
 
-        // ---- Üst bölüm: selamlama, marka, yenile / ayarlar
-        val top = a.hbox()
-        top.setPadding(dp(20), dp(18), dp(14), dp(4))
+        // ---- Üst bölüm: yazı markası (tabela harfi), tarih, ayarlar
+        val top = a.hbox(Gravity.TOP)
+        top.setPadding(dp(20), dp(20), dp(16), dp(2))
         val titleCol = a.vbox()
-        val hour = ZonedDateTime.now(Dates.TR).hour
-        val greet = when (hour) { in 5..11 -> "Günaydın"; in 12..17 -> "İyi günler"; in 18..22 -> "İyi akşamlar"; else -> "İyi geceler" }
-        titleCol.addView(a.text("$greet · ${Dates.long(a.today)}", 13f, Theme.p.text2, Theme.medium, 1))
-        val brand = SpannableString("FIRSAT360").apply {
-            setSpan(ForegroundColorSpan(Theme.p.accent), 6, 9, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-        titleCol.addView(a.text(brand, 28f, Theme.p.text, Theme.bold), lp(t = dp(2)))
+        titleCol.addView(a.text("FIRSAT360", 36f, Theme.p.text, Theme.display, 1).apply {
+            letterSpacing = -0.01f; contentDescription = "FIRSAT360" }, lp(WRAP, WRAP))
+        titleCol.addView(a.text(Dates.long(a.today), 14f, Theme.p.text2, Theme.medium, 1), lp(t = dp(2)))
         top.addView(titleCol, lp(0, WRAP, weight = 1f))
-        top.addView(a.iconButton(Icon.SETTINGS, desc = "Ayarlar") { a.openSettings() }, lp(dp(42), dp(42)))
+        top.addView(a.iconButton(Icon.SETTINGS, desc = "Ayarlar") { a.openSettings() }, lp(dp(44), dp(44), t = dp(4)))
         col.addView(top)
 
-        // ---- Arama
+        // ---- Arama: kâğıt beyazı, mürekkep çizgili düz alan
         val search = a.hbox().apply {
-            setPadding(dp(16), dp(15), dp(16), dp(15))
-            background = ripple(rounded(Theme.p.surface, 18f, Theme.p.outline), 18f)
-            elevation = dp(1).toFloat()
-            addView(IconView(a, Icon.SEARCH, Theme.p.text2, 20))
-            addView(a.text("Ürün, marka veya market ara", 15f, Theme.p.text3, Theme.regular, 1), lp(0, WRAP, l = dp(12), weight = 1f))
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = ripple(rounded(Theme.p.surface, 8f, Theme.p.text, 1.5f), 8f)
+            contentDescription = "Ara: ürün, marka veya market"
+            addView(IconView(a, Icon.SEARCH, Theme.p.text, 20))
+            addView(a.text("Ürün, marka veya market ara", 15.5f, Theme.p.text3, Theme.regular, 1), lp(0, WRAP, l = dp(12), weight = 1f))
             onTap { a.switchTab(Tab.SEARCH) }
         }
         col.addView(search, lp(l = dp(20), r = dp(20), t = dp(16)))
@@ -87,12 +83,10 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val home = com.firsat360.app.core.HomeCatalogs.build(f, a.user.chainOrder, a.today, a.user.favoriteStores(), a.user.region)
         val shelf = home.shelf
         if (shelf.isNotEmpty()) {
-            col.addView(a.sectionHeader("Market broşürleri", "Sırala") { a.push(ShelfOrderScreen(a)) })
-            val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), dp(4)) }
-            for (e in shelf) row.addView(a.shelfCard(e))
-            col.addView(a.hscroll(row))
-            col.addView(a.text("Son güncelleme: ${Dates.relative(f.generatedAt, a.now)} · resmî market kaynaklarından",
-                11.5f, Theme.p.text3, Theme.regular, 1), lp(l = dp(20), r = dp(20), t = dp(8)))
+            col.addView(a.sectionHeader("Broşürlük", "Sırala") { a.push(ShelfOrderScreen(a)) })
+            col.addView(a.shelfRack(shelf))
+            col.addView(a.text("Resmî market sayfalarından, ${Dates.relative(f.generatedAt, a.now)} güncellendi",
+                12.5f, Theme.p.text3, Theme.regular, 1), lp(l = dp(20), r = dp(20), t = dp(10)))
         }
         fun catalogRow(title: String, list: List<Catalog>) {
             if (list.isEmpty()) return
@@ -114,11 +108,11 @@ class HomeScreen(a: MainActivity) : Screen(a) {
                 card.bind(o, f.store(o.storeId)?.name ?: "", f.catalog(o.catalogId), o.id in favs, a.today)
                 card.setOnClickListener { a.openOffer(o.id) }
                 card.onFav { a.repo.toggleFavorite(o.id); a.refreshCurrent() }
-                row.addView(card, lp(dp(172), WRAP, r = dp(12)))
+                row.addView(card, lp(dp(168), MATCH, r = dp(12)))
             }
-            if (deals.size > 12) row.addView(seeAll("${deals.size - 12}+ indirim daha") { a.openDeals() }, lp(dp(120), dp(200), r = dp(12)))
+            if (deals.size > 12) row.addView(seeAll("${deals.size - 12} indirim daha") { a.openDeals() }, lp(dp(120), MATCH, r = dp(12)))
             col.addView(a.hscroll(row))
-            col.addView(a.text(f.dailyDeals?.note ?: "", 11.5f, Theme.p.text3, Theme.regular),
+            col.addView(a.text(f.dailyDeals?.note ?: "", 12.5f, Theme.p.text3, Theme.regular),
                 lp(l = dp(20), r = dp(20), t = dp(10)))
         }
 
@@ -136,6 +130,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val byStore = f.catalogs.filter { it.kind != "link_only" && Dates.status(it.validFrom, it.validTo, a.today).kind != ValidityKind.EXPIRED }
             .groupBy { it.storeId }
         val grid = a.vbox().apply { setPadding(dp(16), 0, dp(16), 0) }
+        // Market tabelaları: marka renginde blok, kısa ad sol altta
         val stores = f.stores.sortedWith(compareBy({ if (it.id in favStores) 0 else 1 }, { it.sort }))
         for (chunk in stores.chunked(4)) {
             val r = a.hbox(Gravity.TOP)
@@ -152,14 +147,14 @@ class HomeScreen(a: MainActivity) : Screen(a) {
 
         // ---- Bildirim önerisi (bir kez)
         if (!a.user.askedNotifications && !a.user.notifyCatalogs) {
-            val card = a.vbox(dp(18)).apply { background = rounded(Theme.p.accentSoft, 22f) }
-            val h = a.hbox()
+            val card = a.card(dp(18))
+            val h = a.hbox(Gravity.TOP)
             h.addView(FrameLayout(a).apply {
-                background = rounded(Theme.p.accent, 99f)
-                addView(IconView(a, Icon.BELL, 0xFFFFFFFF.toInt(), 20), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-            }, LinearLayout.LayoutParams(dp(40), dp(40)))
+                background = rounded(Theme.p.label, 4f)
+                addView(IconView(a, Icon.BELL, Theme.p.onLabel, 20), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
+            }, LinearLayout.LayoutParams(dp(44), dp(36)))
             val t = a.vbox()
-            t.addView(a.text("Kataloglar çıkınca haber verelim", 15.5f, Theme.p.text, Theme.bold))
+            t.addView(a.text("Yeni broşür çıkınca haber verelim", 20f, Theme.p.text, Theme.displayBold))
             t.addView(a.text("Her sabah ${minuteLabel(a.user.notifyMinute)}'da tek bir özet: hangi markette yeni katalog var.",
                 13f, Theme.p.text2, Theme.regular), lp(t = dp(3)))
             h.addView(t, lp(0, WRAP, l = dp(12), weight = 1f))
@@ -174,8 +169,8 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         }
 
         col.addView(a.text("Fiyatlar marketlerin resmî sayfalarından otomatik alınır. Fiyat ve stok durumu mağazaya göre " +
-            "değişebilir. FIRSAT360'ın marketlerle resmî bir bağı yoktur.", 11.5f, Theme.p.text3, Theme.regular, gravity = Gravity.CENTER),
-            lp(l = dp(28), r = dp(28), t = dp(28)))
+            "değişebilir. FIRSAT360'ın marketlerle resmî bir bağı yoktur.", 12f, Theme.p.text3, Theme.regular),
+            lp(l = dp(20), r = dp(20), t = dp(32)))
 
         return ScrollView(a).apply {
             isVerticalScrollBarEnabled = false
@@ -184,45 +179,31 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         }
     }
 
-    private fun dealsHeader(): View = a.hbox().apply {
-        setPadding(dp(20), dp(28), dp(20), dp(12))
-        addView(FrameLayout(a).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Theme.p.accent2, Theme.p.deal))
-                .apply { cornerRadius = dp(12).toFloat() }
-            addView(IconView(a, Icon.FLAME, 0xFFFFFFFF.toInt(), 18), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        }, LinearLayout.LayoutParams(dp(34), dp(34)))
-        val t = a.vbox()
-        t.addView(a.text("Günün İndirimleri", 19f, Theme.p.text, Theme.bold))
+    private fun dealsHeader(): View = a.vbox().apply {
+        addView(a.sectionHeader("Günün indirimleri", "Tümü") { a.openDeals() })
         val end = ZonedDateTime.now(Dates.TR).let { java.time.Duration.between(it, it.toLocalDate().plusDays(1).atStartOfDay(Dates.TR)) }
-        t.addView(a.text("Her gün otomatik seçilir · yenisine ${end.toHours()} sa ${end.toMinutes() % 60} dk", 12f,
-            Theme.p.text2, Theme.medium, 1), lp(t = dp(2)))
-        addView(t, lp(0, WRAP, l = dp(12), weight = 1f))
-        addView(a.text("Tümü", 13.5f, Theme.p.accent, Theme.semibold).apply {
-            setPadding(dp(8), dp(6), 0, dp(6)); onTap { a.openDeals() } })
+        addView(a.text("Her gün yeniden seçilir. Yenisi ${end.toHours()} sa ${end.toMinutes() % 60} dk sonra.", 13f,
+            Theme.p.text2, Theme.medium, 1), lp(l = dp(20), r = dp(20), t = -dp(6), b = dp(12)))
     }
 
     private fun seeAll(label: String, onClick: () -> Unit): View = a.vbox().apply {
         setGravity(Gravity.CENTER)
-        background = ripple(rounded(Theme.p.surface, 20f, Theme.p.outline), 20f)
-        addView(FrameLayout(a).apply {
-            background = rounded(Theme.p.accentSoft, 99f)
-            addView(IconView(a, Icon.CHEVRON, Theme.p.accent, 22), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        }, LinearLayout.LayoutParams(dp(48), dp(48)))
-        addView(a.text(label, 13f, Theme.p.text, Theme.semibold, 2, Gravity.CENTER), lp(WRAP, WRAP, t = dp(10)))
+        background = ripple(rounded(Theme.p.surface, 6f), 6f)
+        addView(IconView(a, Icon.CHEVRON, Theme.p.accent, 26))
+        addView(a.text(label, 17f, Theme.p.text, Theme.displayBold, 2, Gravity.CENTER), lp(WRAP, WRAP, t = dp(8)))
         onTap(onClick)
     }
 
-    private fun storeTile(id: String, name: String, sub: String, fav: Boolean, onClick: () -> Unit): View = a.vbox(dp(10)).apply {
-        setGravity(Gravity.CENTER_HORIZONTAL)
-        background = ripple(rounded(Theme.p.surface, 18f, Theme.p.outline), 18f)
-        contentDescription = "$name, $sub"
-        val circle = FrameLayout(a).apply { background = rounded(Theme.store(id), 14f) }
-        val short = Theme.storeShort[id] ?: name.take(2)
-        circle.addView(a.text(short, if (short.length >= 4) 11.5f else 13.5f, Theme.onStore(id), Theme.bold),
-            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        addView(circle, LinearLayout.LayoutParams(dp(44), dp(44)))
-        addView(a.text((if (fav) "★ " else "") + name, 12f, Theme.p.text, Theme.semibold, 1, Gravity.CENTER), lp(WRAP, WRAP, t = dp(8)))
-        addView(a.text(sub, 10.5f, Theme.p.text3, Theme.medium, 1, Gravity.CENTER), lp(WRAP, WRAP, t = dp(2)))
+    private fun storeTile(id: String, name: String, sub: String, fav: Boolean, onClick: () -> Unit): View = a.vbox().apply {
+        contentDescription = (if (fav) "Favori market, " else "") + "$name, $sub"
+        val sign = FrameLayout(a).apply { background = ripple(rounded(Theme.store(id), 4f), 4f) }
+        val short = Theme.storeShort[id]?.takeIf { it.length >= 3 } ?: name
+        sign.addView(a.text(short, if (short.length > 6) 16f else 21f, Theme.onStore(id), Theme.display, 1),
+            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(8), 0, dp(6), dp(6)) })
+        if (fav) sign.addView(IconView(a, Icon.STAR_FILLED, Theme.onStore(id), 14),
+            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.END).apply { setMargins(0, dp(6), dp(6), 0) })
+        addView(sign, LinearLayout.LayoutParams(MATCH, dp(62)))
+        addView(a.text(sub.ifEmpty { " " }, 12f, Theme.p.text2, Theme.medium, 1), lp(WRAP, WRAP, t = dp(5)))
         onTap(onClick)
     }
 }
@@ -230,19 +211,74 @@ class HomeScreen(a: MainActivity) : Screen(a) {
 fun minuteLabel(m: Int): String = String.format(java.util.Locale.ROOT, "%02d.%02d", m / 60, m % 60)
 
 
-/** Raf kartı: güncel broşür varsa onun kapağı; yoksa mağazanın resmî broşür sayfası (uygulama içinde tam ekran). */
-fun MainActivity.shelfCard(e: com.firsat360.app.core.ShelfEntry): View {
+/**
+ * Broşürlük: marketlerin güncel broşürleri bir rafta durur; altlarından geçen sarı raf şeridine her marketin adı ve
+ * broşür durumu raf etiketi gibi basılır. Ana sayfanın tek "güçlü" öğesi; geri kalan her şey sakin.
+ */
+fun MainActivity.shelfRack(shelf: List<com.firsat360.app.core.ShelfEntry>): View {
+    // Raf şeridi yüksekliği yazı ölçeğiyle büyür (büyük yazıda durum satırı kesilmez)
+    val stripH = dp(30f + 36f * resources.configuration.fontScale)
+    val row = hbox(Gravity.TOP).apply {
+        setPadding(dp(20), dp(4), dp(6), 0)
+        background = ShelfDrawable(stripH)
+    }
+    for (e in shelf) row.addView(shelfSlot(e, stripH))
+    return hscroll(row).apply { isFillViewport = true }
+}
+
+private fun MainActivity.shelfSlot(e: com.firsat360.app.core.ShelfEntry, stripH: Int): View {
     val cached = if (e.bridge != null) com.firsat360.app.data.DeviceBrochures.get(this, e.store.id) else null
-    val c = e.catalog ?: Catalog(id = "web-${e.store.id}", storeId = e.store.id,
-        title = if (e.bridge != null) "Güncel broşür" else "Güncel broşür ve afişler",
-        kind = "flipbook", validFrom = null, validTo = null,
-        officialUrl = e.bridge?.url ?: e.store.brochureUrl ?: e.store.catalogUrl,
-        sourceMethod = "official_page", observedAt = null, offerCount = 0,
-        coverUrl = cached?.pages?.firstOrNull())
-    val card = catalogCard(c, e.store.name, today) { openBrochure(e) }
-    if (e.others > 0) card.addView(text("+${e.others} katalog daha", 11.5f, Theme.p.accent, Theme.semibold, 1),
-        lp(l = dp(12), b = dp(12)))
-    return card
+    val c = e.catalog
+    val cover = c?.coverUrl ?: cached?.pages?.firstOrNull()
+    val w = minOf(dp(132), (resources.displayMetrics.widthPixels - dp(20 + 14 * 2 + 30)) / 3 + dp(20))
+    val slot = vbox().apply { layoutParams = lp(w, WRAP, r = dp(14)) }
+    val frame = paperFrame(1.38f, Theme.blend(Theme.p.surface, Theme.store(e.store.id), if (Theme.p.dark) 0.16f else 0.07f))
+    val ph = vbox().apply {
+        addView(View(context).apply { setBackgroundColor(Theme.store(e.store.id)) }, lp(MATCH, dp(10)))
+        addView(IconView(context, if (c?.hasPdf == true) Icon.PDF else Icon.CATALOG, Theme.p.text3, 22), lp(WRAP, WRAP, l = dp(10), t = dp(10)))
+        addView(text(if (e.bridge != null || c == null) "Resmî sayfadan açılır" else c.title, 13f, Theme.p.text2, Theme.medium, 3),
+            lp(l = dp(10), r = dp(10), t = dp(8)))
+    }
+    frame.addView(ph, FrameLayout.LayoutParams(MATCH, MATCH))
+    if (cover != null && com.firsat360.app.data.ImageLoader.enabled) {
+        val img = NetImage(this, 0f).apply {
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        ph.visibility = View.INVISIBLE
+        img.load(cover, dp(360)) { img.visibility = View.GONE; ph.visibility = View.VISIBLE }
+        frame.addView(img, FrameLayout.LayoutParams(MATCH, MATCH))
+    }
+    slot.addView(frame, lp(MATCH, WRAP, r = dp(4)))
+    // Raf etiketi (şeridin üzerinde): market adı + durum
+    val label = vbox().apply { setPadding(0, dp(9), dp(4), 0) }
+    label.addView(text(e.store.name, 20f, Theme.p.onLabel, Theme.display, 1))
+    val status = when {
+        c != null -> Dates.status(c.validFrom, c.validTo, today).label
+        e.bridge != null -> if (cached != null) "Bu hafta okundu" else "Güncel broşür"
+        else -> "Resmî sayfa"
+    } + if (e.others > 0) ", +${e.others} katalog" else ""
+    label.addView(text(status, 12.5f, Theme.blend(Theme.p.onLabel, Theme.p.label, 0.25f), Theme.medium, 1), lp(t = dp(2)))
+    slot.addView(label, lp(MATCH, stripH))  // kapak doğrudan rafın üstünde durur
+    slot.contentDescription = "${e.store.name} broşürü, $status. Açmak için dokunun"
+    slot.background = ripple(null, 4f)
+    slot.onTap { openBrochure(e) }
+    return slot
+}
+
+/** Raf şeridi: içeriğin altında boydan boya sarı bant; üst kenarında rafın ışık çizgisi, altında gölge çizgisi. */
+class ShelfDrawable(private val stripH: Int) : android.graphics.drawable.Drawable() {
+    private val p = android.graphics.Paint()
+    override fun draw(c: android.graphics.Canvas) {
+        val b = bounds
+        val top = (b.bottom - stripH).toFloat()
+        p.color = Theme.p.label; c.drawRect(b.left.toFloat(), top, b.right.toFloat(), b.bottom.toFloat(), p)
+        p.color = Theme.tint(0xFFFFFFFF.toInt(), 0.55f); c.drawRect(b.left.toFloat(), top, b.right.toFloat(), top + dp(2), p)
+        p.color = Theme.p.labelShade; c.drawRect(b.left.toFloat(), b.bottom - dp(4).toFloat(), b.right.toFloat(), b.bottom.toFloat(), p)
+    }
+    override fun setAlpha(alpha: Int) {}
+    override fun setColorFilter(cf: android.graphics.ColorFilter?) {}
+    @Deprecated("Drawable API") override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
 }
 
 /** Broşürü en iyi biçimde açar: sayfa görselleri → yakınlaştırılabilir okuyucu; PDF → PDF; diğerleri → resmî sayfa. */
@@ -286,14 +322,14 @@ class ShelfOrderScreen(a: MainActivity) : Screen(a) {
         col.addView(a.text("Ana sayfadaki broşür rafında marketler bu sırayla görünür.", 13f, Theme.p.text2, Theme.regular))
         order.forEachIndexed { i, id ->
             val s = a.feed.store(id) ?: return@forEachIndexed
-            val r = a.hbox().apply { setPadding(dp(14), dp(10), dp(8), dp(10)); background = rounded(Theme.p.surface, 16f, Theme.p.outline) }
+            val r = a.hbox().apply { setPadding(dp(14), dp(10), dp(8), dp(10)); background = rounded(Theme.p.surface, 8f) }
             r.addView(a.text("${i + 1}", 14f, Theme.p.text3, Theme.semibold), lp(dp(26), WRAP))
             r.addView(a.storeBadge(s.id, s.name))
             r.addView(a.text(s.name, 15f, Theme.p.text, Theme.medium, 1), lp(0, WRAP, l = dp(10), weight = 1f))
             r.addView(a.iconButton(Icon.CHEVRON_UP, if (i > 0) Theme.p.text else Theme.p.text3, desc = "${s.name} yukarı") { move(i, -1) },
-                lp(dp(40), dp(40)))
+                lp(dp(48), dp(48)))
             r.addView(a.iconButton(Icon.CHEVRON_DOWN, if (i < order.size - 1) Theme.p.text else Theme.p.text3,
-                desc = "${s.name} aşağı") { move(i, 1) }, lp(dp(40), dp(40), l = dp(4)))
+                desc = "${s.name} aşağı") { move(i, 1) }, lp(dp(48), dp(48), l = dp(4)))
             col.addView(r, lp(t = dp(10)))
         }
         col.addView(a.button("Varsayılan sıraya dön", null, false) {

@@ -9,7 +9,7 @@ import com.firsat360.app.core.Json
  * yalnızca resmî görsel adresleri tutulur. Bir sonraki açılışta broşür doğrudan uygulama içi okuyucuda açılır.
  */
 object DeviceBrochures {
-    private const val MAX_AGE_MS = 3L * 24 * 60 * 60 * 1000
+    private const val MAX_AGE_MS = 12L * 60 * 60 * 1000  // 12 sa: haftalık broşür değişimini (Per/Çar) kaçırmamak için
     private fun prefs(ctx: Context) = ctx.getSharedPreferences("device_brochures", Context.MODE_PRIVATE)
 
     data class Entry(val title: String, val sourceUrl: String, val pages: List<String>, val savedAt: Long)

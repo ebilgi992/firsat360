@@ -278,9 +278,11 @@ class MainActivity : Activity() {
 
     private fun buildNav(): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
-        setBackgroundColor(Theme.p.surface)
-        elevation = dp(8).toFloat()
-        setPadding(dp(8), dp(6), dp(8), dp(8))
+        // Düz alt çubuk: gölge yok, üstte ince çizgi; seçili sekmenin adı raf etiketi sarısında.
+        background = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.ColorDrawable(Theme.p.outline),
+            android.graphics.drawable.ColorDrawable(Theme.p.surface))).apply { setLayerInset(1, 0, dp(1), 0, 0) }
+        setPadding(dp(6), dp(6), dp(6), dp(8))
         for (t in Tab.values()) {
             val item = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -289,9 +291,9 @@ class MainActivity : Activity() {
                 contentDescription = t.label
             }
             val icon = IconView(context, t.icon, Theme.p.text3, 24)
-            val label = context.text(t.label, 11.5f, Theme.p.text3, Theme.medium, 1)
+            val label = context.text(t.label, 12.5f, Theme.p.text3, Theme.medium, 1).apply { setPadding(dp(5), dp(1), dp(5), dp(2)) }
             item.addView(icon)
-            item.addView(label, lp(WRAP, WRAP, t = dp(4)))
+            item.addView(label, lp(WRAP, WRAP, t = dp(3)))
             item.onTap { if (repo.feed != null) switchTab(t) }
             navItems[t] = icon to label
             addView(item, lp(0, WRAP, weight = 1f))
@@ -301,11 +303,12 @@ class MainActivity : Activity() {
     private fun highlight(tab: Tab) {
         for ((t, pair) in navItems) {
             val on = t == tab
-            pair.first.color = if (on) Theme.p.accent else Theme.p.text3
+            pair.first.color = if (on) Theme.p.text else Theme.p.text3
             pair.first.icon = if (t == Tab.FAVORITES && on) Icon.HEART_FILLED else t.icon
-            pair.second.setTextColor(if (on) Theme.p.accent else Theme.p.text3)
-            (pair.first.parent as? View)?.background = if (on) rounded(Theme.p.accentSoft, 18f) else null
+            pair.second.setTextColor(if (on) Theme.p.onLabel else Theme.p.text3)
+            pair.second.background = if (on) rounded(Theme.p.label, 2f) else null
             pair.second.typeface = if (on) Theme.semibold else Theme.medium
+            (pair.first.parent as? View)?.let { it.contentDescription = t.label + if (on) " (seçili)" else ""; it.isSelected = on }
         }
     }
 

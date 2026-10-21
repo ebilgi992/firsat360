@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import __version__
-from .config import STORE_KIND, STORE_STYLE, STORES, CHAIN_RANK, BROCHURE_URLS
+from .config import STORE_KIND, STORE_STYLE, STORES, CHAIN_RANK, BROCHURE_URLS, RETIRED_STORES
 from .db import Catalog, Offer, PriceObservation, Store
 from .normalize import CATEGORIES
 
@@ -134,6 +134,10 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
     stores = session.scalars(select(Store).order_by(Store.id)).all()
     catalogs = session.scalars(select(Catalog).where(Catalog.data_mode == "real")).all()
     offers = session.scalars(select(Offer).where(Offer.published.is_(True), Offer.data_mode == "real")).all()
+    # Kaldırılan marketler (RETIRED_STORES): eski kayıtları veritabanında kalsa da yayına girmez.
+    stores = [s for s in stores if s.id not in RETIRED_STORES]
+    catalogs = [c for c in catalogs if c.store_id not in RETIRED_STORES]
+    offers = [o for o in offers if o.store_id not in RETIRED_STORES]
     if not include_expired:
         offers = [o for o in offers if o.valid_to is None or o.valid_to >= today]
         catalogs = [c for c in catalogs if c.valid_to is None or c.valid_to >= today]

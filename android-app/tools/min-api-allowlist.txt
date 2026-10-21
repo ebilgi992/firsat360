@@ -6,3 +6,4 @@ android/app/Activity.getOnBackInvokedDispatcher  # API 33+; SDK_INT >= 33 kontro
 android/view/WindowInsetsController  # API 30+; yalnızca SDK_INT >= 30 dalında kullanılır
 android/view/Window.getInsetsController  # API 30+; SDK_INT >= 30 kontrolü
 android/view/View.getWindowInsetsController  # API 30+; yalnızca SDK_INT >= 30 dalında kullanılır (applySystemBars)
+android/widget/TextView.setAccessibilityHeading  # API 28+; yalnızca SDK_INT >= 28 dalında (ui/Ui.kt accessibilityHeading)

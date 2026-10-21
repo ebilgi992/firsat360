@@ -3,7 +3,8 @@
 ## Uygulamaya gömülü
 | Bileşen | Lisans | Not |
 |---|---|---|
-| Inter yazı tipi (Regular, Medium, SemiBold, Bold) | SIL Open Font License 1.1 | Ubuntu `fonts-inter` paketinden; değiştirilmeden gömüldü. Lisans: https://openfontlicense.org |
+| Barlow ve Barlow Condensed yazı tipleri (Jeremy Tribby) | SIL Open Font License 1.1 | Google Fonts sürümü, npm `@expo-google-fonts/barlow`, `@expo-google-fonts/barlow-condensed` 0.2.3 paketlerinden; değiştirilmeden gömüldü. Lisans: https://openfontlicense.org |
+| The Agency ajan tanımları (`.claude/agents/`) | MIT | https://github.com/msitarzewski/agency-agents — `.claude/agents/LICENSE-agency-agents` |
 | Kotlin standart kütüphanesi 2.2.20 | Apache-2.0 | ProGuard ile küçültülerek APK'ya eklendi |
 
 ## Derleme araçları (dağıtıma dahil değil)

@@ -88,7 +88,7 @@ class CatalogListScreen(a: MainActivity, private val newOnly: Boolean) : Screen(
         if (cats.isEmpty()) col.addView(a.emptyState(Icon.CATALOG, "Şu an yeni katalog yok",
             "Marketler yeni katalog yayınladığında burada görünür.", "Tüm kataloglar") { a.openCatalogList(false) })
         for ((sid, group) in cats.groupBy { it.storeId }) {
-            col.addView(a.text(f.store(sid)?.name ?: sid, 16f, Theme.p.text, Theme.bold), lp(t = dp(18), b = dp(10)))
+            col.addView(a.text(f.store(sid)?.name ?: sid, 21f, Theme.p.text, Theme.displayBold), lp(t = dp(18), b = dp(10)))
             for (c in group) col.addView(a.catalogCard(c, f.store(sid)?.name ?: "", a.today, wide = true) { a.openCatalog(c.id) },
                 lp(b = dp(12)))
         }
@@ -123,7 +123,7 @@ class PdfScreen(a: MainActivity, private val catalogId: String,
         val root = a.vbox().apply { setBackgroundColor(0xFF0B0D12.toInt()) }
         val bar = a.hbox().apply { setPadding(dp(10), dp(10), dp(10), dp(10)) }
         bar.addView(a.iconButton(Icon.CLOSE, 0xFFF2F3F7.toInt(), 0x33FFFFFF, "Kapat") { a.onBackPressedCompat() }
-            .apply { background = rounded(0x33FFFFFF, 99f) })
+            .apply { background = rounded(0x33FFFFFF, 8f) })
         val titles = a.vbox()
         titles.addView(a.text(c.title, 15f, 0xFFF2F3F7.toInt(), Theme.semibold, 1))
         val counter = a.text(Dates.status(c.validFrom, c.validTo, a.today).label, 12f, 0xB3F2F3F7.toInt(), Theme.medium, 1)
@@ -133,7 +133,7 @@ class PdfScreen(a: MainActivity, private val catalogId: String,
         bar.addView(a.iconButton(if (saved) Icon.CHECK else Icon.DOWNLOAD, 0xFFF2F3F7.toInt(), 0x33FFFFFF,
             if (saved) "Çevrim dışı kayıtlı" else "Çevrim dışı kaydet") {
             if (saved) a.toast("Bu katalog cihazınıza kayıtlı") else a.saveOffline(c)
-        }.apply { background = rounded(0x33FFFFFF, 99f) }, lp(dp(42), dp(42), l = dp(8)))
+        }.apply { background = rounded(0x33FFFFFF, 8f) }, lp(dp(42), dp(42), l = dp(8)))
         root.addView(bar)
 
         val body = FrameLayout(a)

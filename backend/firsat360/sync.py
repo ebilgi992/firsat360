@@ -382,13 +382,18 @@ def status_dict(session: Session) -> dict:
     }
 
 
+from .config import RETIRED_STORES  # noqa: E402
+
+
 def announcements_for_feed(session: Session, now: datetime, days: int = 14) -> list[dict]:
     rows = session.scalars(select(Announcement).where(Announcement.created_at >= now - timedelta(days=days))
                            .order_by(Announcement.created_at.desc())).all()
     return [{"id": a.id, "created_at": _aware(a.created_at).isoformat(),
              "deliver_at": _aware(a.deliver_at).isoformat() if a.deliver_at else None,
              "title": a.title, "body": a.body, "catalog_ids": json.loads(a.catalog_ids),
-             "store_ids": json.loads(a.store_ids)} for a in rows]
+             "store_ids": json.loads(a.store_ids)} for a in rows
+            # Kaldırılan marketi anan eski duyurular yayından çıkar (metin onu adıyla anar).
+            if not set(json.loads(a.store_ids)) & set(RETIRED_STORES)]
 
 
 def today_tr(now: datetime | None = None) -> date:

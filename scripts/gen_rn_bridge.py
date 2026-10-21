@@ -19,11 +19,17 @@ CONFIG = ROOT / "config/client_bridge.json"
 OUT = ROOT / "clients/react-native/src/bridgeScripts.ts"
 
 
+NONCE = "__F360_NONCE__"
+
+
 def wrap(common: str, profile: str) -> str:
     # common.js bir "var F360 = …;" bildirimi, profil betiği bir ifade. Sayfanın genel kapsamını kirletmemek için IIFE.
-    return ("(function(){try{\n" + common.strip() + "\nvar __f360 = " + profile.strip().rstrip(";") +
-            ";\nwindow.ReactNativeWebView.postMessage(String(__f360));\n}catch(e){window.ReactNativeWebView.postMessage("
-            "JSON.stringify({type:'pending',error:String(e)}));}})();\ntrue;")
+    # Sonuç {n: <oturum nonce'u>, r: <sonuç>} zarfıyla gönderilir: sayfanın KENDİ betikleri de ReactNativeWebView'a
+    # mesaj atabilir; nonce'u bilmeyen mesajlar uygulama tarafında yok sayılır. Nonce, enjeksiyon anında yerine konur.
+    post = "window.ReactNativeWebView.postMessage(JSON.stringify({n:'" + NONCE + "',r:%s}));"
+    return ("(function(){try{\n" + common.strip() + "\nvar __f360 = " + profile.strip().rstrip(";") + ";\n" +
+            post % "String(__f360)" + "\n}catch(e){" + post % "JSON.stringify({type:'pending',error:String(e)})" +
+            "}})();\ntrue;")
 
 
 def render() -> str:
@@ -53,8 +59,11 @@ def render() -> str:
     for p in profiles:
         src = wrap(common, (BRIDGE / f"{p}.js").read_text(encoding="utf-8"))
         lines.append(f"  {json.dumps(p)}: {json.dumps(src, ensure_ascii=False)},")
-    lines += ["};", "", "export function bridgeScript(profile: string): string {",
-              "  return BRIDGE_SCRIPTS[profile] ?? BRIDGE_SCRIPTS.generic;", "}", ""]
+    lines += ["};", "", f"export const BRIDGE_NONCE_PLACEHOLDER = {json.dumps(NONCE)};", "",
+              "/** Profil betiği; nonce bu oturumun rastgele değeriyle değiştirilir (bkz. CatalogBridge). */",
+              "export function bridgeScript(profile: string, nonce: string): string {",
+              "  const src = BRIDGE_SCRIPTS[profile] ?? BRIDGE_SCRIPTS.generic;",
+              "  return src.split(BRIDGE_NONCE_PLACEHOLDER).join(nonce);", "}", ""]
     return "\n".join(lines)
 
 

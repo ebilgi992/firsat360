@@ -1,5 +1,21 @@
 # Değişiklik günlüğü
 
+## 1.5.0 — 22 Ekim 2026
+- **Yeni arayüz: "market rafı" tasarım dili.** Soğuk raf grisi zemin, beyaz kâğıt yüzeyler, tükenmez kalem mavisi
+  eylemler, raf etiketi sarısı fiyatlar, kırmızı yalnızca indirimde. Yazı tipi Barlow + Barlow Condensed (tabela harfi:
+  fiyatlar, başlıklar, market adları); Inter kaldırıldı (APK ~1 MB küçüldü).
+  - Ana sayfa **Broşürlük**: marketlerin broşürleri bir rafta durur, altlarından geçen sarı raf şeridinde market adı ve
+    broşür durumu raf etiketi gibi yazar.
+  - Ürün kartları ve ürün ekranı **raf etiketi fiyatı** (büyük lira, üstte kuruş), indirim kırmızı damga.
+  - Market tabelaları, köşeli etiketler, düz alt çubuk (seçili sekme sarı etikette), mürekkep çizgili arama alanı.
+- **Onur Market kaldırıldı** (bağlayıcı, yapılandırma, uygulama, eski önbellek feed'leri ve duyurular). Bölge ayarı
+  yalnızca bölgesel broşür yayımlayan bir market olduğunda görünür.
+- **Köprü düzeltmeleri (bağımsız kod incelemesi):** görünmez reCAPTCHA/Turnstile içeren sıradan sayfalar doğrulama
+  sanılmıyor; doğrulama sırasında 3 sn'de bir kontrol, tamamlanınca broşür kendiliğinden açılıyor; KVKK/koşullar
+  PDF'leri broşür sayılmıyor; flipbook sağlayıcısından başka siteye atlanmıyor; geri tuşu döngüsü ve belge başına süre
+  sınırı; yeniden kurulan ekranda WebView sızıntısı; yıl sonu tarih aralıkları (30 Aralık'ta "02–08 Ocak");
+  cihaz broşür önbelleği 12 saat; ŞOK PDF önbelleği tarih aralığıyla anahtarlanıyor; React Native'de oturum nonce'u.
+
 ## 1.4.0 — 21 Ekim 2026
 - **İstemci Katalog Köprüsü (6 market):** A101, ŞOK, Migros (Migroskop), Gratis, CarrefourSA ve Rossmann broşürleri
   artık sunucuda kazınmıyor. `config/client_bridge.json` (`"client_rendered": true`) → feed `client_bridge` alanı →

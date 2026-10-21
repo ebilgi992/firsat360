@@ -26,7 +26,7 @@ class ShoppingListScreen(a: MainActivity) : Screen(a) {
         val col = a.vbox()
         col.setPadding(0, dp(18), 0, dp(32))
         val head = a.hbox().apply { setPadding(dp(20), 0, dp(16), 0) }
-        head.addView(a.text("Alışveriş listem", 26f, Theme.p.text, Theme.bold), lp(0, WRAP, weight = 1f))
+        head.addView(a.text("Alışveriş listem", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(0, WRAP, weight = 1f))
         if (items.isNotEmpty()) head.addView(a.iconButton(Icon.SHARE, desc = "Listeyi paylaş") {
             a.share(ShoppingList.shareText(items) { id -> a.feed.store(id)?.name ?: id })
         })
@@ -40,7 +40,7 @@ class ShoppingListScreen(a: MainActivity) : Screen(a) {
 
         // Serbest metin ekleme
         val box = a.hbox().apply {
-            setPadding(dp(14), dp(4), dp(6), dp(4)); background = rounded(Theme.p.surface, 16f, Theme.p.outline)
+            setPadding(dp(14), dp(4), dp(6), dp(4)); background = rounded(Theme.p.surface, 8f)
         }
         val input = EditText(a).apply {
             hint = "Örn. ekmek, deterjan"; setHintTextColor(Theme.p.text3); setTextColor(Theme.p.text)
@@ -57,7 +57,7 @@ class ShoppingListScreen(a: MainActivity) : Screen(a) {
         input.setOnEditorActionListener { _, id, _ -> if (id == EditorInfo.IME_ACTION_DONE) { add(); true } else false }
         box.addView(input, lp(0, WRAP, weight = 1f))
         box.addView(a.iconButton(Icon.PLUS, Theme.p.onAccent, Theme.p.accent, "Ekle") { add() }.apply {
-            background = rounded(Theme.p.accent, 99f) })
+            background = rounded(Theme.p.accent, 3f) })
         col.addView(box, lp(l = dp(20), r = dp(20), t = dp(16)))
 
         for ((storeId, list) in ShoppingList.grouped(items)) {
@@ -65,7 +65,7 @@ class ShoppingListScreen(a: MainActivity) : Screen(a) {
             val h = a.hbox().apply { setPadding(dp(20), dp(22), dp(20), dp(8)) }
             if (storeId != null) h.addView(a.storeBadge(storeId, name, small = false)) else h.addView(a.text(name, 15f, Theme.p.text, Theme.bold))
             col.addView(h)
-            val card = a.vbox(0, rounded(Theme.p.surface, 18f, Theme.p.outline))
+            val card = a.vbox(0, rounded(Theme.p.surface, 8f))
             for ((i, item) in list.withIndex()) {
                 card.addView(row(item))
                 if (i < list.size - 1) card.addView(View(a).apply { setBackgroundColor(Theme.p.outline) }, lp(MATCH, 1, l = dp(52)))
@@ -119,14 +119,14 @@ class FavoritesScreen(a: MainActivity, private var section: Int = 0) : Screen(a)
         val list = a.offerListView()
         val header = a.vbox()
         header.setPadding(dp(20), dp(18), dp(20), dp(10))
-        header.addView(a.text("Favoriler", 26f, Theme.p.text, Theme.bold))
+        header.addView(a.text("Favoriler", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() })
         header.addView(a.text("Takip ettiğiniz ürün, katalog ve mağazalar yalnızca bu cihazda saklanır.", 13f, Theme.p.text2,
             Theme.regular), lp(t = dp(6)))
-        val seg = a.hbox().apply { setPadding(dp(4), dp(4), dp(4), dp(4)); background = rounded(Theme.p.surface2, 16f) }
+        val seg = a.hbox().apply { setPadding(dp(4), dp(4), dp(4), dp(4)); background = rounded(Theme.p.surface2, 8f) }
         for ((i, label) in listOf("Ürünler", "Kataloglar", "Mağazalar").withIndex()) {
             val on = i == section
             seg.addView(a.text(label, 14f, if (on) Theme.p.onAccent else Theme.p.text2, if (on) Theme.bold else Theme.medium, 1, Gravity.CENTER).apply {
-                setPadding(0, dp(10), 0, dp(10)); background = if (on) rounded(Theme.p.accent, 12f) else null
+                setPadding(0, dp(10), 0, dp(10)); background = if (on) rounded(Theme.p.accent, 6f) else null
                 onTap { section = i; a.refreshCurrent() }
             }, lp(0, WRAP, weight = 1f))
         }
@@ -163,7 +163,7 @@ class FavoritesScreen(a: MainActivity, private var section: Int = 0) : Screen(a)
                 for (s in f.stores) {  // feed sırası (mağaza "sort" alanı)
                     val on = s.id in fav
                     val r = a.hbox().apply {
-                        setPadding(dp(14), dp(12), dp(10), dp(12)); background = rounded(Theme.p.surface, 16f, Theme.p.outline)
+                        setPadding(dp(14), dp(12), dp(10), dp(12)); background = rounded(Theme.p.surface, 8f)
                     }
                     r.addView(a.storeBadge(s.id, s.name, small = false))
                     r.addView(a.text("${f.catalogs.count { it.storeId == s.id && it.kind != "link_only" }} katalog · " +

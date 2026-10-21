@@ -32,8 +32,8 @@ fun MainActivity.topBar(title: String, vararg actions: View): LinearLayout = hbo
     setPadding(dp(12), dp(12), dp(12), dp(8))
     setBackgroundColor(Theme.p.bg)
     addView(iconButton(Icon.BACK, desc = "Geri") { onBackPressedCompat() })
-    addView(text(title, 16f, Theme.p.text, Theme.semibold, 1), lp(0, WRAP, l = dp(12), r = dp(8), weight = 1f))
-    for (v in actions) addView(v, lp(dp(42), dp(42), l = dp(8)))
+    addView(text(title, 21f, Theme.p.text, Theme.displayBold, 1).apply { accessibilityHeading() }, lp(0, WRAP, l = dp(12), r = dp(8), weight = 1f))
+    for (v in actions) addView(v, lp(dp(48), dp(48), l = dp(4)))
 }
 
 @Suppress("DEPRECATION")
@@ -66,13 +66,13 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
         col.setPadding(dp(20), dp(4), dp(20), dp(32))
         // Kahraman blok
         val hero = a.vbox(dp(20)).apply {
-            background = rounded(Theme.blend(Theme.p.surface, Theme.category(o.category), if (Theme.p.dark) 0.16f else 0.08f), 24f)
+            background = rounded(Theme.blend(Theme.p.surface, Theme.category(o.category), if (Theme.p.dark) 0.16f else 0.08f), 6f)
             setGravity(Gravity.CENTER_HORIZONTAL)
         }
         val imgUrl = o.imageLargeUrl ?: o.imageUrl
         if (imgUrl != null && com.firsat360.app.data.ImageLoader.enabled) {
             val mono = Monogram(a, 88).apply { bind(o); visibility = View.GONE }
-            val photo = NetImage(a, 18f).apply {
+            val photo = NetImage(a, 4f).apply {
                 scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                 setBackgroundColor(0xFFFFFFFF.toInt())
                 contentDescription = "${o.displayTitle} görseli, büyütmek için dokunun"
@@ -88,7 +88,7 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
                 val src = a.hbox(Gravity.CENTER).apply { setPadding(dp(10), dp(6), dp(12), dp(6)) }
                 src.addView(IconView(a, Icon.CHECK, Theme.p.ok, 15))
                 src.addView(a.text("${store?.name ?: ""} resmî ürün görseli", 11.5f, Theme.p.text2, Theme.medium, 1), lp(WRAP, WRAP, l = dp(6)))
-                src.background = rounded(Theme.p.surface, 99f, Theme.p.outline)
+                src.background = rounded(Theme.p.surface, 4f, Theme.p.outline)
                 hero.addView(src, lp(WRAP, WRAP, t = dp(12)))
             }
         } else {
@@ -102,24 +102,30 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
         badges.addView(a.storeBadge(o.storeId, store?.name ?: o.storeId, small = false))
         badges.addView(a.pill(f.categoryName(o.category), Theme.p.text2, Theme.p.surface2, 12f, Theme.medium), lp(WRAP, WRAP, l = dp(8)))
         col.addView(badges, lp(t = dp(20)))
-        if (o.brand != null) col.addView(a.text(TurkishTextUpper(o.brand), 12.5f, Theme.p.text3, Theme.semibold), lp(t = dp(16)))
-        col.addView(a.text(o.name, 22f, Theme.p.text, Theme.bold), lp(t = dp(6)))
+        if (o.brand != null) col.addView(a.text(o.brand, 14f, Theme.p.text2, Theme.semibold), lp(t = dp(16)))
+        col.addView(a.text(o.name, 28f, Theme.p.text, Theme.displayBold).apply { accessibilityHeading() }, lp(t = dp(4)))
         if (o.variant != null) col.addView(a.text(o.variant, 14f, Theme.p.text2, Theme.regular), lp(t = dp(6)))
         else if (o.pageSizeText != null) col.addView(a.text(o.pageSizeText, 14f,
             Theme.p.text2, Theme.regular), lp(t = dp(6)))
 
         // Fiyat kartı
-        val priceCard = a.card(dp(18))
+        // Fiyat: rafta asılı sarı etiket (büyük lira, üstte kuruş); indirim kırmızı damga
+        val priceCard = a.vbox(dp(18)).apply {
+            background = android.graphics.drawable.LayerDrawable(arrayOf(rounded(Theme.p.labelShade, 6f), rounded(Theme.p.label, 6f)))
+                .apply { setLayerInset(1, 0, 0, 0, dp(4)) }
+        }
         val pr = a.hbox(Gravity.BOTTOM)
-        pr.addView(a.text(Money.format(o.price), 30f, Theme.p.text, Theme.bold, 1))
+        pr.addView(a.priceText(Money.format(o.price), 52f, Theme.p.onLabel))
         val pct = Money.declaredDiscountPercent(o.price, o.storeDeclaredOldPrice)
-        if (pct != null) { pr.addView(a.flex()); pr.addView(a.pill("%$pct indirim", 0xFFFFFFFF.toInt(), Theme.p.deal, 13f, Theme.bold)) }
+        if (pct != null) { pr.addView(a.flex()); pr.addView(a.text("%$pct", 24f, 0xFFFFFFFF.toInt(), Theme.display, 1).apply {
+            setPadding(dp(10), dp(2), dp(10), dp(4)); background = rounded(Theme.p.deal, 2f); rotation = -5f
+            contentDescription = "Yüzde $pct indirim (market beyanı)" }, lp(WRAP, WRAP, b = dp(10))) }
         priceCard.addView(pr)
         if (o.storeDeclaredOldPrice != null) {
-            priceCard.addView(a.text(Money.format(o.storeDeclaredOldPrice), 14f, Theme.p.text3, Theme.medium).apply {
+            priceCard.addView(a.text(Money.format(o.storeDeclaredOldPrice), 15f, Theme.blend(Theme.p.onLabel, Theme.p.label, 0.35f), Theme.medium).apply {
                 paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             }, lp(t = dp(6)))
-            priceCard.addView(a.text("Üstü çizili fiyat, marketin sayfasında yazan önceki fiyattır.", 12.5f, Theme.p.text2,
+            priceCard.addView(a.text("Üstü çizili fiyat, marketin sayfasında yazan önceki fiyattır.", 12.5f, Theme.blend(Theme.p.onLabel, Theme.p.label, 0.2f),
                 Theme.regular), lp(t = dp(8)))
         }
         if (o.condition != null) priceCard.addView(a.notice(Icon.TAG, o.condition, Theme.p.warn, Theme.p.warnSoft), lp(t = dp(12)))
@@ -133,14 +139,14 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
         val others = com.firsat360.app.core.SimilarOffers.find(f.offers, o)
         if (others.isNotEmpty()) {
             val cmp = a.card(dp(16))
-            cmp.addView(a.text("Diğer marketlerde", 16f, Theme.p.text, Theme.bold))
+            cmp.addView(a.text("Diğer marketlerde", 21f, Theme.p.text, Theme.displayBold))
             cmp.addView(a.text("Aynı ürün ve aynı ambalaj ölçüsü", 12f, Theme.p.text2, Theme.regular), lp(t = dp(4)))
             for (x in others.take(5)) {
                 val r = a.hbox().apply { setPadding(0, dp(12), 0, dp(4)) }
                 r.addView(a.storeBadge(x.storeId, f.store(x.storeId)?.name ?: x.storeId, small = false))
                 r.addView(a.text(x.displayTitle, 13.5f, Theme.p.text, Theme.medium, 1), lp(0, WRAP, l = dp(10), r = dp(8), weight = 1f))
                 val diff = x.price - o.price
-                r.addView(a.text(Money.format(x.price), 15f, if (diff < 0) Theme.p.ok else Theme.p.text, Theme.bold, 1))
+                r.addView(a.priceText(Money.format(x.price), 21f, if (diff < 0) Theme.p.ok else Theme.p.text))
                 r.onTap { a.openOffer(x.id) }
                 cmp.addView(r)
                 if (Math.abs(diff) >= 0.01) cmp.addView(a.text(if (diff < 0) "${Money.format(-diff)} daha ucuz" else
@@ -162,7 +168,7 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
         val v = Dates.status(o.validFrom ?: catalog?.validFrom, o.validTo ?: catalog?.validTo, a.today)
         val info = a.card(dp(16))
         info.addView(a.infoRow(Icon.CALENDAR, if (catalog != null) catalog.title else "Geçerlilik",
-            v.label + " · stoklarla sınırlı", validityColor(v.kind).first))
+            v.label + ", stoklarla sınırlı", validityColor(v.kind).first))
         col.addView(info, lp(t = dp(14)))
 
         // Fiyat geçmişi (yalnızca değişim varsa)
@@ -170,7 +176,7 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
         if (points.size >= 2 && points.map { it.price }.distinct().size > 1) {
             val hist = a.card(dp(16))
             val trend = PriceTrend.of(points)
-            hist.addView(a.text("Fiyat geçmişi", 16f, Theme.p.text, Theme.bold))
+            hist.addView(a.text("Fiyat geçmişi", 21f, Theme.p.text, Theme.displayBold))
             hist.addView(a.text(trend.summary, 13.5f, when (trend.direction) {
                 -1 -> Theme.p.ok; 1 -> Theme.p.danger; else -> Theme.p.text2 }, Theme.semibold), lp(t = dp(6)))
             hist.addView(Sparkline(a, points.map { it.price }), lp(MATCH, dp(80), t = dp(10)))
@@ -210,16 +216,16 @@ class CatalogScreen(a: MainActivity, private val catalogId: String) : Screen(a) 
         val list = a.offerListView()
         val header = a.vbox()
         val hero = a.vbox(dp(20)).apply {
-            background = gradient(intArrayOf(Theme.store(c.storeId), Theme.blend(Theme.store(c.storeId), 0xFF000000.toInt(), 0.25f)), 24f)
+            background = rounded(Theme.store(c.storeId), 6f)
         }
         val onS = Theme.onStore(c.storeId)
-        hero.addView(a.text(store?.name ?: "", 13f, onS, Theme.semibold))
-        hero.addView(a.text(c.title, 24f, onS, Theme.bold, 2), lp(t = dp(6)))
+        hero.addView(a.text(store?.name ?: "", 18f, onS, Theme.displayBold))
+        hero.addView(a.text(c.title, 28f, onS, Theme.displayBold, 2).apply { accessibilityHeading() }, lp(t = dp(4)))
         val v = Dates.status(c.validFrom, c.validTo, a.today)
-        hero.addView(a.pill(v.label, onS, Theme.tint(onS, 0.18f), 12f), lp(WRAP, WRAP, t = dp(12)))
+        hero.addView(a.pill(v.label, Theme.p.onLabel, Theme.p.label, 14f, Theme.displayBold), lp(WRAP, WRAP, t = dp(12)))
         hero.addView(a.text(listOfNotNull(if (all.isNotEmpty()) "${all.size} ürün" else null,
             if (c.hasPages) "${c.pages.size} sayfa" else null, if (c.hasPdf) "PDF katalog" else null,
-            "güncellendi ${Dates.relative(c.lastCheckedAt ?: c.observedAt, a.now)}").joinToString(" · "),
+            "güncellendi ${Dates.relative(c.lastCheckedAt ?: c.observedAt, a.now)}").joinToString(", "),
             12.5f, Theme.tint(onS, 0.85f), Theme.medium), lp(t = dp(12)))
         header.addView(hero, lp(l = dp(20), r = dp(20), t = dp(4)))
         if (c.hasPdf) {
@@ -271,6 +277,10 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun create(): View {
+        // Ekran yeniden kurulursa (refreshCurrent) eski WebView ve okuma döngüsü kapatılır: sızıntı ve çift okuma olmaz.
+        web?.let { try { it.stopLoading(); it.destroy() } catch (e: Exception) { } }
+        web = null; extracting = false; polls = 0; navigations = 0; handedOff = false; pagesBtn = null
+        challengeShown = false; deadlines.clear(); upgrades = 0
         val outer = a.vbox()
         outer.setBackgroundColor(if (catalog) 0xFF0B0D12.toInt() else Theme.p.bg)
         val host = if (catalog) "Resmî katalog · iki parmakla yakınlaştırabilirsiniz" else Uri.parse(url).host ?: ""
@@ -313,7 +323,8 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
                 override fun shouldOverrideUrlLoading(view: WebView?, u: String?): Boolean {
                     val s = Uri.parse(u ?: return true).scheme?.lowercase() ?: return true
                     if (s == "https") return false
-                    if (s == "http") { view?.loadUrl(u.replaceFirst("http://", "https://")); return true }  // HTTPS'e yükselt
+                    // HTTPS'e yükselt (sunucu https→http yönlendirip döngü kurarsa en çok 3 kez)
+                    if (s == "http") { if (upgrades++ < 3) view?.loadUrl(u.replaceFirst("http://", "https://")); return true }
                     // tel:, intent:, file:, javascript: vb. WebView içinde açılmaz; yalnızca güvenli şemalar dışarıda
                     if (s == "tel" || s == "mailto" || s == "market") a.openExternal(u)
                     return true
@@ -384,21 +395,26 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         if (message != null) a.toast(message)
     }
 
+    /** Belge başına TEK süre sınırı (#p= gibi parça değişimleri ve yönlendirmeler sayacı sıfırlayamaz). */
+    private fun deadline(view: WebView): Long =
+        deadlines.getOrPut((view.url ?: url).substringBefore('#')) { System.currentTimeMillis() + MAX_MS }
+
     private fun startExtraction(view: WebView) {
         if (handedOff) return
-        polls = 0; lastCount = -1
+        lastCount = -1
+        deadline(view)
         if (!extracting) { extracting = true; view.postDelayed({ poll(view) }, 1200) }
     }
 
     private fun poll(view: WebView) {
-        if (handedOff || web == null) { extracting = false; return }
+        if (handedOff || view !== web) { extracting = false; return }
         try {
             view.evaluateJavascript(com.firsat360.app.data.BridgeScripts.get(a, profile)) { raw -> onExtracted(view, raw) }
         } catch (e: Exception) { extracting = false; hideOverlay(null) }
     }
 
     private fun onExtracted(view: WebView, raw: String?) {
-        if (handedOff || web == null) return
+        if (handedOff || view !== web) { extracting = false; return }
         val res = try {
             val inner = com.firsat360.app.core.Json.parse(raw ?: "null") as? String
             if (inner == null) null else com.firsat360.app.core.Json.parse(inner) as? Map<*, *>
@@ -406,9 +422,14 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         polls++
         when (res?.get("type")) {
             "challenge" -> {
-                // Doğrulama sayfası: otomatik geçilmez. Kullanıcı görür ve kendisi tamamlar; sayfa yenilenince sürer.
-                extracting = false
-                hideOverlay("Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.")
+                // Doğrulama sayfası: otomatik geçilmez. Kullanıcı görür ve kendisi tamamlar; bu sırada 3 sn'de bir
+                // yalnızca "geçildi mi" diye bakılır (sayfa yenilenmese de). Süre sınırı doğrulama bitince başlar.
+                if (!challengeShown) {
+                    challengeShown = true
+                    hideOverlay("Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.")
+                }
+                deadlines[(view.url ?: url).substringBefore('#')] = System.currentTimeMillis() + MAX_MS
+                view.postDelayed({ poll(view) }, CHALLENGE_POLL_MS)
                 return
             }
             "pdf" -> {
@@ -420,8 +441,11 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
             }
             "navigate" -> {
                 val to = res["url"] as? String
-                if (to != null && to.startsWith("https://") && hostAllowed(to) && to != view.url && navigations < 2) {
-                    navigations++; lastCount = -1; polls = 0
+                // Yalnızca marketin KENDİ sayfasından (başlangıç alanı) katalog görüntüleyicisine geçilir; sağlayıcı
+                // sitesinden başka yere atlanmaz.
+                val onStart = siteFamily(Uri.parse(view.url ?: url).host) == siteFamily(Uri.parse(url).host)
+                if (to != null && to.startsWith("https://") && hostAllowed(to) && to != view.url && navigations < 2 && onStart) {
+                    navigations++; lastCount = -1
                     overlayText?.text = "Resmî katalog açılıyor…"
                     extracting = false
                     view.loadUrl(to)  // onPageFinished → okuma yeniden başlar
@@ -439,7 +463,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         overlayText?.text = if (pages.isEmpty()) "Resmî siteden güncel broşürler alınıyor…"
             else "${pages.size} broşür sayfası bulundu…"
         if (pages.size >= 2) showPagesButton(pages)
-        if (polls >= MAX_POLLS) {
+        if (System.currentTimeMillis() > deadline(view)) {
             extracting = false
             if (pages.size >= 2) { handOff(pages); return }  // süre doldu ama sayfalar var → bulunanlarla aç
             hideOverlay("Bu sayfada broşür görseli bulunamadı; resmî sayfa gösteriliyor.")
@@ -449,6 +473,9 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     }
 
     private var navigations = 0
+    private var challengeShown = false
+    private var upgrades = 0
+    private val deadlines = HashMap<String, Long>()
 
     /** Görsel/PDF/gezinme hedefi izinli mi: feed'deki alan adı aileleri; yoksa açılan sayfanın kendi ailesi. */
     private fun hostAllowed(u: String): Boolean {
@@ -482,6 +509,11 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     /** Yerel okuyucuya geçiş: WebView yığından çıkar, yerine okuyucu açılır (geri → bir önceki ekran). */
     private fun handOff(pages: List<String>) {
         if (handedOff) return
+        if (!com.firsat360.app.data.ImageLoader.enabled) {  // görseller kapalı (veri tasarrufu): okuyucu boş kalırdı
+            extracting = false
+            hideOverlay("Görseller kapalı olduğu için broşür resmî sayfada gösteriliyor.")
+            return
+        }
         handedOff = true; extracting = false
         collected = pages
         storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
@@ -501,12 +533,15 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
 
     companion object {
         private const val POLL_MS = 900L
-        private const val MAX_POLLS = 16  // ≈ 15 sn
+        private const val MAX_MS = 15_000L  // belge başına okuma süresi
+        private const val CHALLENGE_POLL_MS = 3_000L
 
         // Okuma betikleri: assets/bridge/*.js (React Native bileşeniyle ortak). Testler: backend/tests/test_bridge_scripts.py
     }
 
     override fun onBack(): Boolean {
+        // Broşür alınırken geri → ekran kapanır (kitaptan mağaza sayfasına dönüp yeniden ileri gidilmez).
+        if (overlay?.visibility == View.VISIBLE && !handedOff) return false
         val w = web ?: return false
         if (w.canGoBack()) { w.goBack(); return true }
         return false
@@ -597,10 +632,10 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             val card = a.card(dp(18))
             val h = a.hbox()
             h.addView(FrameLayout(a).apply {
-                background = rounded(Theme.p.accentSoft, 12f)
+                background = rounded(Theme.p.label, 4f)
                 addView(IconView(a, icon, Theme.p.accent, 18), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
             }, LinearLayout.LayoutParams(dp(34), dp(34)))
-            h.addView(a.text(title, 16.5f, Theme.p.text, Theme.bold), lp(0, WRAP, l = dp(12), weight = 1f))
+            h.addView(a.text(title, 21f, Theme.p.text, Theme.displayBold), lp(0, WRAP, l = dp(12), weight = 1f))
             card.addView(h)
             col.addView(card, lp(t = dp(14)))
             return card
@@ -691,7 +726,8 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         // ---- Veri
         val data = section("Veri kaynakları", Icon.GLOBE)
         val regionNames = linkedMapOf("istanbul" to "İstanbul", "bursa" to "Bursa", "trakya" to "Trakya")
-        valueRow(data, "Bölge (bölgesel broşürler)", regionNames[a.user.region] ?: a.user.region) {
+        // Yalnızca bölgesel broşür yayımlayan bir market varsa gösterilir (Onur Market kaldırıldı; şu an yok).
+        if (f.catalogs.any { it.region != null }) valueRow(data, "Bölge (bölgesel broşürler)", regionNames[a.user.region] ?: a.user.region) {
             try {
                 val keys = regionNames.keys.toList()
                 android.app.AlertDialog.Builder(a).setTitle("Bölgenizi seçin")

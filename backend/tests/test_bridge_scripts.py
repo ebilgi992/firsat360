@@ -49,6 +49,12 @@ PAGES = {
       {"title":"Haftanın Yıldızları","image":"https:\\/\\/cdn2.a101.com.tr\\/dbmk89vnr\\/CALL\\/Image\\/get\\/afis_hy_1.jpg"},
       {"title":"Aldın Aldın","image":"https://cdn2.a101.com.tr/dbmk89vnr/CALL/Image/get/afis_aa_2.jpg"},
       {"logo":"https://cdn2.a101.com.tr/logo.png"}]}}</script></body></html>""",
+    "invisible_captcha.html": """<html><head><title>Kataloglar</title></head><body>
+      <iframe src="https://www.google.com/recaptcha/api2/anchor?k=x&size=invisible" style="width:256px;height:60px"></iframe>
+      <div class="cf-turnstile"></div><p>bülten formu</p></body></html>""",
+    "footer_pdf.html": """<html><body><h1>Kataloglar</h1>
+      <footer><a href="/docs/kvkk-aydinlatma-metni.pdf">KVKK Aydınlatma Metni</a></footer>
+      <a href="/docs/kampanya-kosullari.pdf">Kampanya koşulları</a></body></html>""",
     "challenge.html": "<html><head><title>Just a moment...</title></head><body><div class='cf-turnstile'></div></body></html>",
 }
 
@@ -89,7 +95,9 @@ def site(tmp_path_factory):
             assert pg.evaluate(rn_script(profile)) is True  # injectJavaScript betiği "true" ile biter
             posted = pg.evaluate("window.__posted")
             assert len(posted) == 1
-            return json.loads(posted[0])
+            env = json.loads(posted[0])
+            assert env["n"] == "__F360_NONCE__"  # uygulama enjeksiyonda gerçek nonce'u koyar
+            return json.loads(env["r"])
         run.rn = run_rn
         yield run, srv.server_port
         b.close()
@@ -149,3 +157,16 @@ def test_react_native_wrapper_posts_same_result(site, path, profile):
     """React Native (postMessage) ve Android (evaluateJavascript dönüşü) aynı sonucu alır."""
     run, _ = site
     assert run.rn(path, profile) == run(path, profile)
+
+
+def test_invisible_captcha_on_normal_page_is_not_a_challenge(site):
+    run, _ = site
+    assert run("invisible_captcha.html", "generic")["type"] != "challenge"
+
+
+def test_footer_and_terms_pdfs_are_not_brochures(site):
+    run, _ = site
+    for _ in range(4):  # sayfa sonuna kadar kaydır
+        r = run("footer_pdf.html", "generic")
+    assert r["type"] != "pdf"
+

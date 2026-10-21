@@ -13,4 +13,3 @@ dist/*.apk
 
 # Sabit DEBUG imza anahtarı bilerek depoda (herkese açık parola; yayın anahtarı DEĞİL) — android-app/signing/README.md
 !android-app/signing/firsat360-debug.jks
-node_modules/

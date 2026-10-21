@@ -211,25 +211,37 @@ object TrDates {
         return if (i >= 0) i + 1 else null
     }
 
+    /**
+     * "21 - 27 Ekim 2026", "24 Eylül - 07 Ekim", "29 Aralık 2026 - 04 Ocak 2027". Yıl yazmıyorsa bugüne en yakın yıl
+     * seçilir (30 Aralık'ta "02-08 Ocak" → gelecek yıl; 3 Ocak'ta "29 Aralık - 4 Ocak" → başlangıç geçen yıl).
+     */
     fun range(text: String?, today: LocalDate): Pair<LocalDate, LocalDate>? {
         val t = text?.trim() ?: return null
-        val two = Regex("""(\d{1,2})\s+(\p{L}+)\s*-\s*(\d{1,2})\s+(\p{L}+)(?:\s+(20\d\d))?""").find(t)
-        val one = Regex("""(\d{1,2})\s*-\s*(\d{1,2})\s+(\p{L}+)(?:\s+(20\d\d))?""").find(t)
+        val two = Regex("""\b(\d{1,2})\s+(\p{L}+)(?:\s+(20\d\d))?\s*[-–]\s*(\d{1,2})\s+(\p{L}+)(?:\s+(20\d\d))?""").find(t)
+        val one = Regex("""\b(\d{1,2})\s*[-–]\s*(\d{1,2})\s+(\p{L}+)(?:\s+(20\d\d))?""").find(t)
         return try {
             when {
                 two != null -> {
-                    val (d1, m1, d2, m2, y) = two.destructured
-                    val ye = y.toIntOrNull() ?: today.year
+                    val (d1, m1, y1, d2, m2, y2) = two.destructured
                     val mm1 = month(m1) ?: return null; val mm2 = month(m2) ?: return null
-                    LocalDate.of(if (mm1 > mm2) ye - 1 else ye, mm1, d1.toInt()) to LocalDate.of(ye, mm2, d2.toInt())
+                    var end = LocalDate.of(y2.toIntOrNull() ?: y1.toIntOrNull()?.let { if (mm2 < mm1) it + 1 else it } ?: today.year, mm2, d2.toInt())
+                    if (y2.isEmpty() && y1.isEmpty()) end = nearest(end, today)
+                    val ys = y1.toIntOrNull() ?: if (mm1 > mm2) end.year - 1 else end.year
+                    LocalDate.of(ys, mm1, d1.toInt()) to end
                 }
                 one != null -> {
                     val (d1, d2, m, y) = one.destructured
-                    val mm = month(m) ?: return null; val ye = y.toIntOrNull() ?: today.year
-                    LocalDate.of(ye, mm, d1.toInt()) to LocalDate.of(ye, mm, d2.toInt())
+                    val mm = month(m) ?: return null
+                    var end = LocalDate.of(y.toIntOrNull() ?: today.year, mm, d2.toInt())
+                    if (y.isEmpty()) end = nearest(end, today)
+                    LocalDate.of(end.year, mm, d1.toInt()) to end
                 }
                 else -> null
             }
         } catch (e: Exception) { null }
     }
+
+    /** Yılsız tarih: ±1 yıldan bugüne en yakın olanı (broşürler en fazla birkaç hafta önce/sonra yayımlanır). */
+    private fun nearest(d: LocalDate, today: LocalDate): LocalDate =
+        listOf(d.minusYears(1), d, d.plusYears(1)).minByOrNull { kotlin.math.abs(java.time.temporal.ChronoUnit.DAYS.between(today, it)) }!!
 }

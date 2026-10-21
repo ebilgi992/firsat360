@@ -89,7 +89,7 @@ class CatalogReaderScreen(
                 intArrayOf(0xE60B0D12.toInt(), 0x000B0D12))
         }
         top.addView(a.iconButton(Icon.CLOSE, onDark, 0x33FFFFFF, "Kapat") { a.onBackPressedCompat() }.apply {
-            background = rounded(0x33FFFFFF, 99f) })
+            background = rounded(0x33FFFFFF, 8f) })
         val titles = a.vbox()
         titles.addView(a.text(singleTitle ?: c?.title ?: "", 15f, onDark, Theme.semibold, 1))
         val sub = listOfNotNull(store?.name, c?.let { Dates.status(it.validFrom, it.validTo, a.today).label }).joinToString(" · ")
@@ -102,17 +102,17 @@ class CatalogReaderScreen(
                 val now = a.user.toggleFavoriteCatalog(c.id)
                 a.toast(if (now) "Katalog favorilere eklendi" else "Katalog favorilerden çıkarıldı")
                 a.refreshCurrent()
-            }.apply { background = rounded(0x33FFFFFF, 99f) }, lp(dp(42), dp(42), l = dp(8)))
+            }.apply { background = rounded(0x33FFFFFF, 8f) }, lp(dp(42), dp(42), l = dp(8)))
             val saved = com.firsat360.app.data.OfflineStore.isSaved(a, c.id)
             top.addView(a.iconButton(if (saved) Icon.CHECK else Icon.DOWNLOAD, onDark, 0x33FFFFFF,
                 if (saved) "Çevrim dışı kayıtlı" else "Çevrim dışı kaydet") {
                 if (saved) a.toast("Bu katalog cihazınıza kayıtlı. Ayarlar › Depolama'dan silebilirsiniz.")
                 else a.saveOffline(c)
-            }.apply { background = rounded(0x33FFFFFF, 99f) }, lp(dp(42), dp(42), l = dp(8)))
+            }.apply { background = rounded(0x33FFFFFF, 8f) }, lp(dp(42), dp(42), l = dp(8)))
             top.addView(a.iconButton(Icon.SHARE, onDark, 0x33FFFFFF, "Paylaş") {
                 val p = pages.getOrNull(index)
                 a.share("${store?.name ?: ""} · ${c.title}\nResmî kaynak: ${p?.link ?: c.officialUrl}")
-            }.apply { background = rounded(0x33FFFFFF, 99f) }, lp(dp(42), dp(42), l = dp(8)))
+            }.apply { background = rounded(0x33FFFFFF, 8f) }, lp(dp(42), dp(42), l = dp(8)))
         }
         root.addView(top, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.TOP))
 

@@ -35,7 +35,7 @@ data class Catalog(
     val pdfUrl: String? = null,
     /** Kataloğun kaynakta ilk görüldüğü an (yayımlanma) ve son kontrol. */
     val firstSeenAt: String? = null, val lastCheckedAt: String? = null,
-    /** Bölgesel yayın (ör. Onur: istanbul/bursa/trakya); null = tüm Türkiye. */
+    /** Bölgesel yayın (ör. istanbul/bursa/trakya); null = tüm Türkiye. */
     val region: String? = null,
     /** Aynı yayının kopyaları (bölge sürümleri) için ortak anahtar; uygulama gruptan tek kart gösterir. */
     val group: String? = null,
@@ -127,6 +127,9 @@ data class Feed(
 
         /** Feed'i ayrıştırır. Gerçek veriyle demo veri ASLA karıştırılmaz: akış "real" ise "real" olmayan kayıt atlanır. */
         @Suppress("UNCHECKED_CAST")
+        /** Uygulamadan kaldırılan marketler (eski önbellek feed'lerinde kalsalar bile gösterilmez). */
+        val RETIRED_STORES = setOf("onur")
+
         fun parse(text: String): Feed {
             val root = Json.parse(text) as? Map<String, Any?> ?: throw FeedException("Akış biçimi geçersiz")
             val schema = root.int("schema_version")
@@ -136,6 +139,7 @@ data class Feed(
             val cats = root.list("categories").mapNotNull { it as? Map<String, Any?> }
                 .mapNotNull { m -> m.str("id")?.let { Category(it, m.str("name") ?: it) } }
             val stores = root.list("stores").mapNotNull { it as? Map<String, Any?> }.mapNotNull { m ->
+                if (m.str("id") in RETIRED_STORES) return@mapNotNull null
                 Store(m.str("id") ?: return@mapNotNull null, m.str("name") ?: "?", m.str("official_url") ?: "",
                     m.str("catalog_url") ?: m.str("official_url") ?: "", m.str("status") ?: "never_run",
                     m.str("status_message"), m.str("last_checked_at"), m.str("last_success_at"),
@@ -145,6 +149,7 @@ data class Feed(
                     if (m.containsKey("chain_rank")) m.int("chain_rank") else 99, m.str("brochure_url"))
             }.sortedWith(compareBy({ it.sort }, { it.name }))
             val catalogs = root.list("catalogs").mapNotNull { it as? Map<String, Any?> }.mapNotNull { m ->
+                if (m.str("store_id") in RETIRED_STORES) return@mapNotNull null
                 Catalog(m.str("id") ?: return@mapNotNull null, m.str("store_id") ?: return@mapNotNull null,
                     m.str("title") ?: "Katalog", m.str("kind") ?: "aktuel", m.str("valid_from"), m.str("valid_to"),
                     m.str("official_url") ?: return@mapNotNull null, m.str("source_method") ?: "",
@@ -162,6 +167,7 @@ data class Feed(
             val offers = root.list("offers").mapNotNull { it as? Map<String, Any?> }.mapNotNull { m ->
                 val price = m.dbl("price")
                 val itemMode = m.str("data_mode") ?: mode
+                if (m.str("store_id") in RETIRED_STORES) return@mapNotNull null
                 if (price == null || price <= 0.0 || itemMode != mode || m.str("source_url") == null) {
                     skipped++
                     return@mapNotNull null

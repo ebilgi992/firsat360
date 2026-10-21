@@ -370,40 +370,44 @@ fun main(args: Array<String>) {
     check("home.startingToday", home.startingToday.all { Dates.date(it.validFrom) == today13 })
     check("home.endingSoon", home.endingSoon.all { val t = Dates.date(it.validTo)!!; !t.isBefore(today13) && t.toEpochDay() - today13.toEpochDay() <= 2 })
 
-    // 1.2: merkezi durum kuralı + Onur bölge kopyaları (21.10.2026 canlı veriyle aynı yapı)
+    // 1.2: merkezi durum kuralı + bölgesel insert kopyaları (21.10.2026 canlı veriyle aynı yapı)
     val d21 = LocalDate.of(2026, 10, 21)
-    fun onur(id: String, t: String, r: String, f: String, to: String, g: String) = Catalog(id, "onur", "$t · $r", "pdf", f, to,
-        "https://kurumsal.onurmarket.com/x", "live_html", null, 0, "https://kurumsal.onurmarket.com/c.jpg",
-        pdfUrl = "https://kurumsal.onurmarket.com/download/$id.pdf", region = r.lowercase().replace("İ", "i").replace("ı", "i"), group = g)
-    val onurCats = listOf(
-        onur("onur-istanbul-944", "Çok Al Az Öde", "istanbul", "2026-10-13", "2026-10-26", "g944"),
-        onur("onur-istanbul-959", "Taze Ürünler", "istanbul", "2026-10-15", "2026-10-21", "g959"),
-        onur("onur-bursa-945", "Çok Al Az Öde", "bursa", "2026-10-13", "2026-10-26", "g944"),
-        onur("onur-bursa-957", "Taze Ürünler", "bursa", "2026-10-15", "2026-10-21", "g959"),
-        onur("onur-trakya-947", "Çok Al Az Öde", "trakya", "2026-10-13", "2026-10-26", "g944"),
-        onur("onur-trakya-956", "Taze Ürünler", "trakya", "2026-10-15", "2026-10-21", "g959"))
-    val onurStore = Store("onur", "Onur Market", "u", "u", "ok", null, null, null, null, null, chainRank = 8)
-    val oFeed = feed.copy(stores = feed.stores + onurStore, catalogs = onurCats)
+    fun regional(id: String, t: String, r: String, f: String, to: String, g: String) = Catalog(id, "bolgeselmarket", "$t · $r", "pdf", f, to,
+        "https://hakmar.com.tr/x", "live_html", null, 0, "https://hakmar.com.tr/c.jpg",
+        pdfUrl = "https://hakmar.com.tr/download/$id.pdf", region = r.lowercase().replace("İ", "i").replace("ı", "i"), group = g)
+    val regCats = listOf(
+        regional("bolge-istanbul-944", "Çok Al Az Öde", "istanbul", "2026-10-13", "2026-10-26", "g944"),
+        regional("bolge-istanbul-959", "Taze Ürünler", "istanbul", "2026-10-15", "2026-10-21", "g959"),
+        regional("bolge-bursa-945", "Çok Al Az Öde", "bursa", "2026-10-13", "2026-10-26", "g944"),
+        regional("bolge-bursa-957", "Taze Ürünler", "bursa", "2026-10-15", "2026-10-21", "g959"),
+        regional("bolge-trakya-947", "Çok Al Az Öde", "trakya", "2026-10-13", "2026-10-26", "g944"),
+        regional("bolge-trakya-956", "Taze Ürünler", "trakya", "2026-10-15", "2026-10-21", "g959"))
+    val regStore = Store("bolgeselmarket", "Bölgesel Market", "u", "u", "ok", null, null, null, null, null, chainRank = 8)
+    val oFeed = feed.copy(stores = feed.stores + regStore, catalogs = regCats)
     val oh = HomeCatalogs.build(oFeed, emptyList(), d21, emptySet(), "istanbul")
-    check("onur.noGroupDup", oh.allGroups.size == oh.allGroups.toSet().size) { oh.allGroups.toString() }
-    check("onur.oneCardPerInsert", oh.allIds.size == 2) { oh.allIds.toString() }
-    check("onur.userRegion", oh.allIds.all { it.startsWith("onur-istanbul-") }) { oh.allIds.toString() }
-    check("onur.bursa", HomeCatalogs.build(oFeed, emptyList(), d21, emptySet(), "bursa").allIds.all { it.startsWith("onur-bursa-") })
-    check("state.expiring", CatalogRules.state(onurCats[1], d21) == CatalogState.EXPIRING_SOON)
-    check("state.active", CatalogRules.state(onurCats[0], d21) == CatalogState.ACTIVE)
-    check("state.expired", CatalogRules.state(onurCats[1], d21.plusDays(1)) == CatalogState.EXPIRED)
-    check("state.unknownNotExpiring", CatalogRules.state(onurCats[0].copy(validFrom = null, validTo = null), d21) == CatalogState.UNKNOWN)
-    check("state.upcoming", CatalogRules.state(onurCats[0], LocalDate.of(2026, 10, 1)) == CatalogState.UPCOMING)
+    check("region.noGroupDup", oh.allGroups.size == oh.allGroups.toSet().size) { oh.allGroups.toString() }
+    check("region.oneCardPerInsert", oh.allIds.size == 2) { oh.allIds.toString() }
+    check("region.userRegion", oh.allIds.all { it.startsWith("bolge-istanbul-") }) { oh.allIds.toString() }
+    check("region.bursa", HomeCatalogs.build(oFeed, emptyList(), d21, emptySet(), "bursa").allIds.all { it.startsWith("bolge-bursa-") })
+    check("state.expiring", CatalogRules.state(regCats[1], d21) == CatalogState.EXPIRING_SOON)
+    check("state.active", CatalogRules.state(regCats[0], d21) == CatalogState.ACTIVE)
+    check("state.expired", CatalogRules.state(regCats[1], d21.plusDays(1)) == CatalogState.EXPIRED)
+    check("state.unknownNotExpiring", CatalogRules.state(regCats[0].copy(validFrom = null, validTo = null), d21) == CatalogState.UNKNOWN)
+    check("state.upcoming", CatalogRules.state(regCats[0], LocalDate.of(2026, 10, 1)) == CatalogState.UPCOMING)
     val expiredGone = HomeCatalogs.build(oFeed, emptyList(), LocalDate.of(2026, 10, 22), emptySet(), "istanbul")
-    check("onur.expiredRemoved", expiredGone.allIds == listOf("onur-istanbul-944")) { expiredGone.allIds.toString() }
+    check("region.expiredRemoved", expiredGone.allIds == listOf("bolge-istanbul-944")) { expiredGone.allIds.toString() }
     // aynı yayın farklı adreslerden (farklı id, aynı grup) → tek kart
-    val dupUrl = listOf(onurCats[0], onurCats[0].copy(id = "onur-istanbul-944b", officialUrl = "https://kurumsal.onurmarket.com/y"))
+    val dupUrl = listOf(regCats[0], regCats[0].copy(id = "bolge-istanbul-944b", officialUrl = "https://hakmar.com.tr/y"))
     check("dedupe.sameContentDifferentUrl", CatalogRules.collapse(dupUrl, "istanbul").size == 1)
 
     // köprü: PDF tarih metni (ŞOK kurumsal)
     check("trdates.single", TrDates.range("21 - 27 Ekim 2026", d21) == (LocalDate.of(2026, 10, 21) to LocalDate.of(2026, 10, 27)))
     check("trdates.twoMonths", TrDates.range("24 Eylül - 07 Ekim 2026", d21) == (LocalDate.of(2026, 9, 24) to LocalDate.of(2026, 10, 7)))
     check("trdates.noYear", TrDates.range("16 Ekim - 1 Kasım", d21) == (LocalDate.of(2026, 10, 16) to LocalDate.of(2026, 11, 1)))
+    val dec30 = LocalDate.of(2026, 12, 30)
+    check("trdates.yearEndNoYear", TrDates.range("02 - 08 Ocak", dec30) == (LocalDate.of(2027, 1, 2) to LocalDate.of(2027, 1, 8)))
+    check("trdates.crossYear", TrDates.range("29 Aralık 2026 - 04 Ocak 2027", dec30) == (LocalDate.of(2026, 12, 29) to LocalDate.of(2027, 1, 4)))
+    check("trdates.crossYearNoYear", TrDates.range("29 Aralık - 4 Ocak", LocalDate.of(2027, 1, 3)) == (LocalDate.of(2026, 12, 29) to LocalDate.of(2027, 1, 4)))
     check("trdates.none", TrDates.range("Haftanın Fırsatları", d21) == null)
 
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")

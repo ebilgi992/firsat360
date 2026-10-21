@@ -5,9 +5,10 @@
   var items = [], seen = {};
   Array.prototype.forEach.call(document.querySelectorAll('a[href*=".pdf"]'), function (a) {
     var u = F360.abs(a.getAttribute('href')); if (!/^https:\/\/kurumsal\.sokmarket\.com\.tr\//.test(u) || seen[u]) return;
+    if (!F360.brochurePdf(a, u)) return;  // KVKK/koşullar PDF'leri broşür değildir
     seen[u] = 1;
     var box = a.closest('div,li,article,section') || a.parentElement, txt = ((box && box.innerText) || a.innerText || '').replace(/\s+/g, ' ').trim();
-    var d = txt.match(/\d{1,2}\s*-\s*\d{1,2}\s+[A-Za-zÇĞİÖŞÜçğıöşü]+(?:\s+20\d\d)?/);
+    var d = txt.match(/\b\d{1,2}(?:\s+[A-Za-zÇĞİÖŞÜçğıöşü]+)?(?:\s+20\d\d)?\s*[-–]\s*\d{1,2}\s+[A-Za-zÇĞİÖŞÜçğıöşü]+(?:\s+20\d\d)?/);
     items.push({ url: u, title: (a.innerText || '').trim().slice(0, 80) || txt.slice(0, 60), dates: d ? d[0] : '' });
   });
   return F360.out(items.length ? { type: 'pdf', items: items } : { type: 'pending' });

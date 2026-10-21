@@ -63,9 +63,17 @@ export interface CatalogBridgeProps {
 }
 
 const POLL_MS = 900;
-const MAX_POLLS = 16;
+const CHALLENGE_POLL_MS = 3000;
+const MAX_MS = 15000; // belge başına okuma süresi (parça değişimi / yönlendirme sıfırlayamaz)
 const MAX_NAVIGATIONS = 2;
 const FIRST_POLL_DELAY_MS = 1200;
+
+/** Oturum başına rastgele değer: yalnızca bizim enjekte ettiğimiz betiğin mesajları kabul edilir. */
+function makeNonce(): string {
+  let n = '';
+  for (let i = 0; i < 4; i++) n += Math.floor(Math.random() * 0x7fffffff).toString(36);
+  return n + Date.now().toString(36);
+}
 
 // ---- Güvenlik yardımcıları ----
 function hostOf(url: string): string {
@@ -85,12 +93,21 @@ function safeUrls(list: unknown, families: string[]): string[] {
   }
   return out;
 }
-function parseResult(raw: string): BridgeResult | null {
+function familyOf(url: string): string {
+  const parts = hostOf(url).split('.');
+  // "www.a101.com.tr" → "a101.com.tr", "katalog.carrefoursa.com" → "carrefoursa.com"
+  const tld2 = parts.length >= 3 && /^(com|net|org|gov|edu|gen|web|bel|k12)$/.test(parts[parts.length - 2]);
+  return parts.slice(tld2 ? -3 : -2).join('.');
+}
+/** Zarfı ({n, r}) açar; nonce tutmuyorsa null (sayfanın kendi mesajı — sayaçlara dokunulmaz). */
+function parseEnvelope(raw: string, nonce: string): BridgeResult | null | undefined {
   try {
-    const r = JSON.parse(raw);
+    const env = JSON.parse(raw);
+    if (!env || env.n !== nonce || typeof env.r !== 'string') return undefined;
+    const r = JSON.parse(env.r);
     return r && typeof r.type === 'string' ? (r as BridgeResult) : null;
   } catch {
-    return null;
+    return undefined;
   }
 }
 
@@ -102,15 +119,30 @@ export default function CatalogBridge({ targetMarket, entry, marketName, onClose
   const [status, setStatus] = useState('Resmî siteden güncel broşürler alınıyor…');
 
   // Durumsuz betik + birikimli durum burada (Android WebScreen ile aynı kurallar)
-  const polls = useRef(0);
+  const nonce = useRef(makeNonce()).current;
+  const deadlines = useRef(new Map<string, number>());
+  const challengeShown = useRef(false);
   const lastCount = useRef(-1);
   const navigations = useRef(0);
   const best = useRef<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = useRef(false);
 
-  const families = useMemo(() => cfg?.allowedHosts ?? [], [cfg]);
-  const script = useMemo(() => bridgeScript(cfg?.profile ?? 'generic'), [cfg]);
+  // allowedHosts boşsa başlangıç sayfasının kendi alan ailesi (hiçbir mesajın kabul edilmemesi → sonsuz bekleme olmaz)
+  const families = useMemo(
+    () => (cfg?.allowedHosts?.length ? cfg.allowedHosts : cfg ? [familyOf(cfg.url)] : []),
+    [cfg],
+  );
+  const script = useMemo(() => bridgeScript(cfg?.profile ?? 'generic', nonce), [cfg, nonce]);
+  const deadlineFor = useCallback((pageUrl: string) => {
+    const key = pageUrl.split('#')[0];
+    let d = deadlines.current.get(key);
+    if (d === undefined) {
+      d = Date.now() + MAX_MS;
+      deadlines.current.set(key, d);
+    }
+    return d;
+  }, []);
 
   const stopPolling = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -140,16 +172,21 @@ export default function CatalogBridge({ targetMarket, entry, marketName, onClose
   const onMessage = useCallback(
     (ev: WebViewMessageEvent) => {
       if (done.current) return;
-      // Mesaj, sayfanın kendi betiklerinden de gelebilir: kaynağı ve her adresi doğrula.
+      // Mesaj, sayfanın kendi betiklerinden de gelebilir: nonce'u, kaynağı ve her adresi doğrula.
+      const res = parseEnvelope(ev.nativeEvent.data, nonce);
+      if (res === undefined) return; // bizim betiğimiz değil → yok say (sayaç/zamanlayıcı değişmez)
       if (!inFamily(ev.nativeEvent.url, families)) return;
-      const res = parseResult(ev.nativeEvent.data);
-      polls.current += 1;
+      const pageUrl = ev.nativeEvent.url;
 
       switch (res?.type) {
         case 'challenge':
-          // Otomatik çözülmez: kullanıcıya gösterilir. Kullanıcı tamamlayınca sayfa yeniden yüklenir → onLoadEnd → okuma sürer.
-          stopPolling();
-          setPhase({ kind: 'web', note: 'Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.' });
+          // Otomatik çözülmez: kullanıcıya gösterilir; 3 sn'de bir yalnızca geçilip geçilmediğine bakılır.
+          if (!challengeShown.current) {
+            challengeShown.current = true;
+            setPhase({ kind: 'web', note: 'Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.' });
+          }
+          deadlines.current.set(pageUrl.split('#')[0], Date.now() + MAX_MS);
+          schedule(CHALLENGE_POLL_MS);
           return;
         case 'pdf': {
           const items = (Array.isArray(res.items) ? res.items : [])
@@ -166,10 +203,10 @@ export default function CatalogBridge({ targetMarket, entry, marketName, onClose
         case 'navigate':
           if (
             typeof res.url === 'string' && res.url.startsWith('https://') && inFamily(res.url, families) &&
-            res.url !== ev.nativeEvent.url && navigations.current < MAX_NAVIGATIONS
+            res.url !== pageUrl && navigations.current < MAX_NAVIGATIONS &&
+            familyOf(pageUrl) === familyOf(cfg?.url ?? '') // yalnızca marketin kendi sayfasından geçilir
           ) {
             navigations.current += 1;
-            polls.current = 0;
             lastCount.current = -1;
             stopPolling();
             setStatus('Resmî katalog açılıyor…');
@@ -190,7 +227,7 @@ export default function CatalogBridge({ targetMarket, entry, marketName, onClose
           break;
       }
 
-      if (polls.current >= MAX_POLLS) {
+      if (Date.now() > deadlineFor(pageUrl)) {
         stopPolling();
         if (best.current.length >= 2) return handOffImages(best.current); // süre doldu ama sayfalar var
         setPhase({ kind: 'web', note: 'Bu sayfada broşür görseli bulunamadı; resmî sayfa gösteriliyor.' });
@@ -198,12 +235,11 @@ export default function CatalogBridge({ targetMarket, entry, marketName, onClose
       }
       schedule(POLL_MS);
     },
-    [families, handOffImages, schedule, stopPolling],
+    [cfg, deadlineFor, families, handOffImages, nonce, schedule, stopPolling],
   );
 
   const onLoadEnd = useCallback(() => {
     if (done.current) return;
-    polls.current = 0;
     lastCount.current = -1;
     schedule(FIRST_POLL_DELAY_MS);
   }, [schedule]);

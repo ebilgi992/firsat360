@@ -11,8 +11,8 @@ from firsat360.connectors.base import ConnectorError, PoliteClient
 from firsat360.connectors.discovery import DiscoveryConnector, StoreSource, render_page, scan_html
 
 NOW = datetime(2026, 10, 21, 6, tzinfo=timezone.utc)
-SRC = StoreSource("onur", "Onur İnsert", ["https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz?region=bursa"],
-                  hosts=("onurmarket.com",))
+SRC = StoreSource("hakmar", "Hakmar İnsert", ["https://hakmar.com.tr/tr/kampanyalar/insertlerimiz?region=bursa"],
+                  hosts=("hakmar.com.tr",))
 
 
 def _client(pages: dict[str, tuple[int, str]]):
@@ -31,15 +31,15 @@ def _client(pages: dict[str, tuple[int, str]]):
 def test_static_scan_finds_pdf_flipbook_and_brochure_images_only():
     html = """<h1>21-27 Ekim İnsert</h1>
       <a href="/files/insert-21-27-ekim.pdf">PDF</a><a href="https://evil.example.com/x.pdf">yabancı</a>
-      <a href="https://online.fliphtml5.com/onur/abcd/">Katalog</a>
+      <a href="https://online.fliphtml5.com/hakmar/abcd/">Katalog</a>
       <img src="/pics/insert/bursa_sayfa1.jpg"><img data-src="/pics/insert/bursa_sayfa2.jpg">
       <img src="/pics/logo.png"><img src="/pics/boxsliders/kampanya_banner.png">
       <img src="https://cdn.other.com/insert/x.jpg">"""
     f = scan_html(html, SRC.urls[0], SRC)
-    assert f.pdfs == ["https://kurumsal.onurmarket.com/files/insert-21-27-ekim.pdf"]
-    assert f.flipbooks[0][0] == "https://online.fliphtml5.com/onur/abcd/"
-    assert f.images == ["https://kurumsal.onurmarket.com/pics/insert/bursa_sayfa1.jpg",
-                        "https://kurumsal.onurmarket.com/pics/insert/bursa_sayfa2.jpg"]
+    assert f.pdfs == ["https://hakmar.com.tr/files/insert-21-27-ekim.pdf"]
+    assert f.flipbooks[0][0] == "https://online.fliphtml5.com/hakmar/abcd/"
+    assert f.images == ["https://hakmar.com.tr/pics/insert/bursa_sayfa1.jpg",
+                        "https://hakmar.com.tr/pics/insert/bursa_sayfa2.jpg"]
     assert f.title == "21-27 Ekim İnsert"
 
 
@@ -50,18 +50,18 @@ def test_falls_back_to_renderer_when_static_empty():
     def fake_render(url, ua):
         calls.append(url)
         return ("<html><h1>Bursa İnsert 21-27 Ekim</h1></html>",
-                [{"url": "https://kurumsal.onurmarket.com/pics/insert/b1.jpg", "type": "image/jpeg", "width": 1200},
-                 {"url": "https://kurumsal.onurmarket.com/pics/insert/thumb.jpg", "type": "image/jpeg", "width": 120},
-                 {"url": "https://kurumsal.onurmarket.com/pics/icons/x.png", "type": "image/png", "width": 900},
-                 {"url": "https://kurumsal.onurmarket.com/uploads/2026/b2.jpg", "type": "image/jpeg", "width": 1000,
+                [{"url": "https://hakmar.com.tr/pics/insert/b1.jpg", "type": "image/jpeg", "width": 1200},
+                 {"url": "https://hakmar.com.tr/pics/insert/thumb.jpg", "type": "image/jpeg", "width": 120},
+                 {"url": "https://hakmar.com.tr/pics/icons/x.png", "type": "image/png", "width": 900},
+                 {"url": "https://hakmar.com.tr/uploads/2026/b2.jpg", "type": "image/jpeg", "width": 1000,
                   "height": 1400},
-                 {"url": "https://kurumsal.onurmarket.com/uploads/2026/header.jpg", "type": "image/jpeg",
+                 {"url": "https://hakmar.com.tr/uploads/2026/header.jpg", "type": "image/jpeg",
                   "width": 1920, "height": 400}])
     res = DiscoveryConnector(SRC, renderer=fake_render).fetch(client, NOW)
     assert calls == SRC.urls
     cat = res.catalogs[0]
-    assert [p["url"] for p in cat.pages] == ["https://kurumsal.onurmarket.com/pics/insert/b1.jpg",
-                                             "https://kurumsal.onurmarket.com/uploads/2026/b2.jpg"]
+    assert [p["url"] for p in cat.pages] == ["https://hakmar.com.tr/pics/insert/b1.jpg",
+                                             "https://hakmar.com.tr/uploads/2026/b2.jpg"]
     assert cat.valid_from and cat.valid_from.day == 21 and cat.valid_to.day == 27
 
 
@@ -91,7 +91,7 @@ def test_blocked_403_is_not_forced_through_browser():
 @pytest.mark.skipif(not Path("/opt/pw-browsers").exists() or __import__("importlib").util.find_spec("PIL") is None
                     or __import__("importlib").util.find_spec("playwright") is None, reason="Chromium/Pillow yok")
 def test_real_chromium_render_captures_js_loaded_brochure(tmp_path):
-    """Gerçek tarayıcı: görseller JavaScript ile eklenen sayfa (Onur Market insert sayfası gibi)."""
+    """Gerçek tarayıcı: görseller JavaScript ile eklenen sayfa (bölgesel insert sayfası gibi)."""
     from PIL import Image
     (tmp_path / "pics" / "insert").mkdir(parents=True)
     Image.new("RGB", (900, 1200), "white").save(tmp_path / "pics" / "insert" / "s1.jpg")
@@ -124,4 +124,4 @@ def test_real_chromium_render_captures_js_loaded_brochure(tmp_path):
 def test_html_error_page_is_not_saved_as_brochure_page():
     client = _client({SRC.urls[0]: (200, "<h1>İnsert</h1><img src='/pics/insert/s1.jpg'><img src='/pics/insert/bozuk.jpg'>")})
     res = DiscoveryConnector(SRC, renderer=lambda u, ua: ("", [])).fetch(client, NOW)
-    assert [p["url"] for p in res.catalogs[0].pages] == ["https://kurumsal.onurmarket.com/pics/insert/s1.jpg"]
+    assert [p["url"] for p in res.catalogs[0].pages] == ["https://hakmar.com.tr/pics/insert/s1.jpg"]

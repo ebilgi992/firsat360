@@ -103,7 +103,11 @@ object PdfCache {
     fun get(ctx: Context, c: Catalog, progress: (Float) -> Unit, cancelled: () -> Boolean): File? {
         val url = c.pdfUrl ?: return null
         OfflineStore.pdf(ctx, c.id)?.let { return it }
-        val f = file(ctx, url)
+        // Cihazda okunan resmî PDF'ler (client_bridge): market aynı dosya adını her hafta yeniden kullanabilir →
+        // anahtar tarih aralığını (yoksa bugünü) içerir; geçen haftanın dosyası yeni broşür diye gösterilmez.
+        val key = if (c.sourceMethod == "client_bridge")
+            "$url|${c.validFrom ?: ""}|${c.validTo ?: java.time.LocalDate.now()}" else url
+        val f = file(ctx, key)
         if (f.exists() && f.length() > 0) { f.setLastModified(System.currentTimeMillis()); return f }
         if (!Download.to(url, f, MAX_PDF, progress, cancelled)) return null
         trim(ctx, protect = setOf(f.name))

@@ -12,7 +12,7 @@
   }
   var base = location.href.split('#')[0].split('?')[0]; if (!/\/$/.test(base)) base = base.replace(/\/[^\/]*\.[a-z]+$/i, '/') ; if (!/\/$/.test(base)) base += '/';
   var pages = window.fliphtml5_pages, urls = [];
-  if (pages && pages.length) {
+  if (Array.isArray(pages) && pages.length) {
     pages.forEach(function (p) { var n = p && (Array.isArray(p.n) ? p.n[0] : p.n); if (!n) return;
       n = String(n).replace(/^\.\.\//, '').replace(/^\.\//, '');
       if (!/^files\//.test(n) && !/^https?:/.test(n)) n = 'files/large/' + n;

@@ -11,10 +11,26 @@
  */
 var F360 = (function () {
   function abs(u) { try { return new URL(u, location.href).href; } catch (e) { return ''; } }
+  /** Doğrulama SAYFASI mı (yalnızca tam sayfa sınama). Sıradan formlardaki görünmez reCAPTCHA v3 / Turnstile
+   *  bileşenleri sayılmaz: yalnızca görünür ve en az 100×50 px doğrulama çerçeveleri. */
   function challenge() {
     var t = (document.title || '').toLowerCase();
-    return t.indexOf('just a moment') >= 0 || t.indexOf('attention required') >= 0 ||
-      !!document.querySelector('#challenge-form,#cf-challenge-running,.cf-turnstile,iframe[src*="challenges.cloudflare.com"],iframe[src*="recaptcha"],iframe[src*="hcaptcha"]');
+    if (t.indexOf('just a moment') >= 0 || t.indexOf('attention required') >= 0 || t.indexOf('bir dakika') >= 0) return true;
+    if (document.querySelector('#challenge-form,#cf-challenge-running,#challenge-stage')) return true;
+    var fr = document.querySelectorAll('iframe[src*="challenges.cloudflare.com"],iframe[src*="recaptcha"],iframe[src*="hcaptcha"]');
+    for (var i = 0; i < fr.length; i++) {
+      var f = fr[i], src = f.getAttribute('src') || '', r = f.getBoundingClientRect();
+      if (/size=invisible|recaptcha\/api2\/anchor.*invisible/.test(src)) continue;
+      if (r.width >= 100 && r.height >= 50 && getComputedStyle(f).visibility !== 'hidden') return true;
+    }
+    return false;
+  }
+  /** Broşür PDF'i mi: bağlantı metni/adresi broşür kelimesi içerir ve altbilgide (KVKK, koşullar) değildir. */
+  function brochurePdf(a, u) {
+    if (a.closest && a.closest('footer,[class*="footer"],[id*="footer"]')) return false;
+    var t = ((a.textContent || '') + ' ' + u).toLowerCase();
+    if (/kvkk|aydınlatma|aydinlatma|gizlilik|çerez|cerez|sözleşme|sozlesme|koşul|kosul|politika|form/.test(t)) return false;
+    return /katalog|broşür|brosur|bro%c5%9f%c3%bcr|fırsat|firsat|aktüel|aktuel|insert/.test(t);
   }
   function scrollStep() {
     window.scrollBy(0, window.innerHeight * 1.5);
@@ -43,5 +59,5 @@ var F360 = (function () {
     return out;
   }
   function out(o) { return JSON.stringify(o); }
-  return { abs: abs, challenge: challenge, scrollStep: scrollStep, bestSrc: bestSrc, portraitImages: portraitImages, out: out };
+  return { abs: abs, challenge: challenge, brochurePdf: brochurePdf, scrollStep: scrollStep, bestSrc: bestSrc, portraitImages: portraitImages, out: out };
 })();

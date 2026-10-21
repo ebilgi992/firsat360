@@ -46,7 +46,7 @@ class UserStore(ctx: Context) {
         get() = prefs.getInt("notify_minute", 9 * 60)
         set(v) { prefs.edit().putInt("notify_minute", v.coerceIn(0, 24 * 60 - 1)).apply() }
     /** Bildirimi kapatılan mağazalar (boş = tüm mağazalar açık). */
-    /** Bölgesel yayınlarda (ör. Onur Market) gösterilecek bölge. */
+    /** Bölgesel yayınlarda gösterilecek bölge. */
     var region: String
         get() = prefs.getString("region", com.firsat360.app.core.CatalogRules.DEFAULT_REGION) ?: com.firsat360.app.core.CatalogRules.DEFAULT_REGION
         set(v) { prefs.edit().putString("region", v).apply() }
