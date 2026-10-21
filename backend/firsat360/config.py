@@ -119,6 +119,29 @@ STORE_KIND = {"tkkoop": "market", "hakmar": "market", "watsons": "kozmetik", "me
               "bizimtoptan": "toptan", "gratis": "kozmetik", "rossmann": "kozmetik", "onur": "market",
               "carrefoursa": "market", "file": "market"}
 
+# Ana sayfadaki "Market broşürleri" varsayılan sırası: Türkiye'deki mağaza sayısına göre büyükten küçüğe
+# (kullanıcı uygulamada kendi sırasını belirleyebilir).
+CHAIN_RANK = ("bim", "a101", "sok", "migros", "carrefoursa", "tkkoop", "file", "hakmar", "onur", "bizimtoptan",
+              "metro", "gratis", "watsons", "rossmann")
+# Mağazanın RESMÎ broşür/afiş sayfası. Broşür sayfaları veri hattında okunamıyorsa (erişim engeli, robots.txt,
+# JavaScript) uygulama bu sayfayı kendi tam ekran görüntüleyicisinde, kullanıcının cihazından açar.
+BROCHURE_URLS = {
+    "bim": "https://www.bim.com.tr/Categories/680/afisler.aspx",
+    "a101": "https://www.a101.com.tr/afisler",
+    "sok": "https://www.sokmarket.com.tr/kampanyalar",
+    "migros": "https://migroskop.migros.com.tr/migroskop",
+    "carrefoursa": "https://www.carrefoursa.com/",
+    "tkkoop": "https://www.tkkoop.com.tr/haftalik-kampanyalar",
+    "file": "https://www.filemarket.com.tr/",
+    "hakmar": "https://hakmar.com.tr/indirim/",
+    "onur": "https://kurumsal.onurmarket.com/tr/kampanyalar/insertlerimiz?region=istanbul",
+    "bizimtoptan": "https://www.bizimtoptan.com.tr/pages/katalog",
+    "metro": "https://brosurler.metro-tr.com/",
+    "gratis": "https://www.gratis.com/gratis-katalog",
+    "watsons": "https://katalog.watsons.com.tr/",
+    "rossmann": "https://www.rossmann.com.tr/kataloglar",
+}
+
 # Europe/Istanbul saatine göre günde iki kontrol (sabah ve akşam). Dakikalar sunucu yükünü dağıtmak için kaydırıldı.
 DEFAULT_SCHEDULE = {
     "a101": "07:40,18:40",

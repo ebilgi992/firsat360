@@ -6,6 +6,10 @@ data class Store(
     val lastError: String?, val legalNote: String?, val imagePolicy: String = "official_cdn",
     /** Feed'deki marka rengi (#RRGGBB → ARGB). Yoksa uygulama varsayılanı kullanılır. */
     val color: Int? = null, val short: String? = null, val kind: String = "market", val sort: Int = 99,
+    /** Türkiye'deki büyüklük sırası (ana sayfadaki broşür rafının varsayılan sırası). */
+    val chainRank: Int = 99,
+    /** Mağazanın resmî broşür/afiş sayfası: broşür sayfaları okunamadığında uygulama içinde tam ekran açılır. */
+    val brochureUrl: String? = null,
 ) {
     val imagesAllowed: Boolean get() = imagePolicy == "official_cdn"
     val shortLabel: String get() = short ?: name.take(2)
@@ -124,7 +128,8 @@ data class Feed(
                     m.str("status_message"), m.str("last_checked_at"), m.str("last_success_at"),
                     m.str("last_error"), m.str("legal_note"), m.str("image_policy") ?: "official_cdn",
                     Store.parseColor(m.str("color")), m.str("short"), m.str("kind") ?: "market",
-                    if (m.containsKey("sort")) m.int("sort") else 99)
+                    if (m.containsKey("sort")) m.int("sort") else 99,
+                    if (m.containsKey("chain_rank")) m.int("chain_rank") else 99, m.str("brochure_url"))
             }.sortedWith(compareBy({ it.sort }, { it.name }))
             val catalogs = root.list("catalogs").mapNotNull { it as? Map<String, Any?> }.mapNotNull { m ->
                 Catalog(m.str("id") ?: return@mapNotNull null, m.str("store_id") ?: return@mapNotNull null,

@@ -503,7 +503,7 @@ def test_migroskop_pdf_probe_same_issue_only():
         return httpx.Response(200, headers={"content-type": "application/pdf"})
     c = MigroskopConnector().fetch(_client(handler), NOW).catalogs[0]
     assert c.pdf_url.endswith("/migros/908/insert.pdf") and c.kind == "pdf"
-    assert asked == ["https://moneyclubkart.azureedge.net/mcfiles/insert/migros/908/insert.pdf"]
+    assert [u for u in asked if "moneyclubkart" in u] == ["https://moneyclubkart.azureedge.net/mcfiles/insert/migros/908/insert.pdf"]
 
     def no_pdf(req):
         if "money.com.tr" in req.url.host:
@@ -535,3 +535,16 @@ def test_daily_deals_rotate_each_day(sf):
     with sf() as s:
         again = set(daily_deals(s, date(2026, 10, 14), now=NOW, limit=12, per_store=4)["offer_ids"])
     assert again == days[0]
+
+
+def test_migroskop_digital_pages():
+    from firsat360.connectors.extra import parse_migroskop_digital
+    html = """<img src="https://migroskop-assets.migros.com.tr/migrosdigitalinsert/MIGROSKOP_72YIL_migroskop_kapak1/Cover/6f30_743x1024.jpg">
+      <div style="background:url('https://migroskop-assets.migros.com.tr/migrosdigitalinsert/908%208-21%20EKIM%20MIGROSKOPHODRI%20MEYDAN/Ad/11ea_716x1024.jpg?t=6392')"></div>
+      <img src="https://migroskop-assets.migros.com.tr/migrosdigitalinsert/908 8-21 EKIM MIGROSKOPHODRI MEYDAN5/Ad/d95f_716x1024.jpg">
+      <img src="https://migroskop-assets.migros.com.tr/migrosdigitalinsert/12345678/Product/aa_200x200.png">
+      <img src="https://migroskop-assets.migros.com.tr/migrosdigitalinsert/MIGROSKOP_72YIL_migroskop_kapak1/Cover/6f30_743x1024.jpg">"""
+    pages = parse_migroskop_digital(html)
+    assert len(pages) == 3 and "/Cover/" in pages[0]["url"]
+    assert " " not in pages[2]["url"] and "%20MEYDAN5/Ad/d95f" in pages[2]["url"]
+    assert not any("/Product/" in p["url"] for p in pages)

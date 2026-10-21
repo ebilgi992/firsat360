@@ -5,6 +5,7 @@
   export           Uygulamanın okuduğu feed.json dosyasını yazar
   schedule         Yapılandırılmış tarama saatlerini listeler
   daily            Günlük tam senkronizasyon: tüm mağazalar → ürün görselleri → yeni katalog duyurusu → push → feed
+  serve            İsteğe bağlı salt okunur JSON API (requirements-api.txt; yalnızca kendi sunucunuzda)
 """
 from __future__ import annotations
 
@@ -35,6 +36,9 @@ def main(argv=None):
     d.add_argument("--out", default=None, help="feed.json yolu (varsayılan FEED_EXPORT_PATH)")
     d.add_argument("--no-live", action="store_true", help="Canlı kaynakları atla (yalnızca duyuru/feed)")
     d.add_argument("--no-pages", action="store_true", help="Ürün sayfası görsel doğrulamasını atla")
+    sv = sub.add_parser("serve")
+    sv.add_argument("--host", default="127.0.0.1")
+    sv.add_argument("--port", type=int, default=8000)
     a = p.parse_args(argv)
 
     settings = Settings()
@@ -61,6 +65,10 @@ def main(argv=None):
         # Hiçbir mağaza güncellenemediyse iş akışı başarısız görünsün (izlenebilirlik); veri yine korunur.
         if report.get("ok_stores", 0) == 0:
             raise SystemExit(2)
+    elif a.cmd == "serve":
+        import uvicorn
+        from .api import create_app
+        uvicorn.run(create_app(sf), host=a.host, port=a.port, proxy_headers=True)
     elif a.cmd == "schedule":
         for sid in conns:
             print(sid, settings.schedule_for(sid), "etkin" if sid in settings.enabled_live_stores else "kapalı")

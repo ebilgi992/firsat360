@@ -350,6 +350,20 @@ fun main(args: Array<String>) {
 
     check("json.writer", (Json.parse(JsonWriter.write(mapOf("a" to listOf(1, 2.5, null, true), "ş" to "\n\u0001"))) as Map<*, *>)["ş"] == "\n\u0001")
 
+    // 0.8: market broşürü rafı — kullanıcı sırası önce, kalanlar büyüklük sırasıyla; her mağaza bir kez
+    val defaultOrder = Shelf.order(feed, emptyList()).map { it.id }
+    check("shelf.allStores", defaultOrder.toSet() == feed.stores.map { it.id }.toSet() && defaultOrder.size == feed.stores.size)
+    val custom = Shelf.order(feed, listOf("migros", "yok", "sok")).map { it.id }
+    check("shelf.customFirst", custom.take(2) == listOf("migros", "sok") && custom.size == feed.stores.size) { custom.toString() }
+    val shelf = Shelf.build(feed, emptyList(), today13)
+    check("shelf.bimHasBrochure", shelf.firstOrNull { it.store.id == "bim" }?.catalog != null)
+    check("shelf.noExpired", shelf.all { e -> e.catalog == null ||
+        Dates.status(e.catalog.validFrom, e.catalog.validTo, today13).kind != ValidityKind.EXPIRED })
+    val rich = Shelf.best(feed, "bim", today13).first
+    check("shelf.prefersPages", rich == null || rich.hasPages || rich.hasPdf ||
+        feed.catalogs.none { it.storeId == "bim" && (it.hasPages || it.hasPdf) &&
+            Dates.status(it.validFrom, it.validTo, today13).kind != ValidityKind.EXPIRED })
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)

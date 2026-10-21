@@ -1,5 +1,18 @@
 # Değişiklik günlüğü
 
+## 0.8.0-beta — 21 Ekim 2026
+- **Market broşürleri rafı (ana sayfa):** Türkiye'nin büyük zincirleri (BİM, A101, ŞOK, Migros, CarrefourSA, Tarım
+  Kredi, File, Hakmar, Onur…) her zaman görünür; her kartta o marketin güncel broşürü. Sayfa görselli broşür
+  yakınlaştırılabilir okuyucuda, PDF uygulama içinde açılır. Broşür sayfaları veri hattında okunamayan marketlerde
+  (A101 erişim engeli, CarrefourSA robots.txt, JavaScript'li sayfalar) resmî broşür/afiş sayfası uygulama içinde tam
+  ekran, kullanıcının cihazından açılır. **Sırala** ile kullanıcı market sırasını değiştirir (yalnızca cihazda).
+- **Migroskop dijital katalog sayfaları:** resmî görüntüleyicinin (migroskop.migros.com.tr) tüm sayfa görselleri.
+- **Ağ trafiği yakalama:** tarayıcı motoru sayfanın kendi XHR/fetch JSON yanıtlarındaki broşür görsellerini alır
+  (DOM'dan önce); bulunamazsa DOM ve görsel yanıtlarına düşer.
+- **İsteğe bağlı salt okunur API** (`python -m firsat360 serve`, `requirements-api.txt`): `/health`, `/catalogs`,
+  `/catalogs/{id}`. Varsayılan yayın yine ücretsiz GitHub Pages'teki feed.json.
+- **Zamanlama:** günde iki çalıştırma 08:05 ve 00:05 (İstanbul).
+
 ## 0.7.0-beta — 21 Ekim 2026
 Canlı veritabanı (21.10.2026 04:49 çalıştırması) incelenerek bulunan kök nedenler düzeltildi.
 - **Ürün görselleri (kök neden):** ürün sayfası okuyucusu görseli yalnızca og:image/JSON-LD'de arıyordu; BİM, ŞOK ve TK

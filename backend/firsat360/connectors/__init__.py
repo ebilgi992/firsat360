@@ -13,6 +13,10 @@ ALL_STORES = ("a101", "bim", "sok", "migros", "tkkoop", "hakmar", "watsons", "me
 
 def live_connectors(max_pages: int = 8):
     """Tüm mağazaların otomatik bağlayıcıları. Her biri resmî kaynaktan okur; anlık görüntü gerekmez."""
+    return _base_connectors(max_pages)
+
+
+def _base_connectors(max_pages: int):
     return {
         "a101": CompositeConnector("a101", [A101Connector(),
                                             FuncConnector("a101", A101_AFIS_URL, parse_a101_afis)]),

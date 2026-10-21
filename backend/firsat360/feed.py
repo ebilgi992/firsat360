@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import __version__
-from .config import STORE_KIND, STORE_STYLE, STORES
+from .config import STORE_KIND, STORE_STYLE, STORES, CHAIN_RANK, BROCHURE_URLS
 from .db import Catalog, Offer, PriceObservation, Store
 from .normalize import CATEGORIES
 
@@ -119,6 +119,8 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
             "short": STORE_STYLE.get(s.id, ("#5B6472", s.name[:2]))[1],
             "kind": STORE_KIND.get(s.id, "market"),
             "sort": list(STORES).index(s.id) if s.id in STORES else 99,
+            "chain_rank": CHAIN_RANK.index(s.id) if s.id in CHAIN_RANK else 99,
+            "brochure_url": BROCHURE_URLS.get(s.id),
         } for s in sorted(stores, key=lambda s: list(STORES).index(s.id) if s.id in STORES else 99)],
         "catalogs": [{
             "id": c.id, "store_id": c.store_id, "title": c.title, "kind": c.kind,

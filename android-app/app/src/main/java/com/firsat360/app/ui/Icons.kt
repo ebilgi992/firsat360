@@ -8,7 +8,7 @@ import android.graphics.RectF
 import android.view.View
 
 enum class Icon { HOME, STORE, SEARCH, HEART, HEART_FILLED, BACK, CLOSE, EXTERNAL, SHARE, SETTINGS, CALENDAR, CLOCK,
-    INFO, SHIELD, TAG, REFRESH, CHEVRON, SORT, GLOBE, CATALOG, LIST, BELL, STAR, STAR_FILLED, PLUS, CHECK, GRID,
+    INFO, SHIELD, TAG, REFRESH, CHEVRON, CHEVRON_UP, CHEVRON_DOWN, SORT, GLOBE, CATALOG, LIST, BELL, STAR, STAR_FILLED, PLUS, CHECK, GRID,
     CHECK_BOX, BOX, TRASH, DOWNLOAD, FLAME, SPARK, WIFI, PDF }
 
 /** 24x24 ızgarada çizilen, çözünürlükten bağımsız çizgi ikonlar (AndroidX/vektör kütüphanesi gerektirmez). */
@@ -104,6 +104,8 @@ class IconView(ctx: Context, icon: Icon, color: Int, sizeDp: Int = 24) : View(ct
                 p.moveTo(18.8f, 3.5f); p.lineTo(18.8f, 8f); p.lineTo(14.3f, 8f)
             }
             Icon.CHEVRON -> { p.moveTo(9.5f, 5.5f); p.lineTo(16f, 12f); p.lineTo(9.5f, 18.5f) }
+            Icon.CHEVRON_UP -> { p.moveTo(5.5f, 15f); p.lineTo(12f, 8.5f); p.lineTo(18.5f, 15f) }
+            Icon.CHEVRON_DOWN -> { p.moveTo(5.5f, 9f); p.lineTo(12f, 15.5f); p.lineTo(18.5f, 9f) }
             Icon.SORT -> {
                 p.moveTo(7.5f, 4.5f); p.lineTo(7.5f, 19.5f); p.moveTo(4.5f, 16.5f); p.lineTo(7.5f, 19.5f); p.lineTo(10.5f, 16.5f)
                 p.moveTo(16.5f, 19.5f); p.lineTo(16.5f, 4.5f); p.moveTo(13.5f, 7.5f); p.lineTo(16.5f, 4.5f); p.lineTo(19.5f, 7.5f)

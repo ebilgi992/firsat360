@@ -83,6 +83,15 @@ class HomeScreen(a: MainActivity) : Screen(a) {
                 lp(l = dp(20), r = dp(20), t = dp(12)))
         }
 
+        // ---- Market broşürleri: Türkiye'nin büyük zincirleri her zaman, kullanıcının sırasıyla
+        val shelf = com.firsat360.app.core.Shelf.build(f, a.user.chainOrder, a.today)
+        if (shelf.isNotEmpty()) {
+            col.addView(a.sectionHeader("Market broşürleri", "Sırala") { a.push(ShelfOrderScreen(a)) })
+            val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), dp(4)) }
+            for (e in shelf) row.addView(a.shelfCard(e))
+            col.addView(a.hscroll(row))
+        }
+
         // ---- Günün İndirimleri
         if (deals.isNotEmpty()) {
             col.addView(dealsHeader())
@@ -205,3 +214,68 @@ class HomeScreen(a: MainActivity) : Screen(a) {
 }
 
 fun minuteLabel(m: Int): String = String.format(java.util.Locale.ROOT, "%02d.%02d", m / 60, m % 60)
+
+
+/** Raf kartı: güncel broşür varsa onun kapağı; yoksa mağazanın resmî broşür sayfası (uygulama içinde tam ekran). */
+fun MainActivity.shelfCard(e: com.firsat360.app.core.ShelfEntry): View {
+    val c = e.catalog ?: Catalog(id = "web-${e.store.id}", storeId = e.store.id, title = "Güncel broşür ve afişler",
+        kind = "flipbook", validFrom = null, validTo = null, officialUrl = e.store.brochureUrl ?: e.store.catalogUrl,
+        sourceMethod = "official_page", observedAt = null, offerCount = 0)
+    val card = catalogCard(c, e.store.name, today) { openBrochure(e) }
+    if (e.others > 0) card.addView(text("+${e.others} katalog daha", 11.5f, Theme.p.accent, Theme.semibold, 1),
+        lp(l = dp(12), b = dp(12)))
+    return card
+}
+
+/** Broşürü en iyi biçimde açar: sayfa görselleri → yakınlaştırılabilir okuyucu; PDF → PDF; diğerleri → resmî sayfa. */
+fun MainActivity.openBrochure(e: com.firsat360.app.core.ShelfEntry) {
+    val c = e.catalog
+    when {
+        c != null && c.hasPages && com.firsat360.app.data.ImageLoader.enabled -> openReader(c.id)
+        c != null && c.hasPdf -> push(PdfScreen(this, c.id))
+        c != null && !c.webOnly -> openCatalog(c.id)
+        else -> push(WebScreen(this, c?.officialUrl ?: e.store.brochureUrl ?: e.store.catalogUrl,
+            "${e.store.name} broşür", catalog = true))
+    }
+}
+
+/** Raf sırası: yukarı/aşağı ile taşınır, "Varsayılan" büyüklük sırasına döner. Yalnızca cihazda saklanır. */
+class ShelfOrderScreen(a: MainActivity) : Screen(a) {
+    override val tab: Tab get() = Tab.HOME
+    private var order: MutableList<String> = com.firsat360.app.core.Shelf.order(a.feed, a.user.chainOrder).map { it.id }.toMutableList()
+
+    override fun create(): View {
+        val outer = a.vbox()
+        outer.setBackgroundColor(Theme.p.bg)
+        outer.addView(a.topBar("Market sırası"))
+        val col = a.vbox()
+        col.setPadding(dp(20), dp(4), dp(20), dp(36))
+        col.addView(a.text("Ana sayfadaki broşür rafında marketler bu sırayla görünür.", 13f, Theme.p.text2, Theme.regular))
+        order.forEachIndexed { i, id ->
+            val s = a.feed.store(id) ?: return@forEachIndexed
+            val r = a.hbox().apply { setPadding(dp(14), dp(10), dp(8), dp(10)); background = rounded(Theme.p.surface, 16f, Theme.p.outline) }
+            r.addView(a.text("${i + 1}", 14f, Theme.p.text3, Theme.semibold), lp(dp(26), WRAP))
+            r.addView(a.storeBadge(s.id, s.name))
+            r.addView(a.text(s.name, 15f, Theme.p.text, Theme.medium, 1), lp(0, WRAP, l = dp(10), weight = 1f))
+            r.addView(a.iconButton(Icon.CHEVRON_UP, if (i > 0) Theme.p.text else Theme.p.text3, desc = "${s.name} yukarı") { move(i, -1) },
+                lp(dp(40), dp(40)))
+            r.addView(a.iconButton(Icon.CHEVRON_DOWN, if (i < order.size - 1) Theme.p.text else Theme.p.text3,
+                desc = "${s.name} aşağı") { move(i, 1) }, lp(dp(40), dp(40), l = dp(4)))
+            col.addView(r, lp(t = dp(10)))
+        }
+        col.addView(a.button("Varsayılan sıraya dön", null, false) {
+            a.user.chainOrder = emptyList(); order = com.firsat360.app.core.Shelf.order(a.feed, emptyList()).map { it.id }.toMutableList()
+            a.toast("Varsayılan sıra"); a.refreshCurrent()
+        }, lp(t = dp(18)))
+        outer.addView(ScrollView(a).apply { isVerticalScrollBarEnabled = false; addView(col) }, lp(MATCH, 0, weight = 1f))
+        return outer
+    }
+
+    private fun move(i: Int, d: Int) {
+        val j = i + d
+        if (j !in order.indices) return
+        val t = order[i]; order[i] = order[j]; order[j] = t
+        a.user.chainOrder = order
+        a.refreshCurrent()
+    }
+}

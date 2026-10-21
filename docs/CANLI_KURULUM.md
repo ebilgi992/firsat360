@@ -2,7 +2,7 @@
 
 Canlı sistem iki parçadır:
 
-1. **Günlük veri hattı (sunucu tarafı):** GitHub Actions her gün 07:05 ve 18:05'te (Türkiye saati) çalışır. 10 marketin
+1. **Günlük veri hattı (sunucu tarafı):** GitHub Actions her gün 08:05 ve 00:05'te (Türkiye saati) çalışır. 10 marketin
    resmî sayfalarını kontrol eder, ürün fotoğraflarını ürünün kendi sayfasından doğrular, yeni katalogları **bir kez**
    duyurur, "Günün İndirimleri"ni seçer ve `feed.json` dosyasını GitHub Pages'te yayımlar.
 2. **Uygulama:** veriyi bu sabit adresten alır (`https://<kullanıcı-adı>.github.io/firsat360/feed.json`). Adres APK'ya

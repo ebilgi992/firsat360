@@ -9,7 +9,7 @@ android-app/   Android uygulaması (Kotlin, ek kütüphane yok) + Gradle'sız de
 backend/       Günlük veri hattı (Python): 10 marketin otomatik bağlayıcıları, görsel doğrulama, duyuru, feed üretimi
 config/        app_config.json — uygulamanın uzaktan ayarları (GitHub'da düzenlenir)
 data/          İlk kurulum tohumu: 12–13.10.2026 doğrulanmış okumalar
-.github/       Günlük iş akışı (07:05 ve 18:05)
+.github/       Günlük iş akışı (08:05 ve 00:05)
 docs/          Kurulum, test, güvenlik, Play yayın, kaynak belgeleri
 ```
 

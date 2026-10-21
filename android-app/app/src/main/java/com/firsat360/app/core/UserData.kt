@@ -93,3 +93,36 @@ object Watch {
         return out
     }
 }
+
+
+/** Ana sayfadaki "Market broşürleri" rafının bir kartı: mağaza + en iyi güncel broşürü (yoksa resmî broşür sayfası). */
+data class ShelfEntry(val store: Store, val catalog: Catalog?, val others: Int)
+
+object Shelf {
+    /** Kullanıcının kaydettiği sıra önce; listede olmayan mağazalar büyüklük sırasıyla sona eklenir. */
+    fun order(feed: Feed, saved: List<String>): List<Store> {
+        val byId = feed.stores.associateBy { it.id }
+        val first = saved.mapNotNull { byId[it] }
+        val rest = feed.stores.filter { it.id !in saved }.sortedWith(compareBy({ it.chainRank }, { it.sort }, { it.name }))
+        return first + rest
+    }
+
+    /** Broşür olarak gösterilecek en iyi katalog: sayfa görselli/PDF > ürün listeli > diğer; satışta olan > yakında. */
+    fun best(feed: Feed, storeId: String, today: java.time.LocalDate): Pair<Catalog?, Int> {
+        val list = feed.catalogs.filter { c ->
+            c.storeId == storeId && c.kind != "link_only" &&
+                Dates.status(c.validFrom, c.validTo, today).kind != ValidityKind.EXPIRED
+        }
+        val pick = list.sortedWith(compareBy<Catalog>(
+            { if (it.hasPages || it.hasPdf) 0 else if (it.coverUrl != null) 1 else 2 },
+            { val d = Dates.date(it.validFrom); if (d == null || !d.isAfter(today)) 0 else 1 },
+            { val d = Dates.date(it.validFrom); if (d == null) 0L else -d.toEpochDay() })).firstOrNull()
+        return pick to (list.size - if (pick != null) 1 else 0)
+    }
+
+    fun build(feed: Feed, saved: List<String>, today: java.time.LocalDate): List<ShelfEntry> =
+        order(feed, saved).mapNotNull { s ->
+            val (c, others) = best(feed, s.id, today)
+            if (c == null && s.brochureUrl.isNullOrBlank()) null else ShelfEntry(s, c, others)
+        }
+}

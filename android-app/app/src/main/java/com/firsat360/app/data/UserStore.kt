@@ -46,6 +46,11 @@ class UserStore(ctx: Context) {
         get() = prefs.getInt("notify_minute", 9 * 60)
         set(v) { prefs.edit().putInt("notify_minute", v.coerceIn(0, 24 * 60 - 1)).apply() }
     /** Bildirimi kapatılan mağazalar (boş = tüm mağazalar açık). */
+    /** Ana sayfadaki market broşürü rafının kullanıcı sırası (mağaza kimlikleri). Boş = büyüklük sırası. */
+    var chainOrder: List<String>
+        get() = (prefs.getString("chain_order", "") ?: "").split(",").filter { it.isNotBlank() }
+        set(v) { prefs.edit().putString("chain_order", v.joinToString(",")).apply() }
+
     fun mutedStores(): Set<String> = set("muted_stores")
     fun toggleMutedStore(id: String) = toggle("muted_stores", id)
     var askedNotifications: Boolean

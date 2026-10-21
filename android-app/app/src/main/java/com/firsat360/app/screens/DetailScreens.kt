@@ -354,7 +354,7 @@ class SourceStatusScreen(a: MainActivity) : Screen(a) {
         outer.addView(a.topBar("Kaynak durumu"))
         val col = a.vbox()
         col.setPadding(dp(20), dp(4), dp(20), dp(36))
-        col.addView(a.text("Veriler her gün 07.05 ve 18.05'te marketlerin resmî sayfalarından otomatik güncellenir. " +
+        col.addView(a.text("Veriler her gün 08.05 ve 00.05'te marketlerin resmî sayfalarından otomatik güncellenir. " +
             "Son yayın: ${Dates.relative(f.generatedAt, now)}.", 13f, Theme.p.text2, Theme.regular), lp(t = dp(6)))
         val byStore = f.offers.groupBy { it.storeId }
         val catCount = f.catalogs.groupBy { it.storeId }.mapValues { it.value.size }

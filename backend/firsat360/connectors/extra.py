@@ -513,6 +513,29 @@ class FlipbookConnector(Connector):
         return res
 
 
+MIGROSKOP_DIGITAL = "https://migroskop.migros.com.tr/migroskop"
+_MIGROSKOP_IMG = re.compile(r"""https?://migroskop-assets\.migros\.com\.tr/migrosdigitalinsert/[^"'<>()]+?\.(?:jpe?g|png|webp)(?:\?[^"'<>()\s]*)?""", re.I)
+
+
+def parse_migroskop_digital(html: str) -> list[dict]:
+    """Migroskop dijital (resmî görüntüleyici) sayfa görselleri: Cover (kapak) + Ad (sayfa) görselleri, belge sırasıyla.
+    Ürün küçük resimleri (/Product/) sayfa değildir. Adreslerdeki boşluklar kodlanır; aynı görsel bir kez alınır."""
+    from urllib.parse import quote
+    raw = html.replace("\\/", "/").replace("&amp;", "&")
+    pages, seen = [], set()
+    for m in _MIGROSKOP_IMG.finditer(raw):
+        u = m.group(0)
+        if "/Cover/" not in u and "/Ad/" not in u:
+            continue
+        u = quote(u, safe=":/?=&%._-~")
+        key = u.split("?")[0]
+        if key in seen:
+            continue
+        seen.add(key)
+        pages.append({"url": u, "thumb_url": u, "page": len(pages) + 1, "verified": True})
+    return pages
+
+
 class MigroskopConnector(Connector):
     """Migroskop dijital: güncel sayı + (sayfada yoksa) aynı sayı numaralı resmî PDF'in varlığı HEAD ile doğrulanır."""
     store_id = "migros"
@@ -524,12 +547,21 @@ class MigroskopConnector(Connector):
         c = parse_migroskop(client.get(MIGROSKOP_URL).text, observed_at.date())
         if c is None:
             raise ConnectorError("Migroskop: güncel sayı bulunamadı")
+        # Resmî dijital görüntüleyicinin sayfa görselleri (rakip uygulamaların gösterdiği broşürün kendisi)
+        try:
+            pages = parse_migroskop_digital(client.get(MIGROSKOP_DIGITAL).text)
+            if pages:
+                c.pages, c.cover_url, c.kind = pages, pages[0]["url"], "aktuel"
+                c.official_url = MIGROSKOP_DIGITAL
+        except ConnectorError as exc:
+            res.warnings.append(f"Migroskop dijital: {exc}")
         if not c.pdf_url:
             issue = c.id.rsplit("-", 1)[-1]
             try:
                 r = client.head(self.PDF.format(issue=issue))
                 if r is not None and r.status_code == 200 and "pdf" in r.headers.get("content-type", "").lower():
-                    c.pdf_url, c.kind = self.PDF.format(issue=issue), "pdf"
+                    c.pdf_url = self.PDF.format(issue=issue)
+                    c.kind = c.kind if c.pages else "pdf"
             except ConnectorError as exc:
                 res.warnings.append(str(exc))
         res.catalogs.append(c)

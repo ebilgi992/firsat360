@@ -17,6 +17,7 @@ Kabul kuralları (uydurma/yanlış broşür olmasın):
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -32,7 +33,7 @@ log = logging.getLogger("firsat360.discovery")
 FLIPBOOK_HOSTS = ("publitas.com", "heyzine.com", "aflip.in", "fliphtml5.com", "issuu.com", "yumpu.com",
                   "flipsnack.com", "calameo.com")
 # Yalnızca broşürü açıkça adlandıran sözcükler ("kampanya", "indirim" gibi genel afiş sözcükleri değil).
-BROCHURE_WORD = re.compile(r"(?i)insert|bro[sş]ur|katalog|catalog|aktuel|aktüel|flyer|leaflet")
+BROCHURE_WORD = re.compile(r"(?i)insert|bro[sş]ur|katalog|catalog|aktuel|aktüel|flyer|leaflet|afis|afiş|poster")
 SKIP = re.compile(r"(?i)logo|icon|favicon|sprite|avatar|placeholder|app-?store|google-?play|banner-app|social")
 PDF_RE = re.compile(r"\.pdf(?:[?#]|$)", re.I)
 
@@ -117,6 +118,16 @@ def render_page(url: str, user_agent: str, timeout_ms: int = 45000) -> tuple[str
                 ct = (r.headers.get("content-type") or "").split(";")[0].strip().lower()
                 if ct == "application/pdf" or ct.startswith("image/"):
                     responses.append({"url": r.url, "type": ct, "status": r.status})
+                elif ct.endswith("json") and r.status == 200 and r.request.resource_type in ("xhr", "fetch"):
+                    # Sayfanın kendi arka plan isteği (XHR/fetch): broşür görsel adresleri çoğu zaman burada,
+                    # DOM'dan daha temiz ve yüksek çözünürlüklü. Gövde sınırlı okunur.
+                    try:
+                        body = r.body()
+                        if len(body) <= MAX_JSON_BYTES:
+                            responses.append({"url": r.url, "type": "json", "status": 200,
+                                              "images": json_image_urls(json.loads(body))})
+                    except Exception:  # noqa: BLE001 — bozuk/ikili yanıt atlanır
+                        log.debug("JSON yanıtı okunamadı: %s", r.url)
             page.on("response", on_response)
             resp = page.goto(url, wait_until="networkidle", timeout=timeout_ms)
             if resp is not None and resp.status in (401, 403, 429):
@@ -135,9 +146,45 @@ def render_page(url: str, user_agent: str, timeout_ms: int = 45000) -> tuple[str
     return html, responses
 
 
+MAX_JSON_BYTES = 3 * 1024 * 1024
+_IMG_URL = re.compile(r"^https?://[^\s\"'<>]+\.(?:jpe?g|png|webp|avif)(?:\?[^\s\"'<>]*)?$", re.I)
+
+
+def json_image_urls(data, limit: int = 400) -> list[str]:
+    """JSON ağacındaki görsel adresleri, belge sırasıyla (derinlik ve sayı sınırlı). Aynı öğede büyük/küçük sürüm
+    varsa ("large", "original", "zoom", "detail" anahtarları) büyük olan önce gelir."""
+    out: list[str] = []
+    big = ("original", "large", "zoom", "full", "detail", "big", "hires", "highres")
+
+    def walk(x, depth: int):
+        if depth > 12 or len(out) >= limit:
+            return
+        if isinstance(x, dict):
+            items = sorted(x.items(), key=lambda kv: 0 if any(b in str(kv[0]).lower() for b in big) else 1)
+            for _, v in items:
+                walk(v, depth + 1)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v, depth + 1)
+        elif isinstance(x, str) and _IMG_URL.match(x.strip()) and x.strip() not in out:
+            out.append(x.strip())
+    walk(data, 0)
+    return out
+
+
 def merge_rendered(found: Found, html: str, responses: list[dict], base_url: str, src: StoreSource) -> Found:
     more = scan_html(html, base_url, src)
     keys = {_dedupe_key(u) for u in found.images}
+    # 1) Ağ trafiğindeki JSON uç noktaları (en temiz kaynak): mağaza alan adındaki broşür adlı görseller
+    for r in responses:
+        if r.get("type") != "json":
+            continue
+        for u in r.get("images", []):
+            if _own(u, src.hosts) and not SKIP.search(u) and BROCHURE_WORD.search(urlparse(u).path):
+                k = _dedupe_key(u)
+                if k not in keys:
+                    keys.add(k)
+                    found.images.append(u)
     for u in more.pdfs + [r["url"] for r in responses if r["type"] == "application/pdf" and r.get("status", 200) == 200]:
         if u not in found.pdfs and (_own(u, src.hosts) or any(h in _host(u) for h in FLIPBOOK_HOSTS)):
             found.pdfs.append(u)
@@ -146,7 +193,7 @@ def merge_rendered(found: Found, html: str, responses: list[dict], base_url: str
             found.flipbooks.append(fb)
     for r in responses:
         u = r["url"]
-        if not r["type"].startswith("image/") or r.get("status", 200) != 200 or not _own(u, src.hosts) or SKIP.search(u):
+        if r.get("type") == "json" or not r["type"].startswith("image/") or r.get("status", 200) != 200 or not _own(u, src.hosts) or SKIP.search(u):
             continue
         w, h = r.get("width"), r.get("height")
         big = (w or 0) >= src.min_width
