@@ -5,7 +5,7 @@ import hashlib
 import re
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import __version__
+from .normalize import clean_variant
 from .config import STORE_KIND, STORE_STYLE, STORES, CHAIN_RANK, BROCHURE_URLS, RETIRED_STORES
 from .db import Catalog, Offer, PriceObservation, Store
 from .normalize import CATEGORIES
@@ -62,7 +63,7 @@ def catalog_pages(c: Catalog, allowed: bool) -> list[dict]:
 def offer_dict(o: Offer, history: list[PriceObservation] | None = None, images: bool = True) -> dict:
     d = {
         "id": o.id, "store_id": o.store_id, "catalog_id": o.catalog_id,
-        "name": o.name, "brand": o.brand, "variant": o.variant,
+        "name": o.name, "brand": o.brand, "variant": clean_variant(o.variant),
         "category": o.category, "category_source": o.category_source,
         "price": _num(o.price), "price_text": o.price_text, "currency": o.currency,
         "store_declared_old_price": _num(o.store_declared_old_price),
@@ -89,6 +90,38 @@ def offer_dict(o: Offer, history: list[PriceObservation] | None = None, images: 
 
 
 STALE_DAYS = 2
+# Bitiş tarihi olmayan ürün/katalog, kaynakta bu kadar gün görülmezse yayından çıkar (ör. erişimi engellenen bir
+# kaynağın haftalar önceki fiyatları "güncel" gibi gösterilmez).
+STALE_UNDATED_DAYS = 5
+# Mağaza ekranındaki "Geçmiş kataloglar": süresi bu kadar gün içinde bitmiş, sayfası/PDF'i/kapağı olan kataloglar.
+ARCHIVE_DAYS = 90
+
+
+def merge_variant_duplicates(offers: list[dict]) -> list[dict]:
+    """Aynı katalogda aynı ad + aynı açıklamayla birden çok fiyat (ör. BİM'de aynı ürün sayfasının iki boyu, açıklaması
+    okunamamış): tek kart, en düşük fiyat; diğer fiyatlar "options" listesinde. Açıklaması farklı olanlar ayrı kalır."""
+    from .normalize import fold
+    groups: dict[tuple, list[dict]] = {}
+    order: list[tuple] = []
+    for o in offers:
+        k = (o["store_id"], o.get("catalog_id") or "", fold(o.get("name") or ""), fold(o.get("variant") or ""))
+        if k not in groups:
+            groups[k] = []
+            order.append(k)
+        groups[k].append(o)
+    out = []
+    for k in order:
+        g = groups[k]
+        if len(g) == 1:
+            out.append(g[0])
+            continue
+        g = sorted(g, key=lambda x: (x["price"] is None, x["price"] or 0))
+        head = dict(g[0])
+        head["options"] = [{"id": x["id"], "price": x["price"], "variant": x.get("variant") or x.get("page_size_text")}
+                           for x in g]
+        head["aliases"] = [x["id"] for x in g[1:]]
+        out.append(head)
+    return out
 
 
 def catalog_group(c: Catalog) -> str:
@@ -111,6 +144,28 @@ def is_stale(c: Catalog, store: Store | None, catalogs_with_offers: set) -> bool
 
 def _aware(d):
     return d if d is None or d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
+def archive_catalogs(session: Session, today: date, store_by_id: dict) -> list[dict]:
+    old = today - timedelta(days=ARCHIVE_DAYS)
+    rows = session.scalars(select(Catalog).where(Catalog.data_mode == "real", Catalog.valid_to.is_not(None),
+                                                 Catalog.valid_to < today, Catalog.valid_to >= old)).all()
+    out = []
+    for c in sorted(rows, key=lambda c: (c.store_id, c.valid_to), reverse=True):
+        if c.store_id not in store_by_id:
+            continue
+        img = _images_allowed(store_by_id.get(c.store_id))
+        pages = catalog_pages(c, img)
+        pdf = c.pdf_url if img else None
+        cover = c.cover_url if img else None
+        if not (pages or pdf or cover):
+            continue
+        out.append({"id": c.id, "store_id": c.store_id, "title": c.title, "kind": c.kind,
+                    "valid_from": _iso(c.valid_from), "valid_to": _iso(c.valid_to), "official_url": c.official_url,
+                    "source_method": c.source_method, "observed_at": _iso(c.observed_at), "offer_count": 0,
+                    "pdf_url": pdf, "cover_url": cover or ((pages[0].get("thumb_url") or pages[0]["url"]) if pages else None),
+                    "pages": pages, "group": catalog_group(c), "archived": True})
+    return out
 
 
 def client_bridge() -> dict:
@@ -141,8 +196,15 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
     if not include_expired:
         offers = [o for o in offers if o.valid_to is None or o.valid_to >= today]
         catalogs = [c for c in catalogs if c.valid_to is None or c.valid_to >= today]
+        undated_cut = datetime.combine(today - timedelta(days=STALE_UNDATED_DAYS), datetime.min.time(), tzinfo=timezone.utc)
+        offers = [o for o in offers if not (o.valid_to is None and _aware(o.last_seen_at) is not None
+                                            and _aware(o.last_seen_at) < undated_cut)]
         catalogs = [c for c in catalogs if not is_stale(c, {s.id: s for s in stores}.get(c.store_id),
                                                         {o.catalog_id for o in offers})]
+        with_offers = {o.catalog_id for o in offers}
+        catalogs = [c for c in catalogs if not (c.valid_to is None and c.id not in with_offers
+                                                and _aware(c.last_checked_at) is not None
+                                                and _aware(c.last_checked_at) < undated_cut)]
     # Fiyat geçmişi (gözlemler) feed'e eklenir; uygulama detay ekranında grafik/özet gösterir.
     history: dict[str, list[PriceObservation]] = {}
     for h in session.scalars(select(PriceObservation).order_by(PriceObservation.observed_at)):
@@ -184,8 +246,10 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
             "cover_url": c.cover_url if _images_allowed(store_by_id.get(c.store_id)) else None,
             "pages": catalog_pages(c, _images_allowed(store_by_id.get(c.store_id))),
         } for c in sorted(catalogs, key=lambda c: (c.store_id, c.valid_from or date.min), reverse=False)],
-        "offers": [offer_dict(o, history.get(o.id, []), _images_allowed(store_by_id.get(o.store_id))) for o in
-                   sorted(offers, key=lambda o: (o.store_id, o.catalog_id or "", o.name))],
+        "offers": merge_variant_duplicates([offer_dict(o, history.get(o.id, []), _images_allowed(store_by_id.get(o.store_id)))
+                                            for o in sorted(offers, key=lambda o: (o.store_id, o.catalog_id or "", o.name))]),
+        # Geçmiş kataloglar (mağaza ekranında tarihe göre): yalnızca okunabilir olanlar (sayfa, PDF veya kapak)
+        "archive": archive_catalogs(session, today, store_by_id),
         # Günün İndirimleri (otomatik seçim) ve yeni katalog duyuruları (bildirimler bunlardan üretilir)
         "daily_deals": _deals(session, today),
         "client_bridge": client_bridge(),

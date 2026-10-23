@@ -32,6 +32,12 @@ class NetImage(ctx: Context, radiusDp: Float = 14f) : ImageView(ctx) {
         setImageDrawable(ColorDrawable(0))
         ImageLoader.load(this, url, maxPx, fallback) { ok -> if (!ok) onFail?.invoke() }
     }
+
+    /** Sonuç her durumda bildirilir (yüklendi / yüklenemedi). */
+    fun loadResult(url: String?, maxPx: Int, onResult: (Boolean) -> Unit) {
+        setImageDrawable(ColorDrawable(0))
+        ImageLoader.load(this, url, maxPx, null) { ok -> onResult(ok) }
+    }
 }
 
 /**

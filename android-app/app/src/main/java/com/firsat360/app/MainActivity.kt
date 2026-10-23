@@ -33,13 +33,15 @@ import com.firsat360.app.ui.emptyState
 import com.firsat360.app.ui.lp
 import com.firsat360.app.ui.onTap
 import com.firsat360.app.ui.rounded
+import com.firsat360.app.ui.ripple
+import com.firsat360.app.ui.surfaceBg
 import com.firsat360.app.ui.skeleton
 import com.firsat360.app.ui.text
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
 enum class Tab(val label: String, val icon: Icon) {
-    HOME("Ana Sayfa", Icon.HOME), STORES("Mağazalar", Icon.STORE), SEARCH("Ara", Icon.SEARCH),
+    HOME("Ana Sayfa", Icon.HOME), STORES("Marketler", Icon.STORE), SEARCH("Ara", Icon.SEARCH),
     FAVORITES("Favoriler", Icon.HEART), LIST("Listem", Icon.LIST)
 }
 
@@ -95,7 +97,12 @@ class MainActivity : Activity() {
         root.addView(content, lp(MATCH, 0, weight = 1f))
         nav = buildNav()
         root.addView(nav, lp(MATCH, WRAP))
-        setContentView(root)
+        // Arka plan broşür okuyucusu (BridgePrefetch) ekranın ARKASINDAKİ bu kaba eklenir; kullanıcı görmez.
+        prefetchHost = FrameLayout(this)
+        val stage = FrameLayout(this)
+        stage.addView(prefetchHost, FrameLayout.LayoutParams(MATCH, MATCH))
+        stage.addView(root, FrameLayout.LayoutParams(MATCH, MATCH))
+        setContentView(stage)
         // ÖNEMLİ: Pencere görünümü (DecorView) setContentView ile oluşur. Sistem çubuğu ayarları ondan SONRA yapılmalı;
         // 0.2.0'da window.insetsController daha önce çağrıldığı için Android 11+ cihazlarda açılışta çöküyordu.
         applySystemBars()
@@ -113,8 +120,9 @@ class MainActivity : Activity() {
         repo.loadInitial { f, err ->
             try {
                 if (f == null) showFatal(err ?: "Veri yüklenemedi") else {
-                    Theme.registerStores(f.stores)
+                    Theme.registerStores(feed.stores)
                     switchTab(Tab.HOME)
+                    content.postDelayed({ startBrochurePrefetch() }, 2500)
                     handleOpenIntent(intent)
                     if (user.seenCatalogs() == null) user.markCatalogsSeen(f.catalogs.map { it.id })
                     com.firsat360.app.data.Notifier.schedule(this)
@@ -135,7 +143,7 @@ class MainActivity : Activity() {
             @Suppress("DEPRECATION")
             run {
                 window.statusBarColor = Theme.p.bg
-                window.navigationBarColor = Theme.p.surface
+                window.navigationBarColor = Theme.p.bg
             }
             if (android.os.Build.VERSION.SDK_INT >= 30) {
                 val light = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
@@ -276,13 +284,49 @@ class MainActivity : Activity() {
         } catch (e: Exception) { }
     }
 
+    lateinit var prefetchHost: FrameLayout
+
+    override fun onDestroy() {
+        // Yeniden kurulumda (tema/dil/yazı boyutu) eski arka plan okuyucusu bırakılır; yeni etkinlik baştan başlatır.
+        com.firsat360.app.data.BridgePrefetch.cancel()
+        super.onDestroy()
+    }
+
+    /**
+     * Raftaki kapaklar açılışta hazır olsun: istemci köprüsündeki ve kullanıcının eklediği marketlerin resmî broşür
+     * sayfaları Wi‑Fi'de, arka planda, sırayla okunur (bkz. BridgePrefetch). [force]: kullanıcı "Şimdi yenile" dedi.
+     */
+    fun startBrochurePrefetch(force: Boolean = false) {
+        if (!force && !user.prefetchBrochures) return
+        val f = repo.feed ?: return
+        val jobs = f.clientBridge.mapNotNull { (sid, e) ->
+            val st = f.store(sid) ?: return@mapNotNull null
+            com.firsat360.app.data.BridgePrefetch.Job(sid, "${st.name} broşür", e.url, e.profile, e.allowedHosts)
+        }.sortedBy { j -> f.store(j.storeId)?.chainRank ?: 99 }
+        com.firsat360.app.data.BridgePrefetch.start(this, prefetchHost, jobs, force, onUpdated = { sid, changed ->
+            (stack.lastOrNull() as? com.firsat360.app.screens.HomeScreen)?.onBrochureUpdated(sid)
+            if (changed) {
+                val st = repo.feed?.store(sid)
+                // Bildirim yalnızca kullanıcının eklediği veya favori marketlerde (gereksiz bildirim yok)
+                if (st != null && (com.firsat360.app.data.CustomStores.isCustom(sid) || sid in user.favoriteStores()))
+                    com.firsat360.app.data.Notifier.post(this, com.firsat360.app.core.Notice("store", "brochure-$sid-${System.currentTimeMillis() / 86_400_000L}",
+                        "${st.name}: yeni broşür", "Resmî sayfasında yeni broşür yayımlandı. Görmek için dokunun.", sid))
+            }
+        })
+    }
+
     private fun buildNav(): LinearLayout = LinearLayout(this).apply {
+        // Yüzen alt menü: zemin rengi üzerinde yuvarlatılmış, ince çizgili kapsül; seçili sekme kehribar.
         orientation = LinearLayout.HORIZONTAL
-        // Düz alt çubuk: gölge yok, üstte ince çizgi; seçili sekmenin adı raf etiketi sarısında.
-        background = android.graphics.drawable.LayerDrawable(arrayOf(
-            android.graphics.drawable.ColorDrawable(Theme.p.outline),
-            android.graphics.drawable.ColorDrawable(Theme.p.surface))).apply { setLayerInset(1, 0, dp(1), 0, 0) }
-        setPadding(dp(6), dp(6), dp(6), dp(8))
+        setBackgroundColor(Theme.p.bg)
+        setPadding(dp(12), dp(4), dp(12), dp(10))
+        val bar = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = surfaceBg(24f, Theme.p.surface)
+            elevation = dp(6).toFloat()
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+        addView(bar, lp(MATCH, WRAP))
         for (t in Tab.values()) {
             val item = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -291,22 +335,22 @@ class MainActivity : Activity() {
                 contentDescription = t.label
             }
             val icon = IconView(context, t.icon, Theme.p.text3, 24)
-            val label = context.text(t.label, 12.5f, Theme.p.text3, Theme.medium, 1).apply { setPadding(dp(5), dp(1), dp(5), dp(2)) }
+            val label = context.text(t.label, 11.5f, Theme.p.text3, Theme.medium, 1)
             item.addView(icon)
             item.addView(label, lp(WRAP, WRAP, t = dp(3)))
             item.onTap { if (repo.feed != null) switchTab(t) }
+            item.background = ripple(null, 20f)
             navItems[t] = icon to label
-            addView(item, lp(0, WRAP, weight = 1f))
+            bar.addView(item, lp(0, WRAP, weight = 1f))
         }
     }
 
     private fun highlight(tab: Tab) {
         for ((t, pair) in navItems) {
             val on = t == tab
-            pair.first.color = if (on) Theme.p.text else Theme.p.text3
+            pair.first.color = if (on) Theme.p.accent else Theme.p.text3
             pair.first.icon = if (t == Tab.FAVORITES && on) Icon.HEART_FILLED else t.icon
-            pair.second.setTextColor(if (on) Theme.p.onLabel else Theme.p.text3)
-            pair.second.background = if (on) rounded(Theme.p.label, 2f) else null
+            pair.second.setTextColor(if (on) Theme.p.accent else Theme.p.text3)
             pair.second.typeface = if (on) Theme.semibold else Theme.medium
             (pair.first.parent as? View)?.let { it.contentDescription = t.label + if (on) " (seçili)" else ""; it.isSelected = on }
         }

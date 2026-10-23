@@ -39,6 +39,9 @@ BROCHURE_WORD = re.compile(r"(?i)insert|bro[sş]ur|katalog|catalog|aktuel|aktüe
 SKIP = re.compile(r"(?i)logo|icon|favicon|sprite|avatar|placeholder|app-?store|google-?play|banner-app|social|"
                   r"/catalog/product/|/product[s]?/|/urun(?:ler)?/|/thumbnail")
 PDF_RE = re.compile(r"\.pdf(?:[?#]|$)", re.I)
+# Broşür olmayan resmî PDF'ler (KVKK, aydınlatma metni, sözleşme, politika, bilgi toplumu hizmetleri…)
+PDF_SKIP = re.compile(r"(?i)kvkk|ayd[ıi]nlatma|politika|s[öo]zle[şs]me|ko[şs]ul|gizlilik|[çc]erez|cookie|bilgi[-_ ]toplumu|"
+                      r"veri[-_ ]saklama|imha|ba[şs]vuru[-_ ]form|personal|privacy")
 
 
 @dataclass
@@ -50,11 +53,19 @@ class StoreSource:
     render: bool = True                    # statik HTML'de bulunamazsa tarayıcıyla dene
     min_width: int = 500
     page_kind: str = "aktuel"              # görsel sayfalı yayının türü: aktuel (broşür) | poster (tek tek ürün afişi)
+    # Broşür sayfası görselleri adında "insert/katalog" geçmeyen marketler için ek kabul deseni (yol üzerinde)
+    image_re: str | None = None
+    # PDF broşürün resmî kapak görseli (PDF bağlantısını saran görsel veya bu desene uyan görsel)
+    cover_re: str | None = None
+    # Sayfa başlığı (h1) genel bir sözcükse ("Kataloglar") kaynağın kendi başlığı kullanılır
+    default_title_only: bool = False
 
 
 @dataclass
 class Found:
     pdfs: list[str] = field(default_factory=list)
+    pdf_titles: dict = field(default_factory=dict)                    # PDF adresi → bağlantı metni
+    pdf_covers: dict = field(default_factory=dict)                    # PDF adresi → resmî kapak görseli
     flipbooks: list[tuple[str, str]] = field(default_factory=list)   # (adres, başlık)
     images: list[str] = field(default_factory=list)
     title: str | None = None
@@ -90,14 +101,31 @@ def scan_html(html: str, base_url: str, src: StoreSource) -> Found:
             continue
         seen.add(href)
         if PDF_RE.search(href) and (_own(href, src.hosts) or any(h in _host(href) for h in FLIPBOOK_HOSTS)):
+            t = clean(text_of(a)) or clean(a.attributes.get("title"))
+            if PDF_SKIP.search(href) or (t and PDF_SKIP.search(t)):
+                continue
             out.pdfs.append(href)
+            if t and len(t) > 3:
+                out.pdf_titles[href] = t[:90]
+            img = a.css_first("img")
+            if img is not None:
+                cu = urljoin(base_url, (img.attributes.get("src") or img.attributes.get("data-src") or "").strip())
+                if cu.startswith("https://") and _own(cu, src.hosts) and not SKIP.search(cu):
+                    out.pdf_covers[href] = cu
+                alt = clean(img.attributes.get("alt"))
+                if alt and href not in out.pdf_titles:
+                    out.pdf_titles[href] = alt[:90]
         elif any(_host(href).endswith(h) for h in FLIPBOOK_HOSTS) and urlparse(href).path.strip("/"):
             out.flipbooks.append((href, clean(text_of(a)) or clean(a.attributes.get("title")) or src.title))
     keys: set[str] = set()
     for u in all_image_urls(tree.body or tree.root):
         u = urljoin(base_url, u)
-        if not _own(u, src.hosts) or SKIP.search(u) or not BROCHURE_WORD.search(urlparse(u).path):
+        path = urlparse(u).path
+        extra = bool(src.image_re and re.search(src.image_re, path, re.I))
+        if not _own(u, src.hosts) or SKIP.search(u) or not (BROCHURE_WORD.search(path) or extra):
             continue
+        if src.cover_re and re.search(src.cover_re, path, re.I):
+            continue  # PDF kapağı sayfa görseli değildir
         k = _dedupe_key(u)
         if k not in keys:
             keys.add(k)
@@ -225,6 +253,8 @@ def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx:
     out: list[CatalogData] = []
     slug = re.sub(r"[^a-z0-9]+", "-", (urlparse(page_url).path + "-" + (urlparse(page_url).query or "")).lower()).strip("-")[-30:]
     title = found.title or default_title
+    if title and re.fullmatch(r"(?i)\s*(kataloglar|katalog|insert\s*&?\s*bro[şs][üu]r|indirim\s+b[üu]lteni|bro[şs][üu]rler|aktüel|aktuel)\s*", title):
+        title = default_title
     start, end = parse_tr_range(title, observed)
     if found.images:
         pages = [{"url": u, "thumb_url": u, "page": i + 1, "verified": True} for i, u in enumerate(found.images[:60])]
@@ -232,15 +262,35 @@ def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx:
                                valid_from=start, valid_to=end, pages=pages, cover_url=pages[0]["url"]))
     for j, pdf in enumerate(found.pdfs[:5]):
         name = urlparse(pdf).path.rsplit("/", 1)[-1]
-        s2, e2 = parse_tr_range(name.replace("-", " ").replace("_", " "), observed)
-        out.append(CatalogData(id=f"{store_id}-pdf-{hashlib.sha1(pdf.encode(), usedforsecurity=False).hexdigest()[:10]}", title=title if j == 0 else name,
-                               kind="pdf", official_url=page_url, pdf_url=pdf, valid_from=s2 or start, valid_to=e2 or end))
+        link_title = found.pdf_titles.get(pdf)
+        s2, e2 = parse_tr_range(link_title or "", observed)
+        if s2 is None and e2 is None:
+            s2, e2 = parse_tr_range(name.replace("-", " ").replace("_", " "), observed)
+        if s2 is None and e2 is None:
+            s2, e2 = _numeric_range(name, observed)
+        out.append(CatalogData(id=f"{store_id}-pdf-{hashlib.sha1(pdf.encode(), usedforsecurity=False).hexdigest()[:10]}",
+                               title=link_title or (title if j == 0 else name), kind="pdf", official_url=page_url,
+                               pdf_url=pdf, valid_from=s2 or start, valid_to=e2 or end, cover_url=found.pdf_covers.get(pdf)))
     for fb, t in found.flipbooks[:5]:
         fslug = re.sub(r"[^a-z0-9]+", "-", fb.lower().split("//", 1)[-1])[-40:].strip("-")
         s3, e3 = parse_tr_range(t or "", observed)
         out.append(CatalogData(id=f"{store_id}-{fslug}"[:64], title=t or title, kind="flipbook", official_url=fb,
                                valid_from=s3, valid_to=e3))
     return out
+
+
+def _numeric_range(name: str, observed: date) -> tuple[date | None, date | None]:
+    """Dosya adındaki sayısal tarih aralığı: "17-30.10.26", "17-30.10.2026" → 17 Ekim – 30 Ekim."""
+    m = re.search(r"(\d{1,2})\s*[-_]\s*(\d{1,2})[._](\d{1,2})[._](\d{2,4})", name)
+    if not m:
+        return None, None
+    d1, d2, mo, y = (int(x) for x in m.groups())
+    y = y + 2000 if y < 100 else y
+    try:
+        a, b = date(y, mo, d1), date(y, mo, d2)
+    except ValueError:
+        return None, None
+    return (a, b) if a <= b and abs((b - observed).days) < 200 else (None, None)
 
 
 MIN_PAGE_BYTES = 15_000  # broşür sayfası bundan küçük olamaz (simge/boş görsel elenir)
@@ -304,6 +354,19 @@ class DiscoveryConnector(Connector):
                 if bad:
                     attempts.append(f"{bad} görsel doğrulanamadı (HTML/hata/boş)")
                 found.images = ok
+            if found.pdfs:
+                # PDF gerçekten PDF mi (ilk baytlar "%PDF"); hata sayfası katalog sayılmaz
+                good = []
+                for u in found.pdfs[:5]:
+                    try:
+                        p = client.probe(u)
+                    except ConnectorError:
+                        p = {"ok": False}
+                    if p.get("ok") and p.get("kind") == "pdf":
+                        good.append(u)
+                    else:
+                        attempts.append(f"PDF doğrulanamadı ({p.get('status')}, {p.get('kind')}): {u}")
+                found.pdfs = good
             res.catalogs += to_catalogs(self.store_id, url, found, observed_at.date(), i, self.src.title,
                                         self.src.page_kind)
         if not res.catalogs:
@@ -326,4 +389,15 @@ SOURCES = {
     # "AFIS" adlı resmî ürün afişleri (uploads/file/banner/…AFIS…) gösterilir.
     "file": StoreSource("file", "File Market ürün afişleri", ["https://www.file.com.tr/"], hosts=("file.com.tr",),
                         page_kind="poster"),
+    # 1.6.0 — 23.10.2026'da resmî sayfalarda doğrulandı (yalnızca market zincirleri)
+    # Mopaş /kataloglar: resmî PDF (cdnprod.mopas.com.tr/…/17-30.10.26.pdf), PDF bağlantısını saran HERO.png kapak
+    "mopas": StoreSource("mopas", "Mopaş Kataloğu", ["https://mopas.com.tr/kataloglar"], hosts=("mopas.com.tr",),
+                         cover_re=r"/HERO\.(?:png|jpe?g|webp)$"),
+    # Happy Center indirim bülteni: sayfalar crm.happycenter.tr/admin/images/uploads/happy*.jpg
+    "happycenter": StoreSource("happycenter", "Happy Center İndirim Bülteni",
+                               ["https://www.happycenter.com.tr/kurumsal/indirim-bulteni/"],
+                               hosts=("happycenter.com.tr", "happycenter.tr"), image_re=r"/admin/images/uploads/happy\d*\.(?:jpe?g|png|webp)$"),
+    # Yunus Market Insert & Broşür: resmî PDF insertler (/images/dosyalar/insert-brosur/…pdf)
+    "yunus": StoreSource("yunus", "Yunus Market İnsert", ["https://www.yunusmarket.com.tr/insert-brosur"],
+                         hosts=("yunusmarket.com.tr",)),
 }

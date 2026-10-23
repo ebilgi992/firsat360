@@ -68,6 +68,14 @@ def daily_deals(session: Session, today: date, now: datetime | None = None, limi
         if s is None:
             continue
         cands.append((s, o))
+    # Aynı ürün birden çok kez aday olmasın (aynı ürünün iki boyu, iki haftanın broşürü): mağaza + ad başına en iyi puan
+    from .normalize import fold
+    best: dict[tuple[str, str], tuple[float, Offer]] = {}
+    for sc, o in cands:
+        k = (o.store_id, fold(o.name or ""))
+        if k not in best or sc > best[k][0] or (sc == best[k][0] and o.id < best[k][1].id):
+            best[k] = (sc, o)
+    cands = list(best.values())
     picked, stores = pick(cands, today, limit, per_store)
     return {"date": today.isoformat(), "title": "Günün İndirimleri", "note": NOTE, "offer_ids": picked,
             "stores": stores}

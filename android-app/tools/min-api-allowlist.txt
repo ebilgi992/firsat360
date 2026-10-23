@@ -7,3 +7,6 @@ android/view/WindowInsetsController  # API 30+; yalnızca SDK_INT >= 30 dalında
 android/view/Window.getInsetsController  # API 30+; SDK_INT >= 30 kontrolü
 android/view/View.getWindowInsetsController  # API 30+; yalnızca SDK_INT >= 30 dalında kullanılır (applySystemBars)
 android/widget/TextView.setAccessibilityHeading  # API 28+; yalnızca SDK_INT >= 28 dalında (ui/Ui.kt accessibilityHeading)
+android/graphics/RenderEffect  # API 31+; yalnızca SDK_INT >= 31 dalında (HomeScreen vitrin bulanıklığı)
+android/view/View.setRenderEffect  # API 31+; yalnızca SDK_INT >= 31 dalında
+android/graphics/RenderEffect.createBlurEffect  # API 31+; yalnızca SDK_INT >= 31 dalında

@@ -34,30 +34,31 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
         val list = a.gridListView(grid)
         val header = a.vbox()
         header.setPadding(0, dp(18), 0, dp(10))
-        header.addView(a.text("Mağazalar", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(l = dp(20), r = dp(20)))
-        header.addView(a.text("${f.stores.size} market, ${f.offers.size} ürün, ${f.catalogs.count { it.coverUrl != null || it.hasPages }} katalog",
-            12.5f, Theme.p.text2, Theme.medium), lp(l = dp(20), r = dp(20), t = dp(4)))
+        header.addView(a.text("Marketler", 30f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(l = dp(20), r = dp(20)))
+        header.addView(a.text("${f.stores.size} market, ${f.listOffers.size} ürün", 13f, Theme.p.text2, Theme.medium),
+            lp(l = dp(20), r = dp(20), t = dp(2)))
 
-        // Mağaza çipleri (yatay kaydırma): rozet + ad + ürün sayısı
+        // Market çipleri (yatay kaydırma)
         val seg = a.hbox().apply { setPadding(dp(20), 0, dp(12), 0) }
         var selectedChip: View? = null
-        for (s in f.stores) {
+        val counts = f.listOffers.groupingBy { it.storeId }.eachCount()
+        for (s in f.stores.sortedWith(compareBy({ it.chainRank }, { it.sort }))) {
             val sid = s.id
             val on = sid == storeId
-            val n = f.offers.count { it.storeId == sid }
+            val n = counts[sid] ?: 0
             val chip = a.hbox().apply {
                 setPadding(dp(6), dp(6), dp(14), dp(6))
-                background = ripple(if (on) rounded(Theme.store(sid), 6f) else rounded(Theme.p.surface, 6f, Theme.p.outline, 1.5f), 6f)
-                val dot = FrameLayout(a).apply { background = rounded(if (on) Theme.tint(0xFFFFFFFF.toInt(), 0.25f) else Theme.store(sid), 2f) }
-                dot.addView(a.text(Theme.storeShort[sid] ?: s.shortLabel, 12f, Theme.onStore(sid), Theme.display, 1),
+                background = ripple(if (on) rounded(Theme.store(sid), 16f) else surfaceBg(16f), 16f)
+                val dot = FrameLayout(a).apply { background = rounded(if (on) Theme.tint(0xFFFFFFFF.toInt(), 0.22f) else Theme.store(sid), 11f) }
+                dot.addView(a.text(Theme.storeShort[sid] ?: s.shortLabel, 11.5f, Theme.onStore(sid), Theme.display, 1),
                     FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-                addView(dot, LinearLayout.LayoutParams(dp(30), dp(30)))
+                addView(dot, LinearLayout.LayoutParams(dp(34), dp(34)))
                 val col = a.vbox()
-                col.addView(a.text(s.name, 16f, if (on) Theme.onStore(sid) else Theme.p.text, Theme.displayBold, 1))
-                col.addView(a.text(if (n > 0) "$n ürün" else "katalog", 11f,
+                col.addView(a.text(s.name, 14.5f, if (on) Theme.onStore(sid) else Theme.p.text, Theme.semibold, 1))
+                col.addView(a.text(if (n > 0) "$n ürün" else "Broşür", 11.5f,
                     if (on) Theme.tint(Theme.onStore(sid), 0.8f) else Theme.p.text3, Theme.medium, 1))
                 addView(col, lp(WRAP, WRAP, l = dp(8)))
-                contentDescription = "${s.name}, ${if (n > 0) "$n ürün" else "yalnızca katalog"}"
+                contentDescription = "${s.name}, ${if (n > 0) "$n ürün" else "yalnızca broşür"}" + if (on) " (seçili)" else ""
                 onTap { storeId = sid; category = null; a.refreshCurrent() }
             }
             if (on) selectedChip = chip
@@ -67,69 +68,32 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
         selectedChip?.let { sel -> segScroll.post { segScroll.smoothScrollTo(maxOf(0, sel.left - dp(20)), 0) } }
         header.addView(segScroll, lp(t = dp(16)))
 
-        if (store != null) {
-            val info = a.card()
-            val row = a.hbox()
-            val statusLabel = when (store.status) {
-                "ok", "partial" -> "Güncel"; "link_only" -> "Katalog"; "client_bridge" -> "Resmî broşür"
-                "error" -> "Güncelleniyor"; else -> "Yakında"
-            }
-            val (fg, bg) = when (store.status) {
-                "ok", "partial", "link_only", "client_bridge" -> Theme.p.ok to Theme.p.okSoft
-                else -> Theme.p.warn to Theme.p.warnSoft
-            }
-            row.addView(a.pill(statusLabel, fg, bg))
-            row.addView(a.flex())
-            row.addView(a.text("Güncellendi ${Dates.relative(store.lastSuccessAt, a.now)}", 12f, Theme.p.text2, Theme.medium, 1))
-            info.addView(row)
-            if (store.status == "error") {
-                info.addView(a.notice(Icon.CLOCK, "Bu marketin son güncellemesi gecikti; gösterilen fırsatlar " +
-                    "${Dates.relative(store.lastSuccessAt, a.now)} alındı. Fiyatlar değişmiş olabilir.", Theme.p.warn, Theme.p.warnSoft),
-                    lp(t = dp(10)))
-            }
-            a.feed.clientBridge[store.id]?.let { br ->
-                // İstemci köprüsü: resmî broşür sayfası cihazda açılır, sayfalar doğrudan yerel okuyucuya aktarılır
-                info.addView(a.button("Güncel broşürü aç", Icon.CATALOG, true) { a.openBridge(store, br) }, lp(MATCH, WRAP, t = dp(12)))
-            }
-            val btns = a.hbox()
-            btns.addView(a.button("Resmî sayfa", Icon.GLOBE, false) { a.openWeb(store.catalogUrl, store.name) }, lp(0, WRAP, weight = 1f))
-            val favStore = store.id in a.user.favoriteStores()
-            btns.addView(a.button(if (favStore) "Favori mağaza" else "Favorilere ekle", if (favStore) Icon.STAR_FILLED else Icon.STAR, favStore) {
-                val now = a.user.toggleFavoriteStore(store.id)
-                a.toast(if (now) "${store.name} favori mağazalara eklendi" else "${store.name} favorilerden çıkarıldı")
-                a.refreshCurrent()
-            }, lp(0, WRAP, l = dp(8), weight = 1f))
-            info.addView(btns, lp(t = dp(14)))
-            header.addView(info, lp(l = dp(20), r = dp(20), t = dp(14)))
-        }
+        val storeOffersAll = f.listOffers.filter { it.storeId == storeId }
+        if (store != null) header.addView(storeHero(store, storeOffersAll.size), lp(l = dp(20), r = dp(20), t = dp(16)))
 
-        // Süresi dolmuşlar çıkarılır; bölge kopyaları kullanıcının bölgesine göre tek karta indirgenir.
+        // Güncel kataloglar: süresi dolmuşlar çıkarılır; bölge kopyaları kullanıcının bölgesine göre tek karta indirgenir.
         val all = f.catalogs.filter { it.storeId == storeId &&
             com.firsat360.app.core.CatalogRules.state(it, a.today) != com.firsat360.app.core.CatalogState.EXPIRED }
-        val catalogs = com.firsat360.app.core.CatalogRules.collapse(all, a.user.region)
+        val catalogs = com.firsat360.app.core.CatalogRules.collapse(all, a.user.region).filter { it.kind != "link_only" }
         if (catalogs.isNotEmpty()) {
-            header.addView(a.sectionHeader("Kataloglar"))
+            header.addView(a.sectionHeader("Güncel kataloglar"))
             val regions = all.mapNotNull { it.region }.distinct()
             if (regions.size > 1) {
                 val names = mapOf("istanbul" to "İstanbul", "bursa" to "Bursa", "trakya" to "Trakya")
                 val chips = a.hbox().apply { setPadding(dp(20), 0, dp(20), dp(10)) }
-                for (r in regions) {
-                    val on = r == a.user.region
-                    chips.addView(a.pill(names[r] ?: r, if (on) 0xFFFFFFFF.toInt() else Theme.p.text2,
-                        if (on) Theme.p.accent else Theme.p.surface2, 13f, Theme.semibold).apply {
-                        contentDescription = "Bölge: ${names[r] ?: r}"
-                        onTap { a.user.region = r; a.refreshCurrent() }
-                    }, lp(WRAP, WRAP, r = dp(8)))
-                }
+                for (r in regions) chips.addView(a.chip(names[r] ?: r, r == a.user.region) { a.user.region = r; a.refreshCurrent() }, lp(WRAP, WRAP, r = dp(8)))
                 header.addView(chips)
             }
-            val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(8), 0) }
-            for (c in catalogs.sortedWith(compareBy<com.firsat360.app.core.Catalog> { it.kind == "link_only" }.thenBy { it.validFrom ?: "" }))
+            val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), dp(4), dp(6), dp(8)) }
+            for (c in catalogs.sortedBy { it.validFrom ?: "" })
                 row.addView(a.catalogCard(c, store?.name ?: "", a.today) { a.openCatalog(c.id) })
             header.addView(a.hscroll(row))
         }
 
-        val storeOffers = f.offers.filter { it.storeId == storeId }
+        // Geçmiş kataloglar: sunucudaki süresi bitmiş okunabilir kataloglar + bu cihazda okunmuş önceki broşürler, tarihe göre
+        archiveSection(header, store)
+
+        val storeOffers = storeOffersAll
         if (storeOffers.isEmpty()) {
             header.addView(a.notice(Icon.CATALOG, "${store?.name ?: "Bu market"} fırsatlarını yukarıdaki katalog ve broşürlerde sayfa sayfa inceleyebilirsiniz.", Theme.p.text2, Theme.p.surface2),
                 lp(l = dp(20), r = dp(20), t = dp(18)))
@@ -152,6 +116,98 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
             "Mağazanın resmî sayfasını açarak güncel kampanyaları görebilirsiniz."), null, false)
         list.adapter = a.offerAdapter(items, grid)
         return list
+    }
+
+    /** Marketin üst kartı: marka renginde katman, durum, güncel broşür ve hızlı eylemler. */
+    private fun storeHero(store: com.firsat360.app.core.Store, offerCount: Int): View {
+        val f = a.feed
+        val sc = Theme.store(store.id)
+        val bridge = f.clientBridge[store.id]
+        val custom = com.firsat360.app.data.CustomStores.isCustom(store.id)
+        val card = a.vbox(dp(18)).apply {
+            background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Theme.blend(Theme.p.surface, sc, if (Theme.p.dark) 0.30f else 0.16f), Theme.p.surface)).apply {
+                cornerRadius = dp(24).toFloat(); setStroke(1, Theme.p.outline) }
+        }
+        val top = a.hbox()
+        top.addView(FrameLayout(a).apply {
+            background = rounded(sc, 16f)
+            val short = Theme.storeShort[store.id] ?: store.name.take(4)
+            addView(a.text(short, if (short.length >= 4) 14f else 17f, Theme.onStore(store.id), Theme.display, 1), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
+        }, LinearLayout.LayoutParams(dp(56), dp(56)))
+        val t = a.vbox()
+        t.addView(a.text(store.name, 24f, Theme.p.text, Theme.display, 1))
+        val (label, color) = when {
+            custom -> "Sizin eklediğiniz market" to Theme.p.text2
+            bridge != null && (store.status == "error" || store.status == "client_bridge") -> "Broşür resmî sayfasından, bu cihazda" to Theme.p.ok
+            store.status == "ok" || store.status == "partial" -> "Güncel, ${Dates.relative(store.lastSuccessAt, a.now)}" to Theme.p.ok
+            store.status == "link_only" -> "Broşür ve kataloglar" to Theme.p.ok
+            store.status == "error" -> "Güncelleme gecikti" to Theme.p.warn
+            else -> "Yakında" to Theme.p.text3
+        }
+        t.addView(a.text(label, 13f, color, Theme.medium, 2), lp(t = dp(2)))
+        top.addView(t, lp(0, WRAP, l = dp(14), weight = 1f))
+        val favStore = store.id in a.user.favoriteStores()
+        top.addView(a.iconButton(if (favStore) Icon.STAR_FILLED else Icon.STAR, if (favStore) Theme.p.accent else Theme.p.text,
+            desc = if (favStore) "${store.name} favorilerden çıkar" else "${store.name} favorilere ekle") {
+            val now = a.user.toggleFavoriteStore(store.id)
+            a.toast(if (now) "${store.name} favorilere eklendi" else "${store.name} favorilerden çıkarıldı")
+            a.refreshCurrent()
+        })
+        card.addView(top)
+        if (store.status == "error" && offerCount > 0) {
+            card.addView(a.notice(Icon.CLOCK, "Bu marketin son güncellemesi gecikti; gösterilen fiyatlar " +
+                "${Dates.relative(store.lastSuccessAt, a.now)} alındı.", Theme.p.warn, Theme.p.warnSoft), lp(t = dp(12)))
+        }
+        if (bridge != null) {
+            val cached = com.firsat360.app.data.DeviceBrochures.get(a, store.id, freshOnly = false)
+            val sub = when {
+                cached == null -> null
+                cached.pdfs.isNotEmpty() -> "${cached.pdfs.size} PDF broşür, ${relMs(cached.savedAt)} okundu"
+                else -> "${cached.pages.size} sayfa, ${relMs(cached.savedAt)} okundu"
+            }
+            card.addView(a.button("Güncel broşürü aç", Icon.CATALOG, true) { a.openBridge(store, bridge) }, lp(t = dp(16)))
+            if (sub != null) card.addView(a.text(sub, 12.5f, Theme.p.text3, Theme.regular, 1, Gravity.CENTER), lp(t = dp(6)))
+        }
+        val btns = a.hbox()
+        btns.addView(a.button("Resmî sayfa", Icon.GLOBE, false) { a.openWeb(store.catalogUrl, store.name) }, lp(0, WRAP, weight = 1f))
+        if (custom) btns.addView(a.button("Kaldır", Icon.TRASH, false) {
+            try {
+                android.app.AlertDialog.Builder(a).setTitle("${store.name} kaldırılsın mı?")
+                    .setMessage("Bu cihazdaki broşür kayıtları da silinir.")
+                    .setPositiveButton("Kaldır") { _, _ ->
+                        com.firsat360.app.data.CustomStores.remove(a, store.id); a.repo.refreshCustom()
+                        storeId = a.feed.stores.firstOrNull()?.id ?: "bim"; a.toast("${store.name} kaldırıldı"); a.refreshCurrent()
+                    }.setNegativeButton("Vazgeç", null).show()
+            } catch (e: Exception) { }
+        }, lp(0, WRAP, l = dp(8), weight = 1f))
+        card.addView(btns, lp(t = dp(10)))
+        return card
+    }
+
+    private fun relMs(ms: Long): String = Dates.relative(java.time.Instant.ofEpochMilli(ms).toString(), a.now)
+
+    /** Geçmiş kataloglar (ay ay): feed arşivi + cihaz geçmişi. */
+    private fun archiveSection(header: LinearLayout, store: com.firsat360.app.core.Store?) {
+        val f = a.feed
+        data class Past(val date: java.time.LocalDate, val view: () -> View)
+        val items = ArrayList<Past>()
+        for (c in f.archive.filter { it.storeId == storeId }) {
+            val d = Dates.date(c.validTo) ?: Dates.date(c.validFrom) ?: continue
+            items.add(Past(d) { a.archiveCard(c, store?.name ?: "") })
+        }
+        for (e in com.firsat360.app.data.DeviceBrochures.history(a, storeId)) {
+            val d = java.time.Instant.ofEpochMilli(e.savedAt).atZone(Dates.TR).toLocalDate()
+            items.add(Past(d) { a.deviceHistoryCard(store, e, d) })
+        }
+        if (items.isEmpty()) return
+        header.addView(a.sectionHeader("Geçmiş kataloglar"))
+        for ((month, list) in items.sortedByDescending { it.date }.groupBy { Dates.monthYear(it.date) }) {
+            header.addView(a.text(month, 13.5f, Theme.p.text3, Theme.semibold, 1), lp(l = dp(20), r = dp(20), t = dp(4), b = dp(8)))
+            val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), 0, dp(6), dp(10)) }
+            for (p in list) row.addView(p.view())
+            header.addView(a.hscroll(row))
+        }
     }
 }
 
@@ -177,7 +233,7 @@ class SearchScreen(a: MainActivity, initialCategory: String? = null) : Screen(a)
         val header = a.vbox()
         header.setPadding(0, dp(18), 0, dp(8))
         val titleRow = a.hbox()
-        titleRow.addView(a.text("Ara", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(0, WRAP, weight = 1f))
+        titleRow.addView(a.text("Ara", 30f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(0, WRAP, weight = 1f))
         header.addView(titleRow, lp(l = dp(20), r = dp(20)))
 
         val box = a.hbox().apply {
@@ -219,7 +275,7 @@ class SearchScreen(a: MainActivity, initialCategory: String? = null) : Screen(a)
             inp.setText(""); inp.requestFocus()
             (a.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
                 .showSoftInput(inp, 0)
-        }.apply { background = rounded(Theme.p.surface2, 6f); visibility = if (query.isEmpty()) View.GONE else View.VISIBLE }
+        }.apply { background = rounded(Theme.p.surface2, 14f); visibility = if (query.isEmpty()) View.GONE else View.VISIBLE }
         clearBtn = clear
         box.addView(clear, lp(dp(48), dp(48)))
         header.addView(box, lp(l = dp(20), r = dp(20), t = dp(14)))

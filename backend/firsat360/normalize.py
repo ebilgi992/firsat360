@@ -32,6 +32,19 @@ def clean(text: str | None) -> str | None:
     return t or None
 
 
+_BULLETS = re.compile(r"\s*[•·▪●◦;|]+\s*")
+
+
+def clean_variant(text: str | None) -> str | None:
+    """Ürün açıklaması/ölçüsü: madde işaretleri ("• 2 L", "• • Napoliten 360 g • Arrabbiata 360 g") temizlenir,
+    parçalar virgülle birleşir. Yalnızca işaretten oluşan açıklama (ör. "•") yok sayılır."""
+    if not text:
+        return None
+    parts = [p.strip(" -–,") for p in _BULLETS.split(text)]
+    parts = [p for p in dict.fromkeys(parts) if p and re.search(r"[0-9A-Za-zÇĞİÖŞÜçğıöşü]", p)]
+    return ", ".join(parts) or None
+
+
 _PRICE_RE = re.compile(r"(\d{1,3}(?:[.\s]\d{3})+|\d+)\s*(?:[.,]\s*(\d{1,2}))?")
 
 

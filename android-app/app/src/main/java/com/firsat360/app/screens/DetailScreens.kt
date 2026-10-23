@@ -88,7 +88,7 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
                 val src = a.hbox(Gravity.CENTER).apply { setPadding(dp(10), dp(6), dp(12), dp(6)) }
                 src.addView(IconView(a, Icon.CHECK, Theme.p.ok, 15))
                 src.addView(a.text("${store?.name ?: ""} resmî ürün görseli", 11.5f, Theme.p.text2, Theme.medium, 1), lp(WRAP, WRAP, l = dp(6)))
-                src.background = rounded(Theme.p.surface, 4f, Theme.p.outline)
+                src.background = rounded(Theme.p.surface, 12f, Theme.p.outline)
                 hero.addView(src, lp(WRAP, WRAP, t = dp(12)))
             }
         } else {
@@ -110,22 +110,19 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
 
         // Fiyat kartı
         // Fiyat: rafta asılı sarı etiket (büyük lira, üstte kuruş); indirim kırmızı damga
-        val priceCard = a.vbox(dp(18)).apply {
-            background = android.graphics.drawable.LayerDrawable(arrayOf(rounded(Theme.p.labelShade, 6f), rounded(Theme.p.label, 6f)))
-                .apply { setLayerInset(1, 0, 0, 0, dp(4)) }
-        }
+        val priceCard = a.card(dp(20))
         val pr = a.hbox(Gravity.BOTTOM)
-        pr.addView(a.priceText(Money.format(o.price), 52f, Theme.p.onLabel))
+        pr.addView(a.priceText(Money.format(o.price), 52f, Theme.p.text))
         val pct = Money.declaredDiscountPercent(o.price, o.storeDeclaredOldPrice)
         if (pct != null) { pr.addView(a.flex()); pr.addView(a.text("%$pct", 24f, 0xFFFFFFFF.toInt(), Theme.display, 1).apply {
-            setPadding(dp(10), dp(2), dp(10), dp(4)); background = rounded(Theme.p.deal, 2f); rotation = -5f
+            setPadding(dp(12), dp(4), dp(12), dp(6)); background = rounded(Theme.p.deal, 12f)
             contentDescription = "Yüzde $pct indirim (market beyanı)" }, lp(WRAP, WRAP, b = dp(10))) }
         priceCard.addView(pr)
         if (o.storeDeclaredOldPrice != null) {
-            priceCard.addView(a.text(Money.format(o.storeDeclaredOldPrice), 15f, Theme.blend(Theme.p.onLabel, Theme.p.label, 0.35f), Theme.medium).apply {
+            priceCard.addView(a.text(Money.format(o.storeDeclaredOldPrice), 15f, Theme.p.text3, Theme.medium).apply {
                 paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             }, lp(t = dp(6)))
-            priceCard.addView(a.text("Üstü çizili fiyat, marketin sayfasında yazan önceki fiyattır.", 12.5f, Theme.blend(Theme.p.onLabel, Theme.p.label, 0.2f),
+            priceCard.addView(a.text("Üstü çizili fiyat, marketin sayfasında yazan önceki fiyattır.", 12.5f, Theme.p.text3,
                 Theme.regular), lp(t = dp(8)))
         }
         if (o.condition != null) priceCard.addView(a.notice(Icon.TAG, o.condition, Theme.p.warn, Theme.p.warnSoft), lp(t = dp(12)))
@@ -134,9 +131,21 @@ class OfferScreen(a: MainActivity, private val offerId: String) : Screen(a) {
                 "mağazada kontrol edin.", Theme.p.warn, Theme.p.warnSoft), lp(t = dp(12)))
         }
         col.addView(priceCard, lp(t = dp(18)))
+        // Aynı ürünün farklı boy/fiyat seçenekleri (kopya kart yerine tek kartta)
+        if (o.optionCount >= 2) {
+            val oc = a.card(dp(16))
+            oc.addView(a.text("${o.optionCount} seçenek", 16f, Theme.p.text, Theme.semibold))
+            for (x in o.options) {
+                val r = a.hbox().apply { setPadding(0, dp(10), 0, dp(2)) }
+                r.addView(a.text(x.variant ?: "Seçenek", 14.5f, Theme.p.text2, Theme.regular, 2), lp(0, WRAP, weight = 1f))
+                r.addView(a.priceText(Money.format(x.price), 21f, Theme.p.text))
+                oc.addView(r)
+            }
+            col.addView(oc, lp(t = dp(12)))
+        }
 
         // Diğer marketlerde: TEMKİNLİ eşleşme (aynı ölçü + ad sözcüklerinin büyük kısmı ortak)
-        val others = com.firsat360.app.core.SimilarOffers.find(f.offers, o)
+        val others = com.firsat360.app.core.SimilarOffers.find(f.listOffers, o)
         if (others.isNotEmpty()) {
             val cmp = a.card(dp(16))
             cmp.addView(a.text("Diğer marketlerde", 21f, Theme.p.text, Theme.displayBold))
@@ -271,36 +280,50 @@ fun siteFamily(host: String?): String? {
 class WebScreen(a: MainActivity, private val url: String, private val title: String,
                 private val catalog: Boolean = false, private val storeId: String? = null,
                 /** Köprü okuma profili (assets/bridge/<profile>.js) ve izinli alan adı aileleri (feed client_bridge). */
-                private val profile: String = "generic", private val allowedHosts: List<String> = emptyList()) : Screen(a) {
+                private val profile: String = "generic", private val allowedHosts: List<String> = emptyList(),
+                /** Kullanıcının eklediği market: bulunan broşür bu kimlikle saklanır ve kullanıcıya bildirilir. */
+                private val onFound: ((Int) -> Unit)? = null) : Screen(a) {
     override val tab: Tab get() = Tab.STORES
     private var web: WebView? = null
+    private var session: com.firsat360.app.data.BridgeSession? = null
+    private var overlay: View? = null
+    private var overlayText: android.widget.TextView? = null
+    private var pagesBtn: View? = null
+    private var webFrame: FrameLayout? = null
+    private var handedOff = false
+    private var upgrades = 0
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun create(): View {
         // Ekran yeniden kurulursa (refreshCurrent) eski WebView ve okuma döngüsü kapatılır: sızıntı ve çift okuma olmaz.
+        session?.cancel(); session = null
         web?.let { try { it.stopLoading(); it.destroy() } catch (e: Exception) { } }
-        web = null; extracting = false; polls = 0; navigations = 0; handedOff = false; pagesBtn = null
-        challengeShown = false; deadlines.clear(); upgrades = 0
+        web = null; handedOff = false; pagesBtn = null; upgrades = 0
         val outer = a.vbox()
-        outer.setBackgroundColor(if (catalog) 0xFF0B0D12.toInt() else Theme.p.bg)
-        val host = if (catalog) "Resmî katalog · iki parmakla yakınlaştırabilirsiniz" else Uri.parse(url).host ?: ""
+        outer.setBackgroundColor(if (catalog) Theme.p.ink else Theme.p.bg)
+        val host = if (catalog) "Resmî sayfa, iki parmakla yakınlaştırabilirsiniz" else Uri.parse(url).host ?: ""
+        val onDark = catalog
         val bar = a.hbox().apply {
             setPadding(dp(12), dp(10), dp(12), dp(8))
-            addView(a.iconButton(Icon.CLOSE, desc = "Kapat") { a.onBackPressedCompat() })
+            addView(a.iconButton(Icon.CLOSE, if (onDark) 0xFFF2F3F7.toInt() else Theme.p.text,
+                if (onDark) 0x1FFFFFFF else Theme.p.surface, "Kapat") { a.onBackPressedCompat() })
             val t = a.vbox()
-            t.addView(a.text(title, 15f, if (catalog) 0xFFF2F3F7.toInt() else Theme.p.text, Theme.semibold, 1))
+            t.addView(a.text(title, 16f, if (onDark) 0xFFF2F3F7.toInt() else Theme.p.text, Theme.semibold, 1))
             t.addView(a.hbox().apply {
                 addView(IconView(a, Icon.SHIELD, Theme.p.ok, 14))
-                addView(a.text(host, 12f, if (catalog) 0xB3F2F3F7.toInt() else Theme.p.text2, Theme.medium, 1), lp(WRAP, WRAP, l = dp(4)))
+                addView(a.text(host, 12f, if (onDark) 0xB3F2F3F7.toInt() else Theme.p.text2, Theme.medium, 1), lp(WRAP, WRAP, l = dp(4)))
             }, lp(t = dp(2)))
             addView(t, lp(0, WRAP, l = dp(12), weight = 1f))
-            addView(a.iconButton(Icon.EXTERNAL, desc = "Tarayıcıda aç") { a.openExternal(web?.url ?: url) })
+            addView(a.iconButton(Icon.EXTERNAL, if (onDark) 0xFFF2F3F7.toInt() else Theme.p.text,
+                if (onDark) 0x1FFFFFFF else Theme.p.surface, "Tarayıcıda aç") { a.openExternal(web?.url ?: url) })
         }
         outer.addView(bar)
         val progress = ProgressBar(a, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100; progressTintList = android.content.res.ColorStateList.valueOf(Theme.p.accent)
         }
         outer.addView(progress, lp(MATCH, dp(3)))
+        val s = if (catalog && storeId != null) com.firsat360.app.data.BridgeSession(a, url, profile, allowedHosts, listener()) else null
+        session = s
         val w = WebView(a).apply {
             // Yalnızca marketlerin resmî sayfaları için: JS gerekli; dosya/içerik erişimi, karışık içerik ve
             // JavaScript köprüsü kapalı (addJavascriptInterface kullanılmaz).
@@ -321,18 +344,18 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
                 // API 24+ cihazlarda yeni imzanın varsayılan uygulaması bu yöntemi çağırır.
                 @Deprecated("WebViewClient API")
                 override fun shouldOverrideUrlLoading(view: WebView?, u: String?): Boolean {
-                    val s = Uri.parse(u ?: return true).scheme?.lowercase() ?: return true
-                    if (s == "https") return false
+                    val sc = Uri.parse(u ?: return true).scheme?.lowercase() ?: return true
+                    if (sc == "https") return false
                     // HTTPS'e yükselt (sunucu https→http yönlendirip döngü kurarsa en çok 3 kez)
-                    if (s == "http") { if (upgrades++ < 3) view?.loadUrl(u.replaceFirst("http://", "https://")); return true }
+                    if (sc == "http") { if (upgrades++ < 3) view?.loadUrl(u.replaceFirst("http://", "https://")); return true }
                     // tel:, intent:, file:, javascript: vb. WebView içinde açılmaz; yalnızca güvenli şemalar dışarıda
-                    if (s == "tel" || s == "mailto" || s == "market") a.openExternal(u)
+                    if (sc == "tel" || sc == "mailto" || sc == "market") a.openExternal(u)
                     return true
                 }
                 override fun onPageStarted(view: WebView?, u: String?, favicon: Bitmap?) { progress.visibility = View.VISIBLE }
                 override fun onPageFinished(view: WebView?, u: String?) {
                     progress.visibility = View.GONE
-                    if (catalog && view != null) startExtraction(view)
+                    if (view != null && view === web) session?.onPageFinished(view)
                 }
             })
             setWebChromeClient(object : WebChromeClient() {
@@ -345,7 +368,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         val frame = FrameLayout(a)
         frame.addView(w, FrameLayout.LayoutParams(MATCH, MATCH))
         webFrame = frame
-        if (catalog && storeId != null) {
+        if (s != null) {
             overlay = extractionOverlay()
             frame.addView(overlay, FrameLayout.LayoutParams(MATCH, MATCH))
         }
@@ -354,40 +377,38 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     }
 
     // ------------------------------------------------------------------ cihazda resmî sayfadan broşür alma
-    //
-    // Akış (kullanıcı market kartına dokunduğunda başlar):
-    //  1. Resmî sayfa bu WebView'de, kullanıcının kendi bağlantısıyla açılır; üstünde yerel bir yükleme katmanı
-    //     ("Resmî siteden güncel broşürler alınıyor…") ve "Sayfayı göster" düğmesi vardır (kullanıcı her an siteyi görebilir).
-    //  2. Sayfa yüklenince assets/bridge/common.js + <profil>.js çalıştırılır: tembel yüklenen görseller için sayfa adım adım kaydırılır, ardından
-    //     büyük ve dikey (broşür/afiş sayfası oranında) görsellerin en yüksek çözünürlüklü adresi toplanır.
-    //  3. Görsel sayısı art arda iki ölçümde sabitse (≥2 sayfa) WebView kapanır ve yerel tam ekran okuyucu açılır.
-    //  4. Bot sınaması / doğrulama sayfası görülürse katman kalkar: kullanıcı adımı KENDİSİ tamamlar (otomatik çözülmez);
-    //     sayfa yeniden yüklenince alma kaldığı yerden sürer. 15 sn içinde broşür bulunamazsa resmî sayfa olduğu gibi kalır.
-    //
-    // Bağ: evaluateJavascript (tek yönlü, sonuç dönüşü). addJavascriptInterface/postMessage köprüsü KULLANILMAZ:
-    // üçüncü taraf sayfaya uygulama içine çağrı yapabileceği bir yüzey açılmaz. Görseller kopyalanmaz; resmî adresinden yüklenir.
+    // Motor: data/BridgeSession (arka plan ön yüklemesiyle ortak). Bu ekran yalnızca görünür katmanı yönetir:
+    // "Resmî siteden güncel broşürler alınıyor…" + "Sayfayı göster"; doğrulama sayfasında katman kalkar ve kullanıcı
+    // adımı KENDİSİ tamamlar (otomatik çözülmez); bulunan sayfalar/PDF doğrudan yerel okuyucuda açılır.
 
-    private var overlay: View? = null
-    private var overlayText: android.widget.TextView? = null
-    private var pagesBtn: View? = null
-    private var webFrame: FrameLayout? = null
-    private var collected: List<String> = emptyList()
-    private var lastCount = -1
-    private var polls = 0
-    private var handedOff = false
-    private var extracting = false
+    private fun listener() = object : com.firsat360.app.data.BridgeSession.Listener {
+        override fun onProgress(pages: Int) {
+            overlayText?.text = if (pages == 0) "Resmî siteden güncel broşürler alınıyor…" else "$pages broşür sayfası bulundu…"
+            if (pages >= 2) showPagesButton(pages)
+        }
+        override fun onNavigating() { overlayText?.text = "Resmî katalog açılıyor…" }
+        override fun onChallenge(first: Boolean) {
+            if (first) hideOverlay("Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.")
+        }
+        override fun onImages(pages: List<String>) { handOff(pages) }
+        override fun onPdf(items: List<com.firsat360.app.data.BridgeSession.PdfItem>) { handOffPdf(items) }
+        override fun onGiveUp(best: List<String>, reason: String) {
+            hideOverlay("Bu sayfada broşür bulunamadı; resmî sayfa gösteriliyor.")
+            onFound?.invoke(0)
+        }
+    }
 
     private fun extractionOverlay(): View = a.vbox().apply {
-        setBackgroundColor(0xF20B0D12.toInt())
+        setBackgroundColor(Theme.tint(Theme.p.ink, 0.96f))
         setGravity(Gravity.CENTER)
         isClickable = true  // alttaki sayfaya dokunulmasın (katman görünürken)
         contentDescription = "Resmî siteden güncel broşürler alınıyor"
         addView(ProgressBar(a).apply { isIndeterminate = true }, lp(dp(44), dp(44)))
-        overlayText = a.text("Resmî siteden güncel broşürler alınıyor…", 15f, 0xFFF2F3F7.toInt(), Theme.semibold,
+        overlayText = a.text("Resmî siteden güncel broşürler alınıyor…", 16f, 0xFFF2F3F7.toInt(), Theme.semibold,
             gravity = Gravity.CENTER)
         addView(overlayText, lp(WRAP, WRAP, t = dp(16)))
-        addView(a.text(Uri.parse(url).host ?: "", 12.5f, 0xB3F2F3F7.toInt(), Theme.regular, 1, Gravity.CENTER), lp(t = dp(6)))
-        addView(a.button("Sayfayı göster", Icon.GLOBE, false) { hideOverlay(null) }, lp(WRAP, WRAP, t = dp(22)))
+        addView(a.text(Uri.parse(url).host ?: "", 13f, 0xB3F2F3F7.toInt(), Theme.regular, 1, Gravity.CENTER), lp(t = dp(6)))
+        addView(a.ghostButton("Sayfayı göster", Icon.GLOBE) { hideOverlay(null) }, lp(WRAP, WRAP, t = dp(22)))
     }
 
     private fun hideOverlay(message: String?) {
@@ -395,112 +416,24 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         if (message != null) a.toast(message)
     }
 
-    /** Belge başına TEK süre sınırı (#p= gibi parça değişimleri ve yönlendirmeler sayacı sıfırlayamaz). */
-    private fun deadline(view: WebView): Long =
-        deadlines.getOrPut((view.url ?: url).substringBefore('#')) { System.currentTimeMillis() + MAX_MS }
-
-    private fun startExtraction(view: WebView) {
-        if (handedOff) return
-        lastCount = -1
-        deadline(view)
-        if (!extracting) { extracting = true; view.postDelayed({ poll(view) }, 1200) }
-    }
-
-    private fun poll(view: WebView) {
-        if (handedOff || view !== web) { extracting = false; return }
-        try {
-            view.evaluateJavascript(com.firsat360.app.data.BridgeScripts.get(a, profile)) { raw -> onExtracted(view, raw) }
-        } catch (e: Exception) { extracting = false; hideOverlay(null) }
-    }
-
-    private fun onExtracted(view: WebView, raw: String?) {
-        if (handedOff || view !== web) { extracting = false; return }
-        val res = try {
-            val inner = com.firsat360.app.core.Json.parse(raw ?: "null") as? String
-            if (inner == null) null else com.firsat360.app.core.Json.parse(inner) as? Map<*, *>
-        } catch (e: Exception) { null }
-        polls++
-        when (res?.get("type")) {
-            "challenge" -> {
-                // Doğrulama sayfası: otomatik geçilmez. Kullanıcı görür ve kendisi tamamlar; bu sırada 3 sn'de bir
-                // yalnızca "geçildi mi" diye bakılır (sayfa yenilenmese de). Süre sınırı doğrulama bitince başlar.
-                if (!challengeShown) {
-                    challengeShown = true
-                    hideOverlay("Site bir doğrulama istiyor. Adımı tamamladığınızda broşürler otomatik açılır.")
-                }
-                deadlines[(view.url ?: url).substringBefore('#')] = System.currentTimeMillis() + MAX_MS
-                view.postDelayed({ poll(view) }, CHALLENGE_POLL_MS)
-                return
-            }
-            "pdf" -> {
-                val items = ((res["items"] as? List<*>) ?: emptyList<Any>()).mapNotNull { it as? Map<*, *> }
-                    .mapNotNull { m -> val u = m["url"] as? String
-                        if (u != null && u.startsWith("https://") && hostAllowed(u)) Triple(u, (m["title"] as? String).orEmpty(), (m["dates"] as? String).orEmpty()) else null }
-                    .distinctBy { it.first }
-                if (items.isNotEmpty()) { handOffPdf(items); return }
-            }
-            "navigate" -> {
-                val to = res["url"] as? String
-                // Yalnızca marketin KENDİ sayfasından (başlangıç alanı) katalog görüntüleyicisine geçilir; sağlayıcı
-                // sitesinden başka yere atlanmaz.
-                val onStart = siteFamily(Uri.parse(view.url ?: url).host) == siteFamily(Uri.parse(url).host)
-                if (to != null && to.startsWith("https://") && hostAllowed(to) && to != view.url && navigations < 2 && onStart) {
-                    navigations++; lastCount = -1
-                    overlayText?.text = "Resmî katalog açılıyor…"
-                    extracting = false
-                    view.loadUrl(to)  // onPageFinished → okuma yeniden başlar
-                    return
-                }
-            }
-        }
-        val pages = ((res?.get("urls") as? List<*>) ?: emptyList<Any>()).mapNotNull { it as? String }
-            .filter { it.startsWith("https://") && hostAllowed(it) }.distinct()
-        if (pages.size > collected.size) collected = pages
-        // Geçiş: sayfanın sonuna ulaşıldı VE son iki ölçüm aynı (tembel görseller yüklendi) → eksik sayfa kalmaz.
-        val atEnd = res?.get("end") == true
-        if (pages.size >= 2 && pages.size == lastCount && atEnd) { handOff(pages); return }
-        lastCount = pages.size
-        overlayText?.text = if (pages.isEmpty()) "Resmî siteden güncel broşürler alınıyor…"
-            else "${pages.size} broşür sayfası bulundu…"
-        if (pages.size >= 2) showPagesButton(pages)
-        if (System.currentTimeMillis() > deadline(view)) {
-            extracting = false
-            if (pages.size >= 2) { handOff(pages); return }  // süre doldu ama sayfalar var → bulunanlarla aç
-            hideOverlay("Bu sayfada broşür görseli bulunamadı; resmî sayfa gösteriliyor.")
-            return
-        }
-        view.postDelayed({ poll(view) }, POLL_MS)
-    }
-
-    private var navigations = 0
-    private var challengeShown = false
-    private var upgrades = 0
-    private val deadlines = HashMap<String, Long>()
-
-    /** Görsel/PDF/gezinme hedefi izinli mi: feed'deki alan adı aileleri; yoksa açılan sayfanın kendi ailesi. */
-    private fun hostAllowed(u: String): Boolean {
-        val fam = siteFamily(Uri.parse(u).host) ?: return false
-        val allowed = if (allowedHosts.isNotEmpty()) allowedHosts.mapNotNull { siteFamily(it) }
-            else listOfNotNull(siteFamily(Uri.parse(url).host))
-        return fam in allowed
-    }
-
     /** PDF broşür(ler): tek ise doğrudan yerel PDF okuyucu; birden çoksa kısa seçim listesi. */
-    private fun handOffPdf(items: List<Triple<String, String, String>>) {
+    private fun handOffPdf(items: List<com.firsat360.app.data.BridgeSession.PdfItem>) {
         if (handedOff) return
-        handedOff = true; extracting = false
-        fun open(i: Int) {
-            val (u, t, d) = items[i]
-            val range = com.firsat360.app.core.TrDates.range(d, a.today)
-            val c = com.firsat360.app.core.Catalog("bridge-${storeId ?: "x"}-${u.hashCode().toUInt()}", storeId ?: "",
-                t.ifBlank { title }, "pdf", range?.first?.toString(), range?.second?.toString(), url, "client_bridge",
-                null, 0, pdfUrl = u)
-            a.replaceTop(PdfScreen(a, c.id, c))
+        handedOff = true
+        val pdfs = items.map { com.firsat360.app.data.DeviceBrochures.Pdf(it.url, it.title, it.dates) }
+        storeId?.let { sid ->
+            val old = com.firsat360.app.data.DeviceBrochures.get(a, sid, freshOnly = false)
+            com.firsat360.app.data.DeviceBrochures.save(a, sid, title, url, emptyList(), pdfs,
+                old?.cover?.takeIf { old.pdfs.firstOrNull()?.url == pdfs.first().url })
         }
-        if (items.size == 1) { open(0); return }
+        onFound?.invoke(pdfs.size)
+        fun open(i: Int) {
+            a.replaceTop(PdfScreen(a, "", com.firsat360.app.data.BridgeCatalogs.pdf(storeId ?: "x", pdfs[i], url, title, a.today)))
+        }
+        if (pdfs.size == 1) { open(0); return }
         try {
             android.app.AlertDialog.Builder(a).setTitle(title)
-                .setItems(items.map { (_, t, d) -> listOf(t, d).filter { it.isNotBlank() }.joinToString(" · ") }.toTypedArray()) { _, i -> open(i) }
+                .setItems(pdfs.map { p -> listOf(p.title, p.dates).filter { it.isNotBlank() }.joinToString(", ") }.toTypedArray()) { _, i -> open(i) }
                 .setOnCancelListener { handedOff = false; hideOverlay(null) }
                 .show()
         } catch (e: Exception) { open(0) }
@@ -509,34 +442,24 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     /** Yerel okuyucuya geçiş: WebView yığından çıkar, yerine okuyucu açılır (geri → bir önceki ekran). */
     private fun handOff(pages: List<String>) {
         if (handedOff) return
+        storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
+        onFound?.invoke(pages.size)
         if (!com.firsat360.app.data.ImageLoader.enabled) {  // görseller kapalı (veri tasarrufu): okuyucu boş kalırdı
-            extracting = false
             hideOverlay("Görseller kapalı olduğu için broşür resmî sayfada gösteriliyor.")
             return
         }
-        handedOff = true; extracting = false
-        collected = pages
-        storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
+        handedOff = true
         val ps = pages.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", url, true) }
         a.replaceTop(CatalogReaderScreen(a, null, 0, null, title, extraPages = ps))
     }
 
-    private fun showPagesButton(pages: List<String>) {
-        collected = pages
+    private fun showPagesButton(count: Int) {
         pagesBtn?.let { webFrame?.removeView(it) }
-        val b = a.button("Sayfa sayfa aç (${pages.size})", Icon.CATALOG, true) { handOff(collected) }
+        val b = a.button("Sayfa sayfa aç ($count)", Icon.CATALOG, true) { session?.finishWithBest() }
         pagesBtn = b
         webFrame?.addView(b, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
             .apply { bottomMargin = dp(20) })
         overlay?.bringToFront()
-    }
-
-    companion object {
-        private const val POLL_MS = 900L
-        private const val MAX_MS = 15_000L  // belge başına okuma süresi
-        private const val CHALLENGE_POLL_MS = 3_000L
-
-        // Okuma betikleri: assets/bridge/*.js (React Native bileşeniyle ortak). Testler: backend/tests/test_bridge_scripts.py
     }
 
     override fun onBack(): Boolean {
@@ -547,7 +470,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         return false
     }
 
-    override fun onHide() { web?.stopLoading(); web?.destroy(); web = null }
+    override fun onHide() { session?.cancel(); web?.stopLoading(); web?.destroy(); web = null }
 }
 
 /** Önceden doldurulmuş "[Hatalı veri]" bildirimi (ürün kimliği gövdede `offer:<id>`). Kişisel veri eklenmez. */
@@ -575,29 +498,42 @@ class SourceStatusScreen(a: MainActivity) : Screen(a) {
         col.setPadding(dp(20), dp(4), dp(20), dp(36))
         col.addView(a.text("Veriler her gün 08.05 ve 00.05'te marketlerin resmî sayfalarından otomatik güncellenir. " +
             "Son yayın: ${Dates.relative(f.generatedAt, now)}.", 13f, Theme.p.text2, Theme.regular), lp(t = dp(6)))
-        val byStore = f.offers.groupBy { it.storeId }
+        val byStore = f.listOffers.groupBy { it.storeId }
         val catCount = f.catalogs.groupBy { it.storeId }.mapValues { it.value.size }
-        for (s in f.stores.sortedWith(compareBy({ statusRank(it.status) }, { it.sort }, { it.name }))) {
+        for (s in f.stores.sortedWith(compareBy({ statusRank(it.status, f.clientBridge.containsKey(it.id)) }, { it.chainRank }, { it.name }))) {
+            val bridged = f.clientBridge.containsKey(s.id)
+            val device = if (bridged) com.firsat360.app.data.DeviceBrochures.get(a, s.id, freshOnly = false) else null
             val card = a.card(dp(16))
             val h = a.hbox()
             h.addView(a.storeBadge(s.id, s.name))
             h.addView(a.text(s.name, 15f, Theme.p.text, Theme.semibold, 1), lp(0, WRAP, l = dp(10), weight = 1f))
-            val (label, fg, bg) = when (s.status) {
-                "ok" -> Triple("Güncel", Theme.p.ok, Theme.p.okSoft)
-                "partial" -> Triple("Kısmi", Theme.p.warn, Theme.p.warnSoft)
-                "link_only" -> Triple("Bağlantı", Theme.p.text2, Theme.p.surface2)
-                "error" -> Triple("Hata", Theme.p.danger, Theme.p.dangerSoft)
+            val (label, fg, bg) = when {
+                s.status == "custom" -> Triple("Sizin eklediğiniz", Theme.p.text2, Theme.p.surface2)
+                s.status == "ok" -> Triple("Güncel", Theme.p.ok, Theme.p.okSoft)
+                s.status == "partial" -> Triple("Kısmi", Theme.p.warn, Theme.p.warnSoft)
+                bridged -> Triple("Cihazda okunur", Theme.p.ok, Theme.p.okSoft)
+                s.status == "link_only" -> Triple("Katalog", Theme.p.ok, Theme.p.okSoft)
+                s.status == "error" -> Triple("Sorun", Theme.p.danger, Theme.p.dangerSoft)
                 else -> Triple("Bekliyor", Theme.p.text2, Theme.p.surface2)
             }
             h.addView(a.pill(label, fg, bg, 12f, Theme.semibold))
             card.addView(h)
             val offers = byStore[s.id].orEmpty()
             val withImg = offers.count { it.hasImage }
-            val lines = mutableListOf("Son başarılı okuma: ${Dates.relative(s.lastSuccessAt, now)}",
-                "${catCount[s.id] ?: 0} katalog · ${offers.size} ürün")
+            val lines = mutableListOf<String>()
+            if (bridged) lines.add(when {
+                device == null -> "Broşür, dokunduğunuzda resmî sayfasından bu cihazda okunur"
+                device.pdfs.isNotEmpty() -> "Broşür bu cihazda ${Dates.relative(java.time.Instant.ofEpochMilli(device.savedAt).toString(), now)} okundu (${device.pdfs.size} PDF)"
+                else -> "Broşür bu cihazda ${Dates.relative(java.time.Instant.ofEpochMilli(device.savedAt).toString(), now)} okundu (${device.pages.size} sayfa)"
+            })
+            if (s.status != "custom" && (!bridged || offers.isNotEmpty() || (catCount[s.id] ?: 0) > 0))
+                lines.add("Sunucu okuması: ${Dates.relative(s.lastSuccessAt, now)}, ${catCount[s.id] ?: 0} katalog, ${offers.size} ürün")
             if (offers.isNotEmpty()) lines.add("Ürün görseli: $withImg/${offers.size} (%${withImg * 100 / offers.size})")
             for (l in lines) card.addView(a.text(l, 13f, Theme.p.text2, Theme.regular), lp(t = dp(6)))
-            if (s.status == "error" && !s.lastError.isNullOrBlank()) {
+            if (s.status == "error" && bridged) {
+                card.addView(a.notice(Icon.INFO, "Ürün fiyatları şu an sunucuda okunamıyor (site otomatik erişimi engelliyor). " +
+                    "Güncel broşür resmî sayfasından bu cihazda açılır.", Theme.p.text2, Theme.p.surface2), lp(t = dp(10)))
+            } else if (s.status == "error" && !s.lastError.isNullOrBlank()) {
                 card.addView(a.notice(Icon.INFO, plainError(s.lastError), Theme.p.danger, Theme.p.dangerSoft), lp(t = dp(10)))
             }
             col.addView(card, lp(t = dp(12)))
@@ -606,7 +542,8 @@ class SourceStatusScreen(a: MainActivity) : Screen(a) {
         return outer
     }
 
-    private fun statusRank(s: String) = when (s) { "error" -> 0; "partial" -> 1; "ok" -> 2; else -> 3 }
+    private fun statusRank(s: String, bridged: Boolean) = when {
+        s == "error" && !bridged -> 0; s == "partial" -> 1; s == "ok" -> 2; else -> 3 }
 
     /** Teknik hata metnini kullanıcının anlayacağı kısa cümleye çevirir. */
     private fun plainError(e: String): String = when {
@@ -628,22 +565,44 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         val col = a.vbox()
         col.setPadding(dp(20), dp(4), dp(20), dp(36))
 
+        // ---- Uygulama kartı
+        val hero = a.vbox(dp(20)).apply {
+            background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Theme.blend(Theme.p.surface, Theme.p.accent, 0.16f), Theme.p.surface)).apply { cornerRadius = dp(24).toFloat()
+                setStroke(1, Theme.p.outline) }
+        }
+        val hh = a.hbox()
+        hh.addView(FrameLayout(a).apply {
+            background = rounded(Theme.p.label, 16f)
+            addView(a.text("360", 18f, Theme.p.onLabel, Theme.display, 1), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
+        }, LinearLayout.LayoutParams(dp(56), dp(56)))
+        val ht = a.vbox()
+        ht.addView(a.text("FIRSAT360", 24f, Theme.p.text, Theme.display, 1))
+        ht.addView(a.text("Sürüm ${BuildInfo.VERSION}, ücretsiz, hesap gerektirmez", 13f, Theme.p.text2, Theme.regular, 2), lp(t = dp(2)))
+        hh.addView(ht, lp(0, WRAP, l = dp(14), weight = 1f))
+        hero.addView(hh)
+        val hb = a.hbox()
+        hb.addView(a.button("Uygulamayı paylaş", Icon.SHARE, true) { shareApp() }, lp(0, WRAP, weight = 1f))
+        hb.addView(a.button("Geri bildirim", Icon.INFO, false) { feedback() }, lp(0, WRAP, l = dp(8), weight = 1f))
+        hero.addView(hb, lp(t = dp(16)))
+        col.addView(hero, lp(t = dp(8)))
+
         fun section(title: String, icon: Icon): LinearLayout {
             val card = a.card(dp(18))
             val h = a.hbox()
             h.addView(FrameLayout(a).apply {
-                background = rounded(Theme.p.label, 4f)
+                background = rounded(Theme.p.accentSoft, 12f)
                 addView(IconView(a, icon, Theme.p.accent, 18), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-            }, LinearLayout.LayoutParams(dp(34), dp(34)))
-            h.addView(a.text(title, 21f, Theme.p.text, Theme.displayBold), lp(0, WRAP, l = dp(12), weight = 1f))
+            }, LinearLayout.LayoutParams(dp(36), dp(36)))
+            h.addView(a.text(title, 17.5f, Theme.p.text, Theme.semibold).apply { accessibilityHeading() }, lp(0, WRAP, l = dp(12), weight = 1f))
             card.addView(h)
             col.addView(card, lp(t = dp(14)))
             return card
         }
         fun toggle(parent: LinearLayout, title: String, sub: String?, on: Boolean, onClick: () -> Unit) {
-            val r = a.hbox().apply { setPadding(0, dp(14), 0, dp(2)) }
+            val r = a.hbox().apply { setPadding(0, dp(14), 0, dp(2)); minimumHeight = dp(48) }
             val t = a.vbox()
-            t.addView(a.text(title, 14.5f, Theme.p.text, Theme.medium))
+            t.addView(a.text(title, 15f, Theme.p.text, Theme.medium))
             if (sub != null) t.addView(a.text(sub, 12.5f, Theme.p.text2, Theme.regular), lp(t = dp(2)))
             r.addView(t, lp(0, WRAP, weight = 1f))
             r.addView(android.widget.Switch(a).apply {
@@ -652,12 +611,30 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             parent.addView(r)
         }
         fun valueRow(parent: LinearLayout, title: String, value: String, onClick: (() -> Unit)?) {
-            val r = a.hbox().apply { setPadding(0, dp(14), 0, dp(4)) }
-            r.addView(a.text(title, 14.5f, Theme.p.text, Theme.medium), lp(0, WRAP, weight = 1f))
+            val r = a.hbox().apply { setPadding(0, dp(12), 0, dp(4)); minimumHeight = dp(48) }
+            r.addView(a.text(title, 15f, Theme.p.text, Theme.medium), lp(0, WRAP, weight = 1f))
             r.addView(a.text(value, 14.5f, if (onClick != null) Theme.p.accent else Theme.p.text2, Theme.semibold, 1))
-            if (onClick != null) { r.addView(IconView(a, Icon.CHEVRON, Theme.p.text3, 16), lp(WRAP, WRAP, l = dp(4))); r.onTap(onClick) }
+            if (onClick != null) { r.addView(IconView(a, Icon.CHEVRON, Theme.p.text3, 16), lp(WRAP, WRAP, l = dp(4))); r.background = ripple(null, 12f); r.onTap(onClick) }
             parent.addView(r)
         }
+
+        // ---- Marketler
+        val stores = section("Marketler", Icon.STORE)
+        val custom = com.firsat360.app.data.CustomStores.list(a)
+        valueRow(stores, "Market ekle", if (custom.isEmpty()) "Adresle" else "${custom.size} eklendi") { a.push(AddStoreScreen(a)) }
+        valueRow(stores, "Vitrin sırası", "Düzenle") { a.push(ShelfOrderScreen(a)) }
+        valueRow(stores, "Favori marketler", "${a.user.favoriteStores().size}") { a.switchTab(Tab.STORES) }
+
+        // ---- Broşürler
+        val br = section("Broşürler", Icon.CATALOG)
+        toggle(br, "Wi‑Fi'de broşürleri önceden hazırla", "Vitrindeki kapaklar ve PDF'ler açılışta hazır olur; mobil veri kullanılmaz",
+            a.user.prefetchBrochures) { a.user.prefetchBrochures = !a.user.prefetchBrochures; a.refreshCurrent() }
+        br.addView(a.button(if (com.firsat360.app.data.BridgePrefetch.running) "Broşürler hazırlanıyor…" else "Broşürleri şimdi yenile",
+            Icon.REFRESH, false) {
+            if (com.firsat360.app.data.BridgePrefetch.running) return@button
+            a.toast("Broşürler resmî sayfalardan yenileniyor")
+            a.startBrochurePrefetch(force = true)
+        }, lp(t = dp(12)))
 
         // ---- Bildirimler
         val notif = section("Bildirimler", Icon.BELL)
@@ -683,8 +660,8 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                     "FIRSAT360 bildirimlerine izin verin.", Theme.p.warn, Theme.p.warnSoft), lp(t = dp(12)))
                 notif.addView(a.button("Bildirim ayarlarını aç", Icon.SETTINGS, false) { a.openNotificationSettings() }, lp(t = dp(8)))
             } else {
-                notif.addView(a.text("Telefonunuzun pil tasarrufu bildirimi birkaç dakika geciktirebilir.", 12f, Theme.p.text3,
-                    Theme.regular), lp(t = dp(10)))
+                notif.addView(a.text("Favori ve eklediğiniz marketlerde yeni broşür çıkınca ayrıca haber verilir. Pil tasarrufu " +
+                    "bildirimi birkaç dakika geciktirebilir.", 12.5f, Theme.p.text3, Theme.regular), lp(t = dp(10)))
             }
             notif.addView(a.text("Hangi marketler?", 13.5f, Theme.p.text2, Theme.semibold), lp(t = dp(16)))
             val muted = a.user.mutedStores()
@@ -715,18 +692,18 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         for (sv in saved) {
             val r = a.hbox().apply { setPadding(0, dp(10), 0, dp(2)) }
             r.addView(a.storeBadge(sv.storeId, f.store(sv.storeId)?.name ?: sv.storeId))
-            r.addView(a.text("${sv.title} · ${String.format(java.util.Locale.ROOT, "%.1f", sv.bytes / 1048576.0)} MB", 13.5f,
+            r.addView(a.text("${sv.title}, ${String.format(java.util.Locale.ROOT, "%.1f", sv.bytes / 1048576.0)} MB", 13.5f,
                 Theme.p.text, Theme.medium, 1), lp(0, WRAP, l = dp(8), weight = 1f))
             r.addView(a.iconButton(Icon.TRASH, Theme.p.danger, desc = "${sv.title} sil") {
                 com.firsat360.app.data.OfflineStore.delete(a, sv.catalogId); a.toast("Silindi"); a.refreshCurrent()
-            }, lp(dp(40), dp(40), l = dp(8)))
+            }, lp(dp(48), dp(48), l = dp(8)))
             st.addView(r)
         }
 
         // ---- Veri
         val data = section("Veri kaynakları", Icon.GLOBE)
         val regionNames = linkedMapOf("istanbul" to "İstanbul", "bursa" to "Bursa", "trakya" to "Trakya")
-        // Yalnızca bölgesel broşür yayımlayan bir market varsa gösterilir (Onur Market kaldırıldı; şu an yok).
+        // Yalnızca bölgesel broşür yayımlayan bir market varsa gösterilir.
         if (f.catalogs.any { it.region != null }) valueRow(data, "Bölge (bölgesel broşürler)", regionNames[a.user.region] ?: a.user.region) {
             try {
                 val keys = regionNames.keys.toList()
@@ -736,19 +713,45 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                     }.show()
             } catch (e: Exception) { }
         }
-        val errs = f.stores.count { it.status == "error" }
-        valueRow(data, "Kaynak durumu", if (errs > 0) "$errs hata" else "Tümü çalışıyor") { a.push(SourceStatusScreen(a)) }
+        val errs = f.stores.count { it.status == "error" && !f.clientBridge.containsKey(it.id) }
+        valueRow(data, "Kaynak durumu", if (errs > 0) "$errs sorun" else "Tümü çalışıyor") { a.push(SourceStatusScreen(a)) }
+        valueRow(data, "Son güncelleme", Dates.relative(f.generatedAt, a.now), null)
+        valueRow(data, "Market sayısı", "${f.stores.size}", null)
 
         // ---- Hakkında
         val about = section("Hakkında", Icon.INFO)
-        about.addView(a.text("FIRSAT360 ${BuildInfo.VERSION}. Fiyatlar marketlerin resmî sayfalarından otomatik alınır; stok, " +
-            "şube ve kampanya koşulları için marketin sayfasını kontrol edin. Marketlerle resmî bir bağımız yoktur; market " +
-            "adları yalnızca kaynağı belirtmek için kullanılır. Hesap açılmaz, kişisel veri toplanmaz; favoriler ve " +
-            "listeleriniz yalnızca bu cihazda saklanır.", 13f, Theme.p.text2, Theme.regular), lp(t = dp(10)))
-        about.addView(a.text("Yazı tipi: Inter — SIL Open Font License 1.1", 12f, Theme.p.text3, Theme.regular), lp(t = dp(10)))
+        valueRow(about, "Sürüm", "${BuildInfo.VERSION} (${BuildInfo.VERSION_CODE})", null)
+        valueRow(about, "Geliştirici", BuildInfo.DEVELOPER) { a.openExternal(BuildInfo.DEVELOPER_GITHUB) }
+        valueRow(about, "Web sitesi", "Aç") { a.openExternal(BuildInfo.WEBSITE) }
+        valueRow(about, "Gizlilik politikası", "Aç") { a.openExternal(BuildInfo.PRIVACY_URL) }
+        valueRow(about, "Lisanslar", "Göster") {
+            try {
+                android.app.AlertDialog.Builder(a).setTitle("Açık kaynak lisansları")
+                    .setMessage("Barlow ve Barlow Condensed yazı tipleri (Jeremy Tribby), SIL Open Font License 1.1.\n\n" +
+                        "Market adları ve broşürler ilgili marketlere aittir; yalnızca kaynağı belirtmek için gösterilir.")
+                    .setPositiveButton("Tamam", null).show()
+            } catch (e: Exception) { }
+        }
+        about.addView(a.text("Fiyatlar ve broşürler marketlerin resmî sayfalarından otomatik alınır; stok, şube ve kampanya " +
+            "koşulları için marketin sayfasını kontrol edin. Marketlerle resmî bir bağımız yoktur. Hesap açılmaz, kişisel veri " +
+            "toplanmaz; favoriler, listeler ve eklediğiniz marketler yalnızca bu cihazda saklanır.", 12.5f, Theme.p.text3, Theme.regular),
+            lp(t = dp(12)))
 
         outer.addView(ScrollView(a).apply { isVerticalScrollBarEnabled = false; addView(col) }, lp(MATCH, 0, weight = 1f))
         return outer
+    }
+
+    private fun shareApp() {
+        a.share("FIRSAT360: BİM, A101, ŞOK, Migros ve diğer marketlerin güncel broşürleri ve günün indirimleri tek yerde. " +
+            BuildInfo.WEBSITE)
+    }
+
+    private fun feedback() {
+        val base = try { a.getString(com.firsat360.app.R.string.report_url).trim() } catch (e: Exception) { "" }
+        if (base.isBlank()) { a.toast("Bu derlemede geri bildirim adresi tanımlı değil"); return }
+        a.openExternal(Uri.parse(base).buildUpon().appendQueryParameter("title", "[Geri bildirim] ")
+            .appendQueryParameter("body", "Görüşünüz / öneriniz:\n\n\n---\nuygulama: ${BuildInfo.VERSION}\nandroid: ${android.os.Build.VERSION.RELEASE}")
+            .build().toString())
     }
 }
 

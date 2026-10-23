@@ -82,6 +82,10 @@ class UserStore(ctx: Context) {
     var showImages: Boolean
         get() = prefs.getBoolean("show_images", true)
         set(v) { prefs.edit().putBoolean("show_images", v).apply() }
+    /** Wi‑Fi'de broşürleri önceden hazırla (vitrin kapakları açılışta hazır olur). */
+    var prefetchBrochures: Boolean
+        get() = prefs.getBoolean("prefetch_brochures", true)
+        set(v) { prefs.edit().putBoolean("prefetch_brochures", v).apply() }
     /** Mobil veride görsel indirme (kapalıysa yalnızca Wi-Fi'de; önbellekteki görseller her zaman gösterilir). */
     var imagesOnMobile: Boolean
         get() = prefs.getBoolean("images_on_mobile", true)

@@ -71,3 +71,16 @@ def test_retired_store_hidden_from_status(tmp_path):
         assert s.get(Store, "onur").enabled is False
         ids = [x["id"] for x in status_dict(s)["stores"]]
     assert ids == ["bim"]
+
+
+def test_variant_cleaning_and_duplicate_merge():
+    from firsat360.feed import merge_variant_duplicates
+    from firsat360.normalize import clean_variant
+    assert clean_variant("• 2 L") == "2 L"
+    assert clean_variant("•") is None and clean_variant(" • • ") is None
+    assert clean_variant("• • Napoliten 360 g • Arrabbiata 360 g") == "Napoliten 360 g, Arrabbiata 360 g"
+    base = {"store_id": "bim", "catalog_id": "bim-1", "name": "Set", "variant": None, "page_size_text": None}
+    out = merge_variant_duplicates([dict(base, id="a", price=459.0), dict(base, id="b", price=249.0),
+                                    dict(base, id="c", price=10.0, variant="200 ml")])
+    assert [o["id"] for o in out] == ["b", "c"]
+    assert [x["price"] for x in out[0]["options"]] == [249.0, 459.0] and out[0]["aliases"] == ["a"]

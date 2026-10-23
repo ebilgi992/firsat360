@@ -9,7 +9,7 @@ from .sok import SokConnector
 
 CLIENT_BRIDGED = ("a101", "sok", "migros", "gratis", "carrefoursa", "rossmann")  # broşürü istemci köprüsünde
 ALL_STORES = ("a101", "bim", "sok", "migros", "tkkoop", "hakmar", "watsons", "metro", "bizimtoptan", "gratis",
-              "rossmann", "carrefoursa", "file")
+              "rossmann", "carrefoursa", "file", "mopas", "happycenter", "yunus")
 
 
 def live_connectors(max_pages: int = 8):

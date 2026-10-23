@@ -34,6 +34,8 @@ object ImageLoader {
         }
     }
     private var dir: File? = null
+    /** Cihazda çizilen PDF kapakları (file://) yalnızca bu klasörden yüklenir. */
+    private var coversRoot: String? = null
     private val active = java.util.Collections.synchronizedSet(HashSet<String>())
     @Volatile var enabled: Boolean = true
     /** Disk önbelleği sınırı (bayt). Varsayılan cihaza göre 40–100 MB; kullanıcı ayarlardan değiştirebilir. */
@@ -45,6 +47,7 @@ object ImageLoader {
         if (dir != null) return
         lowRam = try { ctx.getSystemService(android.app.ActivityManager::class.java)?.isLowRamDevice ?: false } catch (e: Exception) { false }
         dir = File(ctx.cacheDir, "img").apply { mkdirs() }
+        coversRoot = try { File(ctx.filesDir, "covers").apply { mkdirs() }.canonicalPath } catch (e: Exception) { null }
         // Önceki oturumdan kalan yarım indirmeler
         Thread { com.firsat360.app.core.DiskBudget.trim(dir, limitBytes, protect = active.toSet()) }.start()
     }
@@ -61,6 +64,16 @@ object ImageLoader {
               local: File? = null, done: ((Boolean) -> Unit)? = null) {
         view.tag = url
         if (url == null || !enabled) { done?.invoke(false); return }
+        if (url.startsWith("file://")) {
+            val f = try { File(url.removePrefix("file://")).canonicalFile } catch (e: Exception) { null }
+            val root = coversRoot
+            if (f == null || root == null || !f.path.startsWith(root + File.separator) || !f.exists()) { done?.invoke(false); return }
+            pool.execute {
+                val bmp = try { decode(f, maxPx, rgb565) } catch (e: OutOfMemoryError) { mem.evictAll(); null }
+                main.post { if (view.tag == url) { if (bmp != null) view.setImageBitmap(bmp); done?.invoke(bmp != null) } }
+            }
+            return
+        }
         if (local != null && local.exists()) {  // çevrim dışı kaydedilmiş sayfa
             pool.execute {
                 val bmp = try { decode(local, maxPx, rgb565) } catch (e: OutOfMemoryError) { mem.evictAll(); null }

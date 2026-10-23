@@ -1,5 +1,18 @@
 # Veri kaynağı durumu
 
+## 1.6.0 — yeni market zincirleri (23.10.2026, resmî sayfalarda gözlendi)
+
+| Market | Resmî sayfa | İçerik | Bağlayıcı | Not |
+|---|---|---|---|---|
+| Mopaş | https://mopas.com.tr/kataloglar | Resmî PDF (dosya adında tarih: 17-30.10.26) + HERO kapak görseli | discovery (statik) | robots.txt: /kataloglar izinli |
+| Happy Center | https://www.happycenter.com.tr/kurumsal/indirim-bulteni/ | Bülten sayfaları görsel (crm.happycenter.tr/admin/images/uploads/happy*.jpg) | discovery (statik) | robots.txt çalıştırmada denetlenir |
+| Yunus Market | https://www.yunusmarket.com.tr/insert-brosur | Resmî PDF insertler (başlıkta tarih) | discovery (statik) | KVKK/politika PDF'leri elenir |
+
+Eklenmeyenler: Kim Market, Çağrı Market, Pehlivanoğlu, Özhan Market (robots.txt otomatik erişimi kapatıyor);
+Macrocenter (kampanyalar yalnızca JavaScript ile), Seç Market (kampanyalar yalnızca sosyal medyada), Altunbilekler
+(broşür yok, yalnızca afiş), Özdilek (kataloglar giyim/AVM). Bu marketler kullanıcı tarafından "Market ekle" ile
+cihazda takip edilebilir. Marka renkleri yaklaşık değerdir (logo kopyalanmaz).
+
 ## 1.4.0 — İstemci Katalog Köprüsü
 
 Bu 6 marketin **broşürleri sunucuda kazınmaz** (`config/client_bridge.json`, `"client_rendered": true`); sunucu

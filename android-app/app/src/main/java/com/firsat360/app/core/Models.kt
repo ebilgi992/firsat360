@@ -88,7 +88,11 @@ data class Offer(
     val pagePriceConflict: Double? = null,
     /** Liste açıklamasında ölçü yoksa ürün sayfasındaki ölçü. */
     val pageSizeText: String? = null,
+    /** Aynı katalogda aynı ürünün farklı fiyatları (tek kartta birleşmiş; en düşük fiyat [price]). */
+    val options: List<PriceOption> = emptyList(),
 ) {
+    /** Birden çok fiyat seçeneği varsa kartta "N seçenek". */
+    val optionCount: Int get() = options.size
     val hasImage: Boolean get() = imageUrl != null
     val imageVerified: Boolean get() = imageSource == "product_page_verified"
     /** Kartta gösterilecek açıklama: listedeki açıklama, yoksa ürün sayfasındaki ölçü. */
@@ -98,6 +102,8 @@ data class Offer(
     val searchKey: String by lazy { TurkishText.fold(listOfNotNull(brand, name, variant).joinToString(" ")) }
     val displayTitle: String get() = if (brand != null && !name.startsWith(brand, ignoreCase = true)) "$brand $name" else name
 }
+
+data class PriceOption(val id: String, val price: Double, val variant: String?)
 
 data class Category(val id: String, val name: String)
 
@@ -111,13 +117,24 @@ data class Feed(
     val dailyDeals: DailyDeals? = null, val announcements: List<Announcement> = emptyList(),
     val ads: AdsConfig = AdsConfig(),
     val clientBridge: Map<String, BridgeEntry> = emptyMap(),
+    /** Süresi bitmiş, okunabilir kataloglar (mağaza ekranında "Geçmiş kataloglar"). */
+    val archive: List<Catalog> = emptyList(),
+    /** Birleşmiş kopyaların kimlikleri → kalan kart (eski favoriler/bildirimler kaybolmaz). */
+    val aliases: Map<String, String> = emptyMap(),
 ) {
+    private val offerById: Map<String, Offer> by lazy { offers.associateBy { it.id } }
+
+    /**
+     * Listelerde gösterilecek ürünler: aynı market + aynı ad + aynı açıklama tek kez. Bu hafta geçerli olan,
+     * gelecek haftanın broşüründeki kopyasına tercih edilir (gelecek hafta kendi katalog ekranında görünür).
+     */
+    val listOffers: List<Offer> by lazy { Dedupe.forLists(offers, java.time.LocalDate.now(Dates.TR)) }
     /** Günün İndirimleri ürünleri (feed sırasıyla; artık listede olmayanlar atlanır). */
     val dealOffers: List<Offer> by lazy { dailyDeals?.offerIds?.mapNotNull { offer(it) } ?: emptyList() }
     val isDemo: Boolean get() = dataMode != "real"
     fun store(id: String): Store? = stores.firstOrNull { it.id == id }
     fun catalog(id: String?): Catalog? = if (id == null) null else catalogs.firstOrNull { it.id == id }
-    fun offer(id: String): Offer? = offers.firstOrNull { it.id == id }
+    fun offer(id: String): Offer? = offerById[id] ?: aliases[id]?.let { offerById[it] }
     fun categoryName(id: String): String = categories.firstOrNull { it.id == id }?.name ?: "Diğer"
     fun methodLabel(m: String): String = methodLabels[m] ?: m
 
@@ -148,11 +165,11 @@ data class Feed(
                     if (m.containsKey("sort")) m.int("sort") else 99,
                     if (m.containsKey("chain_rank")) m.int("chain_rank") else 99, m.str("brochure_url"))
             }.sortedWith(compareBy({ it.sort }, { it.name }))
-            val catalogs = root.list("catalogs").mapNotNull { it as? Map<String, Any?> }.mapNotNull { m ->
-                if (m.str("store_id") in RETIRED_STORES) return@mapNotNull null
-                Catalog(m.str("id") ?: return@mapNotNull null, m.str("store_id") ?: return@mapNotNull null,
+            fun catalogOf(m: Map<String, Any?>): Catalog? {
+                if (m.str("store_id") in RETIRED_STORES) return null
+                return Catalog(m.str("id") ?: return null, m.str("store_id") ?: return null,
                     m.str("title") ?: "Katalog", m.str("kind") ?: "aktuel", m.str("valid_from"), m.str("valid_to"),
-                    m.str("official_url") ?: return@mapNotNull null, m.str("source_method") ?: "",
+                    m.str("official_url") ?: return null, m.str("source_method") ?: "",
                     m.str("observed_at"), m.int("offer_count"), m.str("cover_url"),
                     m.list("pages").mapNotNull { p ->
                         val pm = p as? Map<String, Any?> ?: return@mapNotNull null
@@ -163,6 +180,8 @@ data class Feed(
                     }, m.str("pdf_url")?.takeIf { it.startsWith("https://") }, m.str("first_seen_at"),
                     m.str("last_checked_at"), m.str("region"), m.str("group"))
             }
+            val catalogs = root.list("catalogs").mapNotNull { it as? Map<String, Any?> }.mapNotNull { catalogOf(it) }
+            val archive = root.list("archive").mapNotNull { it as? Map<String, Any?> }.mapNotNull { catalogOf(it) }
             var skipped = 0
             val offers = root.list("offers").mapNotNull { it as? Map<String, Any?> }.mapNotNull { m ->
                 val price = m.dbl("price")
@@ -179,7 +198,8 @@ data class Feed(
                 }
                 val old = m.dbl("store_declared_old_price")?.takeIf { it > price }
                 Offer(m.str("id") ?: return@mapNotNull null, m.str("store_id") ?: return@mapNotNull null,
-                    m.str("catalog_id"), m.str("name") ?: return@mapNotNull null, m.str("brand"), m.str("variant"),
+                    m.str("catalog_id"), TurkishText.displayCase(m.str("name") ?: return@mapNotNull null), m.str("brand"),
+                    TurkishText.cleanVariant(m.str("variant")),
                     m.str("category") ?: "diger", m.str("category_source") ?: "keyword_rule", price,
                     m.str("price_text"), old, m.str("condition"), m.str("channel"), m.str("product_url"),
                     m.str("valid_from"), m.str("valid_to"), m.str("observed_at"), m.str("source_url")!!,
@@ -188,7 +208,12 @@ data class Feed(
                     m.str("image_large_url")?.takeIf { it.startsWith("https://") },
                     m.str("image_source"), m.str("image_status"),
                     m.str("image_page_url")?.takeIf { it.startsWith("https://") }, m.str("image_checked_at"),
-                    m.dbl("page_price_conflict")?.takeIf { it > 0.0 && it != price }, m.str("page_size_text"))
+                    m.dbl("page_price_conflict")?.takeIf { it > 0.0 && it != price }, m.str("page_size_text"),
+                    m.list("options").mapNotNull { x ->
+                        val om = x as? Map<String, Any?> ?: return@mapNotNull null
+                        PriceOption(om.str("id") ?: return@mapNotNull null, om.dbl("price") ?: return@mapNotNull null,
+                            TurkishText.cleanVariant(om.str("variant")))
+                    }.takeIf { it.size >= 2 } ?: emptyList())
             }
             val money = root.obj("monetization")
             val sponsored = (money?.list("sponsored") ?: emptyList()).mapNotNull { x ->
@@ -218,7 +243,11 @@ data class Feed(
             }.toMap()
             return Feed(schema, root.str("generated_at"), mode, root.str("notice"), labels, cats, stores,
                 catalogs, offers, skipped, sponsored, money?.obj("ads")?.bool("active") ?: false,
-                money?.obj("affiliate")?.bool("active") ?: false, dd, anns, ads, bridge)
+                money?.obj("affiliate")?.bool("active") ?: false, dd, anns, ads, bridge, archive,
+                root.list("offers").mapNotNull { it as? Map<String, Any?> }.flatMap { m ->
+                    val id = m.str("id")
+                    if (id == null) emptyList() else m.list("aliases").mapNotNull { (it as? String)?.let { a -> a to id } }
+                }.toMap())
         }
     }
 }

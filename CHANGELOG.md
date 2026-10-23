@@ -1,5 +1,32 @@
 # Değişiklik günlüğü
 
+## 1.6.0 — 23 Ekim 2026
+- **Yeni tasarım "Vitrin".** Ana sayfanın başında kaydırılan büyük broşür vitrini: her marketin güncel broşür kapağı
+  büyük, arkasında aynı kapağın bulanık ve koyulaştırılmış hâli (renk içerikten gelir). Sakin grafit/porselen zemin,
+  tek vurgu kehribar, kırmızı yalnızca indirim; katmanlı kartlar, yüzen alt menü, dokununca hafif küçülme. Market
+  kutucukları, ürün kartları, katalog kartları, ayarlar ve market ekranı yeniden tasarlandı.
+- **Broşür kapakları açılışta görünüyor.** Okuma motoru ekrandan ayrıldı (BridgeSession); Wi‑Fi'de, arka planda, 6 saatte
+  bir resmî broşür sayfaları sırayla okunur. PDF broşürlerin (ŞOK vb.) ilk sayfası kapak olarak cihazda çizilir ve PDF
+  önbelleğe alınır, dokununca anında açılır. Cihazda okunan broşür yoksa marketin sunucudaki kapaklı kataloğu gösterilir.
+  Doğrulama sayfası çıkan market arka planda atlanır (asla aşılmaz).
+- **Kopya ürünler giderildi:** madde işaretli açıklamalar temizlendi ("• 2 L" → "2 L", yalnız "•" → yok); aynı
+  katalogda aynı ad+açıklamalı farklı fiyatlar tek kartta "N seçenek"; listelerde bu hafta geçerli olan, gelecek
+  haftanın broşüründeki kopyasına tercih edilir; günün indirimlerinde ürün başına tek aday. Tamamı büyük harf ürün
+  adları okunur hâle getirildi ("GLASS IN LOVE … 3'LÜ" → "Glass In Love … 3'lü").
+- **Eski veriler yayından kalkar:** bitiş tarihi olmayan ürün/katalog kaynakta 5 gün görülmezse gösterilmez
+  (A101'in 13 Ekim'den kalan fiyatları artık "güncel" görünmüyor).
+- **Geçmiş kataloglar:** market ekranında ay ay; sunucudaki süresi bitmiş okunabilir kataloglar (90 gün) + bu cihazda
+  okunmuş önceki haftaların broşürleri.
+- **Market ekle:** kullanıcı marketin broşür sayfası adresini yazar; uygulama sayfayı cihazda açıp broşürü bulur,
+  sonucu bildirir, marketi vitrine ekler; sonra Wi‑Fi'de kendiliğinden yenilenir, yeni broşür çıkınca bildirim gelir.
+  Adres denetimi: yalnızca herkese açık https sayfalar.
+- **Yeni marketler (yalnızca market zincirleri):** Mopaş (resmî PDF katalog + kapak), Happy Center (indirim bülteni),
+  Yunus Market (insert PDF'leri). robots.txt'i otomatik erişime kapalı olan zincirler (Kim Market, Çağrı, Pehlivanoğlu,
+  Özhan) eklenmedi; kullanıcı bunları "Market ekle" ile kendi cihazında takip edebilir.
+- **Ayarlar:** uygulama kartı, uygulamayı paylaş, geri bildirim, market ekle, vitrin sırası, Wi‑Fi'de ön hazırlık,
+  broşürleri şimdi yenile, sürüm/geliştirici/web sitesi/gizlilik/lisanslar. Kaynak durumu ekranında köprüdeki
+  marketler "Cihazda okunur" olarak gösterilir. Tanıtım sayfası (GitHub Pages) eklendi.
+
 ## 1.5.0 — 22 Ekim 2026
 - **Yeni arayüz: "market rafı" tasarım dili.** Soğuk raf grisi zemin, beyaz kâğıt yüzeyler, tükenmez kalem mavisi
   eylemler, raf etiketi sarısı fiyatlar, kırmızı yalnızca indirimde. Yazı tipi Barlow + Barlow Condensed (tabela harfi:

@@ -52,7 +52,8 @@ def _variant_text(card) -> str | None:
                 parts.append(t)
         if parts:
             break
-    return clean("; ".join(dict.fromkeys(parts))) if parts else None
+    from ..normalize import clean_variant
+    return clean_variant("; ".join(dict.fromkeys(parts))) if parts else None
 
 
 def parse_products(html: str, page_url: str, catalog_id: str | None) -> tuple[list[OfferData], int]:

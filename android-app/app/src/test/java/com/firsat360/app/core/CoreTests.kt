@@ -95,7 +95,7 @@ fun main(args: Array<String>) {
     val s1 = Search.filter(feed.offers, OfferQuery("şampuan"))
     val s2 = Search.filter(feed.offers, OfferQuery("SAMPUAN"))
     check("search.tr", s1.isNotEmpty() && s1.map { it.id }.toSet() == s2.map { it.id }.toSet()) { "${s1.size} ${s2.size}" }
-    check("search.multi", Search.filter(feed.offers, OfferQuery("çikolatalı gofret")).any { it.name == "ÇİKOLATALI GOFRET MAXİ" })
+    check("search.multi", Search.filter(feed.offers, OfferQuery("çikolatalı gofret")).any { it.name == "Çikolatalı Gofret Maxi" })
     check("search.none", Search.filter(feed.offers, OfferQuery("zzqqxx")).isEmpty())
     val migrosAsc = Search.filter(feed.offers, OfferQuery(storeIds = setOf("migros"), sort = SortMode.PRICE_ASC))
     check("filter.store.sort", migrosAsc.size == 30 && migrosAsc.zipWithNext().all { it.first.price <= it.second.price })
@@ -280,7 +280,7 @@ fun main(args: Array<String>) {
     check("norm.accent", TrNorm.loose("Café Crème") == "cafe creme" && TrNorm.loose("Çağdaş Üzüm Öğür") == "cagdas uzum ogur")
     check("norm.empty", TrNorm.loose("   ") == "" && TrNorm.tokens(null).isEmpty())
     val eng = SearchEngine(feed)
-    val bimCount = feed.offers.count { it.storeId == "bim" }
+    val bimCount = feed.listOffers.count { it.storeId == "bim" }
     for (q in listOf("bim", "BİM", "Bim", "BIM", "  bim  ", "BİM market", "bim marketi", "Bim  Market")) {
         val r = eng.search(OfferQuery(q))
         check("search.store[$q]", r.stores.map { it.id } == listOf("bim") && r.offers.size == bimCount && r.offers.all { it.storeId == "bim" }) {
@@ -313,7 +313,7 @@ fun main(args: Array<String>) {
                 feed.store(it.storeId)?.name, feed.catalog(it.catalogId)?.title).joinToString(" ")).contains(TrNorm.loose(q)) }) { "${r.offers.size}" }
     }
     check("search.shortNoFuzzy", eng.search(OfferQuery("tzu")).offers.isEmpty())
-    check("search.empty", eng.search(OfferQuery("   ")).offers.size == feed.offers.size && eng.search(OfferQuery("")).stores.isEmpty())
+    check("search.empty", eng.search(OfferQuery("   ")).offers.size == feed.listOffers.size && eng.search(OfferQuery("")).stores.isEmpty())
     check("search.category", eng.search(OfferQuery("elektronik")).offers.isNotEmpty())
     check("search.catalog", eng.search(OfferQuery("migroskop")).catalogs.any { it.storeId == "migros" } ||
         eng.search(OfferQuery("migroskop")).stores.any { it.id == "migros" })
@@ -408,6 +408,22 @@ fun main(args: Array<String>) {
     check("trdates.yearEndNoYear", TrDates.range("02 - 08 Ocak", dec30) == (LocalDate.of(2027, 1, 2) to LocalDate.of(2027, 1, 8)))
     check("trdates.crossYear", TrDates.range("29 Aralık 2026 - 04 Ocak 2027", dec30) == (LocalDate.of(2026, 12, 29) to LocalDate.of(2027, 1, 4)))
     check("trdates.crossYearNoYear", TrDates.range("29 Aralık - 4 Ocak", LocalDate.of(2027, 1, 3)) == (LocalDate.of(2026, 12, 29) to LocalDate.of(2027, 1, 4)))
+    // 1.6.0: kopyalar ve büyük harfli adlar
+    check("case.upper", TurkishText.displayCase("GLASS IN LOVE GRAVÜRLÜ AYAKLI CAM KASE 3'LÜ") == "Glass In Love Gravürlü Ayaklı Cam Kase 3'lü") {
+        TurkishText.displayCase("GLASS IN LOVE GRAVÜRLÜ AYAKLI CAM KASE 3'LÜ") }
+    check("case.acronym", TurkishText.displayCase("SAMSUNG 55 İNÇ QLED TV") == "Samsung 55 İnç QLED TV") { TurkishText.displayCase("SAMSUNG 55 İNÇ QLED TV") }
+    check("case.asciiBrand", TurkishText.displayCase("NIVEA SOFT KREM 50 ML") == "Nivea Soft Krem 50 ml") { TurkishText.displayCase("NIVEA SOFT KREM 50 ML") }
+    check("case.mixedUntouched", TurkishText.displayCase("Coca-Cola Light Pet 1 L") == "Coca-Cola Light Pet 1 L")
+    check("variant.bullets", TurkishText.cleanVariant("• • Napoliten 360 g • Arrabbiata 360 g") == "Napoliten 360 g, Arrabbiata 360 g" &&
+        TurkishText.cleanVariant("•") == null && TurkishText.cleanVariant("• 2 L") == "2 L")
+    run {
+        val base = feed.offers.first { it.storeId == "bim" }
+        val cur = base.copy(id = "d-now", name = "Labne", variant = null, validFrom = "2026-10-20", validTo = null, price = 179.0)
+        val next = base.copy(id = "d-next", name = "Labne", variant = null, validFrom = "2026-10-27", validTo = null, price = 149.0)
+        val other = base.copy(id = "d-size", name = "Labne", variant = "400 g", validFrom = "2026-10-20", validTo = null)
+        val out = Dedupe.forLists(listOf(next, cur, other), LocalDate.of(2026, 10, 23)).map { it.id }
+        check("dedupe.preferThisWeek", out == listOf("d-now", "d-size")) { out.toString() }
+    }
     check("trdates.none", TrDates.range("Haftanın Fırsatları", d21) == null)
 
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")

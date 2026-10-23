@@ -97,7 +97,9 @@ object Watch {
 
 
 /** Ana sayfadaki "Market broşürleri" rafının bir kartı: mağaza + en iyi güncel broşürü (yoksa resmî broşür sayfası). */
-data class ShelfEntry(val store: Store, val catalog: Catalog?, val others: Int, val bridge: BridgeEntry? = null)
+data class ShelfEntry(val store: Store, val catalog: Catalog?, val others: Int, val bridge: BridgeEntry? = null,
+                      /** Köprüdeki market için sunucudaki kapaklı katalog (yalnızca kapak önizlemesi). */
+                      val preview: Catalog? = null)
 
 object Shelf {
     /** Kullanıcının kaydettiği sıra önce; listede olmayan mağazalar büyüklük sırasıyla sona eklenir. */
@@ -128,7 +130,11 @@ object Shelf {
             val bridge = feed.clientBridge[s.id]
             // İstemci köprüsündeki market: raf kartı resmî sayfadan cihazda okunan güncel broşürü açar (sunucu kataloğu
             // seçilmez; o marketin diğer resmî katalogları "Diğer kataloglar"da kalır).
-            if (bridge != null) return@mapNotNull ShelfEntry(s, null, 0, bridge)
+            if (bridge != null) {
+                // Kapak önizlemesi: cihazda okunan broşür yoksa marketin sunucudaki en iyi kapaklı kataloğu
+                val (pv, _) = best(feed, s.id, today, region)
+                return@mapNotNull ShelfEntry(s, null, 0, bridge, pv?.takeIf { it.coverUrl != null || it.hasPages })
+            }
             val (c, others) = best(feed, s.id, today, region)
             if (c == null && s.brochureUrl.isNullOrBlank()) null else ShelfEntry(s, c, others)
         }

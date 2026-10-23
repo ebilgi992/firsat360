@@ -125,7 +125,7 @@ data class SearchResult(
 class SearchEngine(private val feed: Feed) {
     private class Doc(val offer: Offer, val loose: String, val tokens: List<String>, val exact: String)
 
-    private val docs: List<Doc> = feed.offers.map { o ->
+    private val docs: List<Doc> = feed.listOffers.map { o ->
         val parts = listOfNotNull(o.brand, o.name, o.variant, o.pageSizeText, feed.categoryName(o.category),
             feed.store(o.storeId)?.name, feed.catalog(o.catalogId)?.title)
         val joined = parts.joinToString(" ")

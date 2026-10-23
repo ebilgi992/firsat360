@@ -92,6 +92,27 @@ STORES = {
         "legal_note": "Resmî sitede 'Katalog Ürünleri' bölümü var; ayrı broşür sayfası bulunamadı (21.10.2026). "
                       "Keşif motoru yalnızca broşür adlı görsel/PDF kabul eder.",
     },
+    # 1.6.0: Türkiye'de yaygın bölgesel market zincirleri (yalnızca market; resmî sayfa robots.txt'e uygun, 23.10.2026)
+    "mopas": {
+        "name": "Mopaş",
+        "official_url": "https://mopas.com.tr/",
+        "catalog_url": "https://mopas.com.tr/kataloglar",
+        "legal_note": "robots.txt (23.10.2026): yalnızca /cart, /checkout, /my-account yasak; /kataloglar izinli. "
+                      "Katalog resmî PDF (cdnprod.mopas.com.tr) ve kapak görseli.",
+    },
+    "happycenter": {
+        "name": "Happy Center",
+        "official_url": "https://www.happycenter.com.tr/",
+        "catalog_url": "https://www.happycenter.com.tr/kurumsal/indirim-bulteni/",
+        "legal_note": "İndirim bülteni sayfası (23.10.2026): bülten sayfaları resmî görsel olarak (crm.happycenter.tr). "
+                      "robots.txt çalıştırmada denetlenir.",
+    },
+    "yunus": {
+        "name": "Yunus Market",
+        "official_url": "https://www.yunusmarket.com.tr/",
+        "catalog_url": "https://www.yunusmarket.com.tr/insert-brosur",
+        "legal_note": "Insert & Broşür sayfası (23.10.2026): resmî PDF insertler. robots.txt çalıştırmada denetlenir.",
+    },
     "file": {
         "name": "File Market",
         "official_url": "https://www.file.com.tr/",
@@ -110,14 +131,15 @@ STORE_STYLE = {
     "tkkoop": ("#0B8A3E", "TK"), "hakmar": ("#D7141A", "H"), "watsons": ("#00A3AD", "W"), "metro": ("#00327D", "MT"),
     "bizimtoptan": ("#E2001A", "BZ"), "gratis": ("#E6007E", "G"), "rossmann": ("#C3002F", "R"),
     "carrefoursa": ("#004E9F", "C"), "file": ("#E4002B", "F"),
+    "mopas": ("#0E8A4A", "Mopaş"), "happycenter": ("#E4002B", "Happy"), "yunus": ("#E0A100", "Yunus"),
 }
 STORE_KIND = {"tkkoop": "market", "hakmar": "market", "watsons": "kozmetik", "metro": "toptan",
               "bizimtoptan": "toptan", "gratis": "kozmetik", "rossmann": "kozmetik",
-              "carrefoursa": "market", "file": "market"}
+              "carrefoursa": "market", "file": "market", "mopas": "market", "happycenter": "market", "yunus": "market"}
 
 # Ana sayfadaki "Market broşürleri" varsayılan sırası: Türkiye'deki mağaza sayısına göre büyükten küçüğe
 # (kullanıcı uygulamada kendi sırasını belirleyebilir).
-CHAIN_RANK = ("bim", "a101", "sok", "migros", "carrefoursa", "tkkoop", "file", "hakmar", "bizimtoptan",
+CHAIN_RANK = ("bim", "a101", "sok", "migros", "carrefoursa", "tkkoop", "file", "hakmar", "mopas", "happycenter", "yunus", "bizimtoptan",
               "metro", "gratis", "watsons", "rossmann")
 # Mağazanın RESMÎ broşür/afiş sayfası. Broşür sayfaları veri hattında okunamıyorsa (erişim engeli, robots.txt,
 # JavaScript) uygulama bu sayfayı kendi tam ekran görüntüleyicisinde, kullanıcının cihazından açar.
@@ -135,6 +157,9 @@ BROCHURE_URLS = {
     "gratis": "https://www.gratis.com/gratis-katalog",
     "watsons": "https://katalog.watsons.com.tr/",
     "rossmann": "https://www.rossmann.com.tr/kataloglar",
+    "mopas": "https://mopas.com.tr/kataloglar",
+    "happycenter": "https://www.happycenter.com.tr/kurumsal/indirim-bulteni/",
+    "yunus": "https://www.yunusmarket.com.tr/insert-brosur",
 }
 
 # Europe/Istanbul saatine göre günde iki kontrol (sabah ve akşam). Dakikalar sunucu yükünü dağıtmak için kaydırıldı.
@@ -179,7 +204,7 @@ class Settings:
     alert_webhook_url: str = field(default_factory=lambda: os.getenv("ALERT_WEBHOOK_URL", ""))
     enabled_live_stores: tuple[str, ...] = field(default_factory=lambda: tuple(
         s for s in _overrides().get("enabled", ()) or os.getenv(
-        "LIVE_STORES", "a101,bim,sok,migros,tkkoop,hakmar,watsons,metro,bizimtoptan,gratis,rossmann,carrefoursa,file")
+        "LIVE_STORES", "a101,bim,sok,migros,tkkoop,hakmar,watsons,metro,bizimtoptan,gratis,rossmann,carrefoursa,file,mopas,happycenter,yunus")
         .split(",") if s))
 
     # ---- günlük senkronizasyon, duyuru ve push

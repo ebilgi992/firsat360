@@ -99,19 +99,42 @@ object PdfCache {
     fun dir(ctx: Context) = File(ctx.cacheDir, "pdf").apply { mkdirs() }
     fun file(ctx: Context, url: String) = File(dir(ctx), Download.hash(url) + ".pdf")
 
+    fun key(c: Catalog, url: String): String = url
+
     /** Önce çevrim dışı kopyaya, sonra önbelleğe bakar; yoksa indirir. */
     fun get(ctx: Context, c: Catalog, progress: (Float) -> Unit, cancelled: () -> Boolean): File? {
         val url = c.pdfUrl ?: return null
         OfflineStore.pdf(ctx, c.id)?.let { return it }
-        // Cihazda okunan resmî PDF'ler (client_bridge): market aynı dosya adını her hafta yeniden kullanabilir →
-        // anahtar tarih aralığını (yoksa bugünü) içerir; geçen haftanın dosyası yeni broşür diye gösterilmez.
-        val key = if (c.sourceMethod == "client_bridge")
-            "$url|${c.validFrom ?: ""}|${c.validTo ?: java.time.LocalDate.now()}" else url
-        val f = file(ctx, key)
+        if (c.sourceMethod == "client_bridge") {
+            val f = bridgeFile(ctx, c, url)
+            if (bridgeFresh(f)) return f
+            if (!Download.to(url, f, MAX_PDF, progress, cancelled)) return f.takeIf { it.exists() && it.length() > 0 }
+            markDownloaded(f); trimBridge(ctx, protect = setOf(f.name))
+            return f
+        }
+        val f = file(ctx, key(c, url))
         if (f.exists() && f.length() > 0) { f.setLastModified(System.currentTimeMillis()); return f }
         if (!Download.to(url, f, MAX_PDF, progress, cancelled)) return null
         trim(ctx, protect = setOf(f.name))
         return f
+    }
+
+    // ---- Cihazda okunan resmî PDF'ler (istemci köprüsü): ayrı klasör (son 2 PDF kuralı bunları silmez), 16 dosya.
+    // Market aynı dosya adını her hafta yeniden kullanabildiğinden dosya 36 saatten eskiyse yeniden indirilir.
+    private const val BRIDGE_KEEP = 16
+    private const val BRIDGE_FRESH_MS = 36L * 60 * 60 * 1000
+    fun bridgeDir(ctx: Context) = File(ctx.cacheDir, "pdf-bridge").apply { mkdirs() }
+    fun bridgeFile(ctx: Context, c: Catalog, url: String) =
+        File(bridgeDir(ctx), Download.hash("$url|${c.validFrom ?: ""}|${c.validTo ?: ""}|${c.title}") + ".pdf")
+    fun bridgeFresh(f: File): Boolean {
+        if (!f.exists() || f.length() == 0L) return false
+        val at = try { File(f.path + ".at").readText().trim().toLong() } catch (e: Exception) { 0L }
+        return System.currentTimeMillis() - at < BRIDGE_FRESH_MS
+    }
+    fun markDownloaded(f: File) { try { File(f.path + ".at").writeText(System.currentTimeMillis().toString()) } catch (e: Exception) { } }
+    fun trimBridge(ctx: Context, protect: Set<String> = emptySet()) {
+        val files = bridgeDir(ctx).listFiles()?.filter { it.name.endsWith(".pdf") }?.sortedByDescending { it.lastModified() } ?: return
+        for (f in files.drop(BRIDGE_KEEP)) if (f.name !in protect && f.name + ".part" !in Download.active) { f.delete(); File(f.path + ".at").delete() }
     }
 
     fun trim(ctx: Context, protect: Set<String> = emptySet()) {

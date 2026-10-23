@@ -1,5 +1,19 @@
 # Test raporu
 
+## 1.6.0 (23.10.2026) — Vitrin tasarımı, kapaklar açılışta, kopyalar, geçmiş kataloglar, market ekle, yeni marketler
+| Test | Sonuç | Kanıt |
+|---|---|---|
+| Backend pytest (tam) | PASS | 182 geçti, 2 atlandı (PostgreSQL) |
+| Kopya ürünler: açıklama temizliği, aynı katalogda tek kart + seçenekler, günün indirimlerinde ürün başına tek aday | PASS | `test_variant_cleaning_and_duplicate_merge`; canlı veride 927 kart, günün indirimleri 24/24 benzersiz |
+| Eski (tarihsiz, 5 gün görülmeyen) ürün/katalog yayından kalkıyor | PASS | canlı veride A101'in 13 Ekim fiyatları feed'de yok |
+| Geçmiş kataloglar (feed `archive`) | PASS | canlı veride 6 okunabilir geçmiş katalog |
+| Yeni marketler: Mopaş PDF + kapak + dosya adından tarih, Happy Center bülten sayfaları, Yunus insert PDF'leri, KVKK PDF'i elenir | PASS | `tests/test_new_markets.py` (5) |
+| Çekirdek (JVM): kopya tercih kuralı, büyük harf düzeltme (Türkçe/ASCII), açıklama temizliği | PASS | 181/181 |
+| Bağımsız kod incelemesi (Android 1.6.0) — 12 bulgu | PASS | tümü düzeltildi: etkinlik yeniden kurulunca iptal, vitrin kart yüksekliği, kaydırma geri sekmesi, PDF yarışı, ayrı PDF önbelleği, haftaya özel kapak dosyası, içerik anahtarı, "NIVEA" büyük harf, markaya göre kopya, favori kimlik taşıma, oturum süre sınırı/bekçi, yerel adres denetimi |
+| Debug + release APK/AAB, min-API, gizli anahtar taraması | PASS | `dist/FIRSAT360-1.6.0*` |
+| Cihazda görsel denetim, arka plan ön yüklemesi, market ekleme akışı | BLOCKED | cihaz/emülatör yok; kullanıcı cihazında doğrulanacak |
+| Yeni marketlerin canlı okuması | GitHub Actions çalıştırmasında | aşağıdaki canlı doğrulama |
+
 ## 1.5.0 (22.10.2026) — yeni arayüz, Onur kaldırıldı, köprü düzeltmeleri
 | Test | Sonuç | Kanıt |
 |---|---|---|

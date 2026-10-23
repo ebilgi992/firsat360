@@ -109,7 +109,7 @@ def test_feed_after_two_days(two_days):
     with sf() as s:
         feed = build_feed(s, today=date(2026, 10, 13))
         n = len(feed["offers"])
-        assert n == 39 + 347 + 40 + 10 + 30 + 65  # + Tarım Kredi (13-19 Ekim)
+        assert n == 39 + 347 + 40 + 10 + 30 + 65 - 1  # + Tarım Kredi (13-19 Ekim); 1 aynı ürün iki fiyat → tek kart (options)
         diger = [o["name"] for o in feed["offers"] if o["category"] == "diger"]
         assert len(diger) <= n * 0.05, diger
         assert not any(o["store_id"] == "a101" and "Brownie" in o["name"] for o in feed["offers"])

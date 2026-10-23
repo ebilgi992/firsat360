@@ -33,6 +33,57 @@ object TurkishText {
         return out
     }
 
+    private val ACRONYMS = setOf("XL", "XXL", "XXXL", "XS", "LED", "TV", "USB", "HD", "UHD", "QLED", "OLED", "PET", "UV",
+        "LCD", "SSD", "HDMI", "WIFI", "RGB", "AAA", "AA", "BİM", "ŞOK", "A101", "PVC", "DVD", "LTD", "AŞ")
+
+    private val UNITS = setOf("ML", "G", "GR", "KG", "CL", "CM", "MM", "MG", "KM", "M2", "M3")
+
+    /** Türkçe küçük harf (I→ı, İ→i). */
+    fun lower(text: String): String {
+        val sb = StringBuilder(text.length)
+        for (ch in text) sb.append(when (ch) { 'I' -> 'ı'; 'İ' -> 'i'; else -> ch.lowercaseChar() })
+        return sb.toString()
+    }
+
+    /**
+     * Tamamı BÜYÜK harfle gelen ürün adlarını okunur hâle getirir ("GLASS IN LOVE GRAVÜRLÜ KASE 3'LÜ" →
+     * "Glass In Love Gravürlü Kase 3'lü"). Karışık yazılmış adlara dokunulmaz; XL, LED, TV gibi kısaltmalar korunur.
+     */
+    fun displayCase(text: String): String {
+        var letters = 0; var uppers = 0
+        for (ch in text) if (ch.isLetter()) { letters++; if (ch.isUpperCase()) uppers++ }
+        if (letters < 4 || uppers * 10 < letters * 9) return text
+        // Metinde Türkçeye özgü harf varsa (İ, Ç, Ğ, Ö, Ş, Ü) Türkçe büyük harf say (I→ı: AYAKLI → Ayaklı); yoksa ASCII
+        // ile büyütülmüş say (I→i: NIVEA → Nivea, PRINGLES → Pringles).
+        val turkishUpper = text.any { it in "İÇĞÖŞÜ" }
+        val out = StringBuilder(text.length)
+        for ((i, w) in words(text).withIndex()) {
+            if (i > 0) out.append(' ')
+            val bare = w.trim(',', '.', '(', ')', '-', '/')
+            if (bare in ACRONYMS) { out.append(w); continue }
+            if (bare == "L" || bare == "LT") { out.append(w); continue }           // litre büyük kalır: "1 L"
+            if (bare in UNITS) { out.append(lower(w)); continue }                  // ölçü birimleri küçük: "50 ml"
+            val lw = if (turkishUpper) lower(w) else lower(w.replace('I', 'i'))
+            val first = lw.indexOfFirst { it.isLetter() }
+            // Rakamla başlayan parça (3'lü, 250ml) ve ölçüler küçük kalır
+            if (first < 0 || (first > 0 && lw[0].isDigit())) { out.append(lw); continue }
+            val c = lw[first]
+            out.append(lw, 0, first).append(when (c) { 'i' -> 'İ'; 'ı' -> 'I'; else -> c.uppercaseChar() }).append(lw, first + 1, lw.length)
+        }
+        return out.toString()
+    }
+
+    /** Açıklama/ölçü: madde işaretleri temizlenir ("• 2 L" → "2 L"); yalnızca işaretten oluşan açıklama → null. */
+    fun cleanVariant(text: String?): String? {
+        if (text.isNullOrBlank()) return null
+        val parts = ArrayList<String>()
+        for (raw in words(text, "•·▪●◦;|")) {
+            val p = raw.trim(' ', '-', '–', ',')
+            if (p.isNotEmpty() && p.any { it.isLetterOrDigit() } && p !in parts) parts.add(p)
+        }
+        return if (parts.isEmpty()) null else parts.joinToString(", ")
+    }
+
     fun upper(text: String): String {
         val sb = StringBuilder(text.length)
         for (ch in text) sb.append(when (ch) { 'i' -> 'İ'; 'ı' -> 'I'; else -> ch.uppercaseChar() })
@@ -105,6 +156,33 @@ object Money {
     }
 }
 
+/** Listelerde kopya ürün: aynı market + ad + açıklama bir kez (bu hafta geçerli olan, gelecek haftanınkine tercih). */
+object Dedupe {
+    fun key(o: Offer): String = o.storeId + "|" + TurkishText.fold(o.brand ?: "") + "|" + TurkishText.fold(o.name) + "|" +
+        TurkishText.fold(o.variant ?: o.pageSizeText ?: "")
+
+    private fun rank(o: Offer, today: java.time.LocalDate): Int = when (Dates.status(o.validFrom, o.validTo, today).kind) {
+        ValidityKind.ACTIVE, ValidityKind.STARTS_TODAY, ValidityKind.LAST_DAY -> 0
+        ValidityKind.UNKNOWN -> 1
+        ValidityKind.UPCOMING -> 2
+        ValidityKind.EXPIRED -> 3
+    }
+
+    fun forLists(offers: List<Offer>, today: java.time.LocalDate): List<Offer> {
+        val best = HashMap<String, Offer>()
+        for (o in offers) {
+            val k = key(o)
+            val cur = best[k]
+            if (cur == null) { best[k] = o; continue }
+            val ro = rank(o, today); val rc = rank(cur, today)
+            if (ro < rc || (ro == rc && o.price < cur.price)) best[k] = o
+        }
+        val keep = HashSet<String>(best.size * 2)
+        for (o in best.values) keep.add(o.id)
+        return offers.filter { it.id in keep }
+    }
+}
+
 object Dates {
     val TR: ZoneId = ZoneId.of("Europe/Istanbul")
     private val months = arrayOf("Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara")
@@ -116,6 +194,18 @@ object Dates {
     fun dateTime(iso: String?): OffsetDateTime? = try { iso?.let { OffsetDateTime.parse(it) } } catch (e: DateTimeParseException) { null }
 
     fun short(d: LocalDate): String = "${d.dayOfMonth} ${months[d.monthValue - 1]}"
+    fun monthYear(d: LocalDate): String = "${monthsLong[d.monthValue - 1]} ${d.year}"
+    /** "13–19 Ekim", "29 Eylül – 5 Ekim"; yalnızca bitiş varsa "5 Ekim'e kadar". */
+    fun rangeLabel(from: String?, to: String?): String? {
+        val f = date(from); val t = date(to)
+        return when {
+            f != null && t != null && f.monthValue == t.monthValue -> "${f.dayOfMonth}–${t.dayOfMonth} ${monthsLong[t.monthValue - 1]}"
+            f != null && t != null -> "${f.dayOfMonth} ${monthsLong[f.monthValue - 1]} – ${t.dayOfMonth} ${monthsLong[t.monthValue - 1]}"
+            t != null -> "${t.dayOfMonth} ${monthsLong[t.monthValue - 1]}'e kadar"
+            f != null -> "${f.dayOfMonth} ${monthsLong[f.monthValue - 1]}"
+            else -> null
+        }
+    }
     fun long(d: LocalDate): String = "${d.dayOfMonth} ${monthsLong[d.monthValue - 1]} ${days[d.dayOfWeek.value - 1]}"
 
     fun stamp(iso: String?): String {

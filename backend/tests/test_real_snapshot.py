@@ -85,11 +85,12 @@ def test_feed_categories_and_catalogs(loaded):
     sf, _ = loaded
     with sf() as s:
         feed = build_feed(s, today=date(2026, 10, 12))
-        assert len(feed["offers"]) == 269
+        # 1.6.0: aynı katalogda aynı ad+açıklamalı iki fiyat tek kartta birleşir (options) → 269 kayıt, 268 kart
+        assert len(feed["offers"]) == 268 and sum(len(o.get("options", [o])) for o in feed["offers"]) == 269
         assert sum(1 for o in feed["offers"] if o["category"] == "diger") == 0
         kinds = {c["kind"] for c in feed["catalogs"]}
         assert {"aktuel", "campaign", "discount_list", "link_only"} <= kinds
         # 17 Ekim'de "10-16 Ekim" kataloğu ve ürünleri süresi dolduğu için gizlenir
         later = build_feed(s, today=date(2026, 10, 17))
         assert not any(c["id"] == "bim-1690" for c in later["catalogs"])
-        assert len(later["offers"]) == 269 - 88
+        assert sum(len(o.get("options", [o])) for o in later["offers"]) == 269 - 88

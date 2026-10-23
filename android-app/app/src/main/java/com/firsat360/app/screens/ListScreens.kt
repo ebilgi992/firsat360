@@ -26,7 +26,7 @@ class ShoppingListScreen(a: MainActivity) : Screen(a) {
         val col = a.vbox()
         col.setPadding(0, dp(18), 0, dp(32))
         val head = a.hbox().apply { setPadding(dp(20), 0, dp(16), 0) }
-        head.addView(a.text("Alışveriş listem", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(0, WRAP, weight = 1f))
+        head.addView(a.text("Alışveriş listem", 30f, Theme.p.text, Theme.display).apply { accessibilityHeading() }, lp(0, WRAP, weight = 1f))
         if (items.isNotEmpty()) head.addView(a.iconButton(Icon.SHARE, desc = "Listeyi paylaş") {
             a.share(ShoppingList.shareText(items) { id -> a.feed.store(id)?.name ?: id })
         })
@@ -57,7 +57,7 @@ class ShoppingListScreen(a: MainActivity) : Screen(a) {
         input.setOnEditorActionListener { _, id, _ -> if (id == EditorInfo.IME_ACTION_DONE) { add(); true } else false }
         box.addView(input, lp(0, WRAP, weight = 1f))
         box.addView(a.iconButton(Icon.PLUS, Theme.p.onAccent, Theme.p.accent, "Ekle") { add() }.apply {
-            background = rounded(Theme.p.accent, 3f) })
+            background = rounded(Theme.p.accent, 8f) })
         col.addView(box, lp(l = dp(20), r = dp(20), t = dp(16)))
 
         for ((storeId, list) in ShoppingList.grouped(items)) {
@@ -119,14 +119,14 @@ class FavoritesScreen(a: MainActivity, private var section: Int = 0) : Screen(a)
         val list = a.offerListView()
         val header = a.vbox()
         header.setPadding(dp(20), dp(18), dp(20), dp(10))
-        header.addView(a.text("Favoriler", 34f, Theme.p.text, Theme.display).apply { accessibilityHeading() })
+        header.addView(a.text("Favoriler", 30f, Theme.p.text, Theme.display).apply { accessibilityHeading() })
         header.addView(a.text("Takip ettiğiniz ürün, katalog ve mağazalar yalnızca bu cihazda saklanır.", 13f, Theme.p.text2,
             Theme.regular), lp(t = dp(6)))
-        val seg = a.hbox().apply { setPadding(dp(4), dp(4), dp(4), dp(4)); background = rounded(Theme.p.surface2, 8f) }
-        for ((i, label) in listOf("Ürünler", "Kataloglar", "Mağazalar").withIndex()) {
+        val seg = a.hbox().apply { setPadding(dp(4), dp(4), dp(4), dp(4)); background = rounded(Theme.p.surface2, 16f) }
+        for ((i, label) in listOf("Ürünler", "Kataloglar", "Marketler").withIndex()) {
             val on = i == section
             seg.addView(a.text(label, 14f, if (on) Theme.p.onAccent else Theme.p.text2, if (on) Theme.bold else Theme.medium, 1, Gravity.CENTER).apply {
-                setPadding(0, dp(10), 0, dp(10)); background = if (on) rounded(Theme.p.accent, 6f) else null
+                setPadding(0, dp(10), 0, dp(10)); background = if (on) rounded(Theme.p.accent, 12f) else null
                 onTap { section = i; a.refreshCurrent() }
             }, lp(0, WRAP, weight = 1f))
         }

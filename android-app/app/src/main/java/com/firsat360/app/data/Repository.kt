@@ -18,8 +18,23 @@ import java.io.File
  * başarılı kopya → uygulama içinde gelen veri. Kullanıcı sunucu adresi girmez/görmez. Demo veri yoktur.
  */
 class Repository(private val ctx: Context) {
-    var feed: Feed? = null
-        private set
+    /** Sunucudan gelen ham feed; [feed] bunun kullanıcının eklediği marketlerle birleşmiş hâlidir. */
+    private var raw: Feed? = null
+    private var merged: Feed? = null
+    var feed: Feed?
+        get() = merged
+        private set(v) { raw = v; merged = v?.let { CustomStores.merge(ctx, it) }; v?.let { migrateFavoriteAliases(it) } }
+
+    /** Kopyası birleşen ürünün eski kimliği favorilerdeyse kalan kartın kimliğine taşınır (kalp doğru görünür). */
+    private fun migrateFavoriteAliases(f: Feed) {
+        if (f.aliases.isEmpty()) return
+        val cur = favorites()
+        if (cur.none { it in f.aliases }) return
+        prefs.edit().putStringSet("favorites", cur.map { f.aliases[it] ?: it }.toSet()).apply()
+    }
+
+    /** Kullanıcı market ekleyip çıkarınca: ham feed yeniden birleştirilir. */
+    fun refreshCustom() { raw?.let { merged = CustomStores.merge(ctx, it) } }
     var lastError: String? = null
         private set
 
