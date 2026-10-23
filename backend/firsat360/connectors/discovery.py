@@ -399,5 +399,7 @@ SOURCES = {
                                hosts=("happycenter.com.tr", "happycenter.tr"), image_re=r"/admin/images/uploads/happy\d*\.(?:jpe?g|png|webp)$"),
     # Yunus Market Insert & Broşür: resmî PDF insertler (/images/dosyalar/insert-brosur/…pdf)
     "yunus": StoreSource("yunus", "Yunus Market İnsert", ["https://www.yunusmarket.com.tr/insert-brosur"],
-                         hosts=("yunusmarket.com.tr",)),
+                         hosts=("yunusmarket.com.tr",),
+                         # PDF'leri saran küçük kapaklar (…/246x345…jpg) sayfa değil, PDF kapağıdır
+                         cover_re=r"\d{2,4}x\d{2,4}[^/]*\.(?:jpe?g|png|webp)$"),
 }

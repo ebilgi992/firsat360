@@ -46,3 +46,10 @@ def test_yunus_insert_pdfs_titles_dates_and_kvkk_skipped():
 def test_numeric_range():
     assert _numeric_range("17-30.10.26.pdf", D) == (date(2026, 10, 17), date(2026, 10, 30))
     assert _numeric_range("katalog.pdf", D) == (None, None)
+
+
+def test_yunus_pdf_thumbnails_are_covers_not_pages():
+    html = ('<html><body><a href="/images/dosyalar/insert-brosur/a/x_500.pdf">'
+            '<img src="/images/dosyalar/insert-brosur/a/246x345500tl-kampanya-246x345-r5x.jpg" alt="Ne Alırsan 500₺"></a></body></html>')
+    f = scan_html(html, "https://www.yunusmarket.com.tr/insert-brosur", SOURCES["yunus"])
+    assert not f.images and len(f.pdfs) == 1 and f.pdf_covers[f.pdfs[0]].endswith("r5x.jpg")
