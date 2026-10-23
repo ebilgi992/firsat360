@@ -1,5 +1,20 @@
 # Değişiklik günlüğü
 
+## 1.7.0-beta — 23 Ekim 2026
+- **Fırsat Asistanı.** Cihazda çalışan, ücretsiz ve anahtarsız sohbet: "en ucuz süt nerede?", "BİM'de ne var?",
+  "bugün neler indirimde?", uygulama yardımı ve neşeli küçük sohbetler. Yanıtlar yalnızca güncel broşür verisinden;
+  soru hiçbir sunucuya gönderilmez, fiyat uydurulmaz.
+- **Tema seçimi:** Ayarlar › Görünüm: Cihaz / Açık / Koyu.
+- **Broşür okuyucu:** FlipHTML5 kitaplarının (CarrefourSA, Gratis ve kullanıcı eklediği marketler) tüm sayfaları,
+  görüntüleyicinin gerçekten yüklediği adresten çıkarılır; sayfa yüklenemezse alternatif klasörler denenir ve
+  "Resmî görüntüleyicide aç" seçeneği sunulur. Sayaç/küçük resimler artık sayfanın üstüne binmez.
+- **Market ekleme:** belirli (eski) bir katalog adresi verilirse aynı sitedeki daha yeni numaralı katalog bulunur;
+  FlipHTML5 bağlantısı varsa tüm sayfalar okunur.
+- **Market logoları:** marketin kendi sitesindeki uygulama simgesi (yoksa marka renginde harf rozeti).
+- Vitrin kartları küçültüldü; ayar anahtarları kehribar; Ayarlar düğmeleri kısaldı; önbellek açıklaması düzeltildi.
+- Bildirimler: Android 13+ izin bir kez sorulur; market bildirimleri günlük özeti silmez; bildirim rengi güncellendi.
+- Desteklenen sürüm: Android 8.0 (API 26) – Android 16 (API 36).
+
 ## 1.6.0 — 23 Ekim 2026
 - **Yeni tasarım "Vitrin".** Ana sayfanın başında kaydırılan büyük broşür vitrini: her marketin güncel broşür kapağı
   büyük, arkasında aynı kapağın bulanık ve koyulaştırılmış hâli (renk içerikten gelir). Sakin grafit/porselen zemin,

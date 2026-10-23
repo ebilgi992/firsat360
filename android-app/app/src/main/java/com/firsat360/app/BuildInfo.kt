@@ -1,8 +1,8 @@
 package com.firsat360.app
 
 object BuildInfo {
-    const val VERSION = "1.6.0"
-    const val VERSION_CODE = 18
+    const val VERSION = "1.7.0-beta"
+    const val VERSION_CODE = 19
     /** Ayarlar → Hakkında. */
     const val DEVELOPER = "Samet"
     const val DEVELOPER_GITHUB = "https://github.com/ebilgi992"

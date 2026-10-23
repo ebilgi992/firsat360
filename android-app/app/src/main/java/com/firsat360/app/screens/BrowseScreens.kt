@@ -130,11 +130,7 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
                 cornerRadius = dp(24).toFloat(); setStroke(1, Theme.p.outline) }
         }
         val top = a.hbox()
-        top.addView(FrameLayout(a).apply {
-            background = rounded(sc, 16f)
-            val short = Theme.storeShort[store.id] ?: store.name.take(4)
-            addView(a.text(short, if (short.length >= 4) 14f else 17f, Theme.onStore(store.id), Theme.display, 1), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        }, LinearLayout.LayoutParams(dp(56), dp(56)))
+        top.addView(a.storeLogo(store.id, store.name, 56, 16f), LinearLayout.LayoutParams(dp(56), dp(56)))
         val t = a.vbox()
         t.addView(a.text(store.name, 24f, Theme.p.text, Theme.display, 1))
         val (label, color) = when {
@@ -211,9 +207,9 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
     }
 }
 
-class SearchScreen(a: MainActivity, initialCategory: String? = null) : Screen(a) {
+class SearchScreen(a: MainActivity, initialCategory: String? = null, initialQuery: String = "") : Screen(a) {
     override val tab = Tab.SEARCH
-    private var query = ""
+    private var query = initialQuery
     private val stores = LinkedHashSet<String>()
     private var category: String? = initialCategory
     private var sort = SortMode.RELEVANCE

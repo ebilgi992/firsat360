@@ -582,8 +582,8 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         hh.addView(ht, lp(0, WRAP, l = dp(14), weight = 1f))
         hero.addView(hh)
         val hb = a.hbox()
-        hb.addView(a.button("Uygulamayı paylaş", Icon.SHARE, true) { shareApp() }, lp(0, WRAP, weight = 1f))
-        hb.addView(a.button("Geri bildirim", Icon.INFO, false) { feedback() }, lp(0, WRAP, l = dp(8), weight = 1f))
+        hb.addView(a.button("Paylaş", Icon.SHARE, true) { shareApp() }, lp(0, WRAP, weight = 1f))
+        hb.addView(a.button("Görüş bildir", Icon.INFO, false) { feedback() }, lp(0, WRAP, l = dp(8), weight = 1f))
         hero.addView(hb, lp(t = dp(16)))
         col.addView(hero, lp(t = dp(8)))
 
@@ -607,6 +607,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             r.addView(t, lp(0, WRAP, weight = 1f))
             r.addView(android.widget.Switch(a).apply {
                 isChecked = on; setOnClickListener { onClick() }; contentDescription = title
+                val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+                thumbTintList = android.content.res.ColorStateList(states, intArrayOf(Theme.p.accent, Theme.p.text3))
+                trackTintList = android.content.res.ColorStateList(states, intArrayOf(Theme.tint(Theme.p.accent, 0.45f), Theme.tint(Theme.p.text3, 0.3f)))
             }, lp(WRAP, WRAP, l = dp(8)))
             parent.addView(r)
         }
@@ -617,6 +620,25 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             if (onClick != null) { r.addView(IconView(a, Icon.CHEVRON, Theme.p.text3, 16), lp(WRAP, WRAP, l = dp(4))); r.background = ripple(null, 12f); r.onTap(onClick) }
             parent.addView(r)
         }
+
+        // ---- Görünüm
+        val look = section("Görünüm", Icon.SETTINGS)
+        val seg = a.hbox().apply { background = rounded(Theme.p.surface2, 14f); setPadding(dp(4), dp(4), dp(4), dp(4)) }
+        for ((mode, label) in listOf("system" to "Cihaz", "light" to "Açık", "dark" to "Koyu")) {
+            val on = a.user.themeMode == mode
+            seg.addView(a.text(label, 14.5f, if (on) Theme.p.onAccent else Theme.p.text, Theme.semibold, 1, Gravity.CENTER).apply {
+                minHeight = dp(44); background = if (on) rounded(Theme.p.accent, 11f) else ripple(null, 11f)
+                contentDescription = "Tema: $label" + if (on) ", seçili" else ""
+                onTap {
+                    if (a.user.themeMode == mode) return@onTap
+                    a.user.themeMode = mode
+                    a.getSharedPreferences("ui_state", android.content.Context.MODE_PRIVATE).edit().putBoolean("reopen_settings", true).apply()
+                    a.recreate()
+                }
+            }, lp(0, WRAP, weight = 1f))
+        }
+        look.addView(seg, lp(MATCH, WRAP, t = dp(14)))
+        look.addView(a.text("Cihaz: telefonunuzun açık/koyu ayarını izler.", 12.5f, Theme.p.text2, Theme.regular), lp(t = dp(8)))
 
         // ---- Marketler
         val stores = section("Marketler", Icon.STORE)
@@ -679,8 +701,9 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         }
         val usedMb = com.firsat360.app.data.ImageLoader.diskUsageMb() +
             com.firsat360.app.core.DiskBudget.size(com.firsat360.app.data.PdfCache.dir(a)) / 1048576.0
-        valueRow(st, "Önbellek", String.format(java.util.Locale.ROOT, "%.0f MB (en fazla %d MB)", usedMb,
-            com.firsat360.app.data.ImageLoader.limitBytes / 1048576), null)
+        valueRow(st, "Önbellek", String.format(java.util.Locale.ROOT, "%.0f MB", usedMb), null)
+        st.addView(a.text("Görseller en fazla ${com.firsat360.app.data.ImageLoader.limitBytes / 1048576} MB, PDF broşürler en fazla " +
+            "120 MB yer kaplar; eskiler kendiliğinden silinir.", 12.5f, Theme.p.text2, Theme.regular), lp(t = dp(2)))
         st.addView(a.button("Önbelleği temizle", Icon.TRASH, false) {
             com.firsat360.app.data.ImageLoader.clear()
             com.firsat360.app.data.PdfCache.dir(a).listFiles()?.forEach { it.delete() }

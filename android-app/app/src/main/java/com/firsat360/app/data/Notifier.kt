@@ -71,13 +71,15 @@ object Notifier {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val b = android.app.Notification.Builder(ctx, CH_CATALOG)
                 .setSmallIcon(R.drawable.ic_stat_firsat)
-                .setColor(0xFFF43F5E.toInt())
+                .setColor(0xFFFFC53D.toInt())
                 .setContentTitle(n.title)
                 .setContentText(n.body.substringBefore('\n'))
                 .setStyle(android.app.Notification.BigTextStyle().bigText(n.body))
                 .setAutoCancel(true).setContentIntent(pi)
                 .setCategory(android.app.Notification.CATEGORY_RECOMMENDATION)
-            nm.notify(NOTIFY_ID, b.build())  // tek bildirim: yenisi eskisinin yerini alır (birleştirme)
+            // Günlük özet tek bildirimdir (yenisi eskisinin yerini alır); market bazlı "yeni broşür" bildirimleri
+            // özeti silmesin diye her market kendi kimliğini kullanır.
+            if (n.kind == "store") nm.notify("store:${n.targetId}", 4200, b.build()) else nm.notify(NOTIFY_ID, b.build())
             true
         } catch (e: Exception) { AppLog.e("notify.post", e.message); false }
     }

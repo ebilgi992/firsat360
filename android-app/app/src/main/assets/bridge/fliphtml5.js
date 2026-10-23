@@ -10,15 +10,9 @@
     if (a) return F360.out({ type: 'navigate', url: F360.abs(a.getAttribute('href') || a.getAttribute('src')) });
     return F360.out({ type: 'pending' });
   }
-  var base = location.href.split('#')[0].split('?')[0]; if (!/\/$/.test(base)) base = base.replace(/\/[^\/]*\.[a-z]+$/i, '/') ; if (!/\/$/.test(base)) base += '/';
-  var pages = window.fliphtml5_pages, urls = [];
-  if (Array.isArray(pages) && pages.length) {
-    pages.forEach(function (p) { var n = p && (Array.isArray(p.n) ? p.n[0] : p.n); if (!n) return;
-      n = String(n).replace(/^\.\.\//, '').replace(/^\.\//, '');
-      if (!/^files\//.test(n) && !/^https?:/.test(n)) n = 'files/large/' + n;
-      urls.push(/^https?:/.test(n) ? n : base + n); });
-    return F360.out({ type: 'images', urls: urls, end: true, total: pages.length });
-  }
+  var fp = F360.flipPages();
+  if (fp && fp.length) return F360.out({ type: 'images', urls: fp, end: true, total: fp.length, title: document.title });
+  if (fp) return F360.out({ type: 'pending' });  // görüntüleyici ilk sayfayı yüklüyor
   var end = F360.scrollStep();
   var dom = F360.portraitImages(function (u) { return /\/files\/(large|page|mobile)\//.test(u); }, 300);
   return F360.out({ type: dom.length ? 'images' : 'pending', urls: dom, end: end });

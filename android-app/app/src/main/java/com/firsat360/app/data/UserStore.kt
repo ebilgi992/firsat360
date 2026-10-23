@@ -82,6 +82,10 @@ class UserStore(ctx: Context) {
     var showImages: Boolean
         get() = prefs.getBoolean("show_images", true)
         set(v) { prefs.edit().putBoolean("show_images", v).apply() }
+    /** Görünüm: "system" (cihaz ayarı), "light" (açık), "dark" (koyu). */
+    var themeMode: String
+        get() = prefs.getString("theme_mode", "system") ?: "system"
+        set(v) { prefs.edit().putString("theme_mode", v).apply() }
     /** Wi‑Fi'de broşürleri önceden hazırla (vitrin kapakları açılışta hazır olur). */
     var prefetchBrochures: Boolean
         get() = prefs.getBoolean("prefetch_brochures", true)

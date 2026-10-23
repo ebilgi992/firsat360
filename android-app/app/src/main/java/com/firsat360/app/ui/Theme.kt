@@ -84,8 +84,13 @@ object Theme {
         "saglik" to 0xFF059669.toInt(), "giyim" to 0xFFDB2777.toInt(), "oyuncak" to 0xFFF59E0B.toInt(),
     )
 
-    fun init(ctx: Context) {
-        val night = (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    /** [mode]: "system" | "light" | "dark" (Ayarlar › Görünüm). */
+    fun init(ctx: Context, mode: String = "system") {
+        val night = when (mode) {
+            "dark" -> true
+            "light" -> false
+            else -> (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
         p = if (night) darkP else light
         density = ctx.resources.displayMetrics.density
         fun font(name: String, fallback: Int): Typeface = try {

@@ -31,6 +31,9 @@ class AddStoreScreen(a: MainActivity) : Screen(a) {
         val col = a.vbox().apply { setPadding(dp(20), dp(4), dp(20), dp(36)) }
         col.addView(a.text("Listede olmayan bir marketin broşürlerini takip edin. Marketin broşür, aktüel veya katalog " +
             "sayfasının adresini yapıştırın; broşürü bulup vitrininize ekleyelim.", 14.5f, Theme.p.text2, Theme.regular))
+        col.addView(a.text("İpucu: Tek bir broşürün değil, marketin \"Kataloglar/Aktüel\" LİSTE sayfasının adresini verirseniz her " +
+            "hafta en yeni broşür otomatik gelir. FlipHTML5, Publitas, Issuu gibi görüntüleyiciler ve PDF'ler tanınır.",
+            13f, Theme.p.text3, Theme.regular), lp(t = dp(8)))
 
         val urlBox = field("Broşür sayfasının adresi", "ornekmarket.com.tr/aktuel", InputType.TYPE_TEXT_VARIATION_URI)
         val nameBox = field("Market adı (isteğe bağlı)", "Örnek Market", InputType.TYPE_TEXT_FLAG_CAP_WORDS)
@@ -51,7 +54,7 @@ class AddStoreScreen(a: MainActivity) : Screen(a) {
                     val name = nameBox.second.text.toString().trim().ifBlank { r.suggestedName }
                     val c = CustomStores.add(a, name, r.url)
                     a.repo.refreshCustom()
-                    Theme.registerStores(a.feed.stores)
+                    Theme.registerStores(a.feed.stores); StoreLogos.register(a.feed.stores)
                     val entry = a.feed.clientBridge[c.id]
                     a.push(WebScreen(a, r.url, "$name broşür", catalog = true, storeId = c.id, profile = "generic",
                         allowedHosts = entry?.allowedHosts ?: emptyList()) { found ->

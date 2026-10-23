@@ -67,7 +67,9 @@ class CatalogReaderScreen(
         val zv = ZoomImageView(a)
         zv.onSwipe = { dir -> go(index + dir, dir) }
         zv.onTap = { toggleChrome() }
-        root.addView(zv, FrameLayout.LayoutParams(MATCH, MATCH))
+        // Sayfa üst/alt çubukların ARASINDA durur: sayaç ve küçük resimler sayfanın üzerine binmez.
+        root.addView(zv, FrameLayout.LayoutParams(MATCH, MATCH).apply {
+            topMargin = dp(68); bottomMargin = if (ps.size > 1) dp(148) else dp(60) })
         pageView = zv
         val pb = ProgressBar(a).apply { isIndeterminate = true }
         root.addView(pb, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER))
@@ -75,9 +77,11 @@ class CatalogReaderScreen(
         val err = a.vbox(dp(20)).apply {
             setGravity(Gravity.CENTER_HORIZONTAL); visibility = View.GONE
             addView(IconView(a, Icon.INFO, dim, 32))
-            addView(a.text("Sayfa yüklenemedi. İnternet bağlantınızı kontrol edin.", 14f, onDark, Theme.medium,
-                gravity = Gravity.CENTER), lp(t = dp(10)))
+            addView(a.text("Bu sayfa şu an açılamadı", 15f, onDark, Theme.semibold, gravity = Gravity.CENTER), lp(t = dp(10)))
+            addView(a.text("Bağlantı yavaş olabilir ya da market görseli yeni bir adrese taşımış olabilir. Broşürü " +
+                "marketin kendi görüntüleyicisinde açabilirsiniz.", 13f, dim, Theme.regular, gravity = Gravity.CENTER), lp(t = dp(6)))
             addView(a.button("Tekrar dene", Icon.REFRESH, true) { showPage(0) }, lp(WRAP, WRAP, t = dp(14)))
+            if (officialUrl() != null) addView(a.button("Resmî görüntüleyicide aç", Icon.EXTERNAL, false) { openOfficial() }, lp(WRAP, WRAP, t = dp(8)))
         }
         root.addView(err, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.CENTER))
         error = err
@@ -129,11 +133,7 @@ class CatalogReaderScreen(
         info.addView(cap, lp(0, WRAP, l = dp(12), weight = 1f))
         val link = a.text("Resmî sayfa", 12.5f, 0xFFFF8FA3.toInt(), Theme.semibold, 1).apply {
             setPadding(dp(10), dp(6), 0, dp(6))
-            onTap {
-                val p = pages.getOrNull(index)
-                val u = p?.link ?: c?.officialUrl
-                if (u != null) a.openWeb(u, c?.title ?: "Kaynak")
-            }
+            onTap { openOfficial() }
         }
         info.addView(link)
         bottom.addView(info)
@@ -154,6 +154,13 @@ class CatalogReaderScreen(
         }
         root.addView(bottom, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.BOTTOM))
         bars = listOf(top, bottom)
+        // Çubukların gerçek yüksekliği (büyük yazı boyutu dahil) ölçülünce sayfa aralarına yerleşir
+        root.post {
+            (zv.layoutParams as? FrameLayout.LayoutParams)?.let { p ->
+                if (top.height > 0 && bottom.height > 0 && (p.topMargin != top.height || p.bottomMargin != bottom.height)) {
+                    p.topMargin = top.height; p.bottomMargin = bottom.height; zv.layoutParams = p }
+            }
+        }
 
         root.post { showPage(0) }
         return root
@@ -190,11 +197,37 @@ class CatalogReaderScreen(
         zv.setImageDrawable(ColorDrawable(0))
         val maxPx = 2400
         val local = catalogId?.let { com.firsat360.app.data.OfflineStore.pageFile(a, it, p.url) }
-        ImageLoader.load(zv, p.url, maxPx, p.thumbUrl, rgb565 = true, local = local) { ok ->
-            progress?.visibility = View.GONE
-            error?.visibility = if (ok) View.GONE else View.VISIBLE
+        // Görüntüleyici klasörü değişmişse (large → page → mobile, webp ↔ jpg) sırayla denenir.
+        val tries = variants(p.url)
+        val at = index
+        fun attempt(i: Int) {
+            ImageLoader.load(zv, tries[i], maxPx, if (i == tries.lastIndex) p.thumbUrl else null, rgb565 = true, local = if (i == 0) local else null) { ok ->
+                if (at != index) return@load
+                if (!ok && i + 1 < tries.size) { attempt(i + 1); return@load }
+                progress?.visibility = View.GONE
+                error?.visibility = if (ok) View.GONE else View.VISIBLE
+            }
         }
+        attempt(0)
         ps.getOrNull(index + 1)?.let { ImageLoader.prefetch(it.url, maxPx, true) }
+    }
+
+    private fun officialUrl(): String? = pages.getOrNull(index)?.link ?: a.feed.catalog(catalogId)?.officialUrl
+
+    private fun openOfficial() {
+        val u = officialUrl() ?: return
+        a.openWeb(u, a.feed.catalog(catalogId)?.title ?: singleTitle ?: "Resmî sayfa")
+    }
+
+    private fun variants(u: String): List<String> {
+        val out = linkedSetOf(u)
+        for ((from, to) in listOf("/files/large/" to "/files/page/", "/files/large/" to "/files/mobile/", "/files/page/" to "/files/large/"))
+            if (u.contains(from)) out += u.replace(from, to)
+        for (v in out.toList()) {
+            if (v.contains(".webp")) out += v.replace(".webp", ".jpg")
+            else if (Regex("\\.jpe?g", RegexOption.IGNORE_CASE).containsMatchIn(v)) out += v.replace(Regex("\\.jpe?g", RegexOption.IGNORE_CASE), ".webp")
+        }
+        return out.toList().take(6)
     }
 
     private fun toggleChrome() {

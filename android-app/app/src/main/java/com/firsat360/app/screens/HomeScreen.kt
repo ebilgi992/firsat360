@@ -46,6 +46,8 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         titleCol.addView(a.text("FIRSAT360", 30f, Theme.p.text, Theme.display, 1).apply { contentDescription = "FIRSAT360" })
         titleCol.addView(a.text("${Dates.long(a.today)}, bu haftanın broşürleri", 13.5f, Theme.p.text2, Theme.medium, 1), lp(t = dp(1)))
         top.addView(titleCol, lp(0, WRAP, weight = 1f))
+        top.addView(a.iconButton(Icon.SPARK, Theme.p.onLabel, Theme.p.label, "Fırsat Asistanı") { a.openAssistant() }.apply {
+            background = rounded(Theme.p.label, 16f) }, lp(dp(48), dp(48), r = dp(8)))
         top.addView(a.iconButton(Icon.SETTINGS, desc = "Ayarlar") { a.openSettings() })
         col.addView(top)
 
@@ -59,6 +61,18 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             onTap { a.switchTab(Tab.SEARCH) }
         }
         col.addView(search, lp(l = dp(20), r = dp(20), t = dp(16)))
+        // Asistan kısayolu: tek satır, sohbet başlatır
+        val ask = a.hbox(Gravity.CENTER_VERTICAL).apply {
+            setPadding(dp(14), dp(11), dp(14), dp(11))
+            background = ripple(rounded(Theme.p.accentSoft, 16f), 16f)
+            contentDescription = "Fırsat Asistanı'na sor"
+            addView(IconView(a, Icon.SPARK, Theme.p.accent, 18))
+            addView(a.text("Asistana sor: \"En ucuz süt nerede?\"", 14f, Theme.p.text, Theme.medium, 1), lp(0, WRAP, l = dp(10), weight = 1f))
+            addView(IconView(a, Icon.CHEVRON, Theme.p.text2, 16))
+            onTap { a.openAssistant() }
+            pressFeedback(0.98f)
+        }
+        col.addView(ask, lp(l = dp(20), r = dp(20), t = dp(10)))
 
         // Önceki açılışta kaydedilmiş hata raporu (beta tanılama; kullanıcı paylaşmadıkça gönderilmez)
         com.firsat360.app.data.CrashLog.pending(a)?.let { crash ->
@@ -203,11 +217,11 @@ class HomeScreen(a: MainActivity) : Screen(a) {
 
     // ------------------------------------------------------------------ Vitrin
 
-    private fun vitrinWidth(): Int = minOf(dp(320), a.resources.displayMetrics.widthPixels - dp(64))
+    private fun vitrinWidth(): Int = minOf(dp(250), a.resources.displayMetrics.widthPixels - dp(100))
 
     private fun buildVitrin(): View {
         val row = a.hbox(Gravity.TOP).apply { setPadding(dp(20), dp(6), dp(8), dp(18)) }
-        for (e in shelf) row.addView(vitrinCard(e), lp(vitrinWidth(), (vitrinWidth() * 1.30f).toInt(), r = dp(12)))
+        for (e in shelf) row.addView(vitrinCard(e), lp(vitrinWidth(), (vitrinWidth() * 1.32f).toInt(), r = dp(12)))
         vitrinRow = row
         val scroll = SnapScroll(a, dp(20)) { idx -> updateDots(idx) }
         scroll.addView(row)
@@ -249,7 +263,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val cover = cached?.coverUrl ?: c?.coverUrl ?: c?.pages?.firstOrNull()?.let { it.thumbUrl ?: it.url }
             ?: e.preview?.let { it.coverUrl ?: it.pages.firstOrNull()?.let { p -> p.thumbUrl ?: p.url } }
         val w = vitrinWidth()
-        val h = (w * 1.30f).toInt()
+        val h = (w * 1.32f).toInt()
         val card = FrameLayout(a).apply {
             layoutParams = LinearLayout.LayoutParams(w, h)
             val sc = Theme.store(e.store.id)
@@ -283,7 +297,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
                 intArrayOf(0x40000000, 0x26000000, 0xD9000000.toInt()))
         }, FrameLayout.LayoutParams(MATCH, MATCH))
         // Kapak
-        val coverW = (w * 0.62f).toInt()
+        val coverW = (w * 0.56f).toInt()
         val coverH = (coverW * 1.38f).toInt()
         val coverBox = FrameLayout(a).apply {
             background = rounded(0x33FFFFFF, 12f)
@@ -311,19 +325,19 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             }
             coverBox.addView(img, FrameLayout.LayoutParams(MATCH, MATCH))
         }
-        card.addView(coverBox, FrameLayout.LayoutParams(coverW, coverH, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(20) })
+        card.addView(coverBox, FrameLayout.LayoutParams(coverW, coverH, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(16) })
 
         // Bilgi satırı: rozet, market adı, durum, "Aç"
         val status = vitrinStatus(e, cached)
-        val meta = a.vbox().apply { setPadding(dp(18), 0, dp(18), dp(16)) }
+        val meta = a.vbox().apply { setPadding(dp(16), 0, dp(14), dp(14)) }
         badgeFor(e, cached)?.let { b -> meta.addView(a.pill(b, Theme.p.onLabel, Theme.p.label, 12f, Theme.semibold), lp(WRAP, WRAP, b = dp(8))) }
         val line = a.hbox(Gravity.BOTTOM)
         val texts = a.vbox()
-        texts.addView(a.text(e.store.name, 30f, 0xFFFFFFFF.toInt(), Theme.display, 1))
-        texts.addView(a.text(status, 13f, 0xD9FFFFFF.toInt(), Theme.medium, 2), lp(t = dp(2)))
+        texts.addView(a.text(e.store.name, 25f, 0xFFFFFFFF.toInt(), Theme.display, 1))
+        texts.addView(a.text(status, 12.5f, 0xD9FFFFFF.toInt(), Theme.medium, 2), lp(t = dp(2)))
         line.addView(texts, lp(0, WRAP, weight = 1f))
-        line.addView(a.text("Aç", 16f, Theme.p.onLabel, Theme.displayBold, 1, Gravity.CENTER).apply {
-            setPadding(dp(18), dp(10), dp(18), dp(10)); background = rounded(Theme.p.label, 14f)
+        line.addView(a.text("Aç", 15f, Theme.p.onLabel, Theme.displayBold, 1, Gravity.CENTER).apply {
+            setPadding(dp(14), dp(8), dp(14), dp(8)); background = rounded(Theme.p.label, 14f)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, lp(WRAP, WRAP, l = dp(10)))
         meta.addView(line)
@@ -385,11 +399,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         background = ripple(surfaceBg(18f), 18f)
         contentDescription = (if (fav) "Favori market, " else "") + "$name, $sub"
         val top = a.hbox()
-        val mono = FrameLayout(a).apply { background = rounded(Theme.store(id), 12f) }
-        val short = Theme.storeShort[id] ?: name.take(3)
-        mono.addView(a.text(short, if (short.length >= 4) 12f else 14f, Theme.onStore(id), Theme.display, 1),
-            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        top.addView(mono, LinearLayout.LayoutParams(dp(42), dp(42)))
+        top.addView(a.storeLogo(id, name, 42), LinearLayout.LayoutParams(dp(42), dp(42)))
         top.addView(a.flex())
         if (fav) top.addView(IconView(a, Icon.STAR_FILLED, Theme.p.accent, 16))
         addView(top)

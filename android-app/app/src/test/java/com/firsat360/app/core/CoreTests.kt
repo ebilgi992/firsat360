@@ -426,6 +426,33 @@ fun main(args: Array<String>) {
     }
     check("trdates.none", TrDates.range("Haftanın Fırsatları", d21) == null)
 
+    // Fırsat Asistanı (cihazda, kural tabanlı)
+    run {
+        val asst = Assistant(feed, LocalDate.of(2026, 10, 14), seed = 7)
+        val hi = asst.reply("Merhaba")
+        check("asst.hello", hi.text.contains("Asistan") && hi.suggestions.isNotEmpty()) { hi.text }
+        val milk = asst.reply("en ucuz süt nerede?")
+        check("asst.product", milk.offers.isNotEmpty() && milk.text.contains("₺") &&
+            milk.offers.all { TrNorm.loose(it.displayTitle + " " + (it.variant ?: "")).contains("sut") }) { milk.text }
+        val bim = asst.reply("BİM'de bu hafta ne var")
+        check("asst.store", bim.text.startsWith("BİM") && bim.action == "search:BİM") { bim.text }
+        val deals = asst.reply("bugün neler indirimde")
+        check("asst.deals", deals.offers.isNotEmpty()) { deals.text }
+        check("asst.notGreeting", !asst.reply("sabun").text.contains("Ben Fırsat Asistanı"))
+        check("asst.help", asst.reply("market nasıl eklerim").action == "add_store")
+        check("asst.offlineNotDeal", asst.reply("indirimli deterjan").action != null)
+        val miss = asst.reply("xqzvw")
+        check("asst.fallback", miss.offers.isEmpty() && miss.suggestions.isNotEmpty()) { miss.text }
+        check("asst.stem", Assistant.stem("sutun") == "sut" && Assistant.stem("deterjanlar") == "deterjan")
+        check("asst.robot", !asst.reply("robot süpürge").text.contains("Ben Fırsat Asistanı"))
+        check("asst.renk", asst.reply("renkli kalem").action != "settings")
+        check("asst.hesap", !asst.reply("hesap makinesi").text.contains("kişisel veri"))
+        check("asst.loc", Assistant.locative("sok" to "ŞOK") == "ŞOK'ta" && Assistant.locative("x" to "Hakmar") == "Hakmar'da" &&
+            Assistant.locative("y" to "Yunus Market") == "Yunus Market'te" && Assistant.locative("z" to "Özdilek") == "Özdilek'te" &&
+            Assistant.locative("bim" to "BİM") == "BİM'de") { Assistant.locative("y" to "Yunus Market") }
+        check("asst.noInvent", asst.reply("uzay mekiği fiyatı").offers.isEmpty())
+    }
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)

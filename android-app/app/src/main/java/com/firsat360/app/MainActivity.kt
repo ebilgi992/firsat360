@@ -78,9 +78,9 @@ class MainActivity : Activity() {
     }
 
     private fun buildUi() {
-        Theme.init(this)
-        repo = Repository(this)
         user = com.firsat360.app.data.UserStore(this)
+        Theme.init(this, user.themeMode)
+        repo = Repository(this)
         user.migrate()
         com.firsat360.app.core.AppLog.init(java.io.File(filesDir, "logs"), verbose = false)
         applyStorageSettings()
@@ -121,11 +121,18 @@ class MainActivity : Activity() {
             try {
                 if (f == null) showFatal(err ?: "Veri yüklenemedi") else {
                     Theme.registerStores(feed.stores)
+                    com.firsat360.app.ui.StoreLogos.register(feed.stores)
                     switchTab(Tab.HOME)
-                    content.postDelayed({ startBrochurePrefetch() }, 2500)
+                    // Görünüm değişince etkinlik yeniden kurulur; kullanıcı Ayarlar'a geri döner.
+                    if (getSharedPreferences("ui_state", MODE_PRIVATE).getBoolean("reopen_settings", false)) {
+                        getSharedPreferences("ui_state", MODE_PRIVATE).edit().putBoolean("reopen_settings", false).apply()
+                        push(com.firsat360.app.screens.SettingsScreen(this))
+                    }
+                    content.postDelayed(prefetchLater, 2500)
                     handleOpenIntent(intent)
                     if (user.seenCatalogs() == null) user.markCatalogsSeen(f.catalogs.map { it.id })
                     com.firsat360.app.data.Notifier.schedule(this)
+                    content.postDelayed(askLater, 4000)
                     // Açılışta güncel veriyi kontrol et (değişmemişse indirilmez; hata olursa mevcut veri kalır)
                     repo.refresh { nf, _ -> if (nf != null) onFeedUpdated() }
                 }
@@ -208,6 +215,20 @@ class MainActivity : Activity() {
         } catch (t: Throwable) { CrashLog.save(this, t, "bildirim açma") }
     }
 
+    /** Android 13+: bildirimler açıkken izin hiç sorulmadıysa bir kez sorulur (reddedilirse bir daha sorulmaz). */
+    private fun askNotificationsOnce() {
+        try {
+            if (isFinishing || isDestroyed || android.os.Build.VERSION.SDK_INT < 33 || !user.notifyCatalogs) return
+            if (com.firsat360.app.data.Notifier.permitted(this)) return
+            val st = getSharedPreferences("ui_state", MODE_PRIVATE)
+            if (st.getBoolean("notif_asked", false)) return
+            st.edit().putBoolean("notif_asked", true).apply()
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 702)  // sessiz: sonuç diyaloğu yok
+        } catch (e: Exception) { }
+    }
+    private val prefetchLater = Runnable { if (!isFinishing && !isDestroyed) startBrochurePrefetch() }
+    private val askLater = Runnable { if (!isFinishing && !isDestroyed) askNotificationsOnce() }
+
     /** Günlük katalog bildirimini açar/kapatır; Android 13+ izni ister; reddedilirse nasıl açılacağını gösterir. */
     fun enableNotifications(on: Boolean) {
         user.notifyCatalogs = on
@@ -252,7 +273,7 @@ class MainActivity : Activity() {
 
     /** Yeni veri geldiğinde: mağaza renklerini kaydet, ana sayfadaysak yenile. */
     fun onFeedUpdated() {
-        repo.feed?.let { Theme.registerStores(it.stores) }
+        repo.feed?.let { Theme.registerStores(it.stores); com.firsat360.app.ui.StoreLogos.register(it.stores) }
         val top = stack.lastOrNull()
         if (top is HomeScreen || top is StoresScreen || top is com.firsat360.app.screens.DealsScreen) refreshCurrent()
     }
@@ -287,6 +308,7 @@ class MainActivity : Activity() {
     lateinit var prefetchHost: FrameLayout
 
     override fun onDestroy() {
+        if (::content.isInitialized) { content.removeCallbacks(prefetchLater); content.removeCallbacks(askLater) }
         // Yeniden kurulumda (tema/dil/yazı boyutu) eski arka plan okuyucusu bırakılır; yeni etkinlik baştan başlatır.
         com.firsat360.app.data.BridgePrefetch.cancel()
         super.onDestroy()
@@ -460,9 +482,10 @@ class MainActivity : Activity() {
     }
     fun openReader(id: String, page: Int = 0) = push(com.firsat360.app.screens.CatalogReaderScreen(this, id, page))
     fun openStore(id: String) { stack.clear(); val s = StoresScreen(this, id); stack.add(s); show(s, true) }
-    fun openSearch(category: String? = null) { stack.clear(); val s = SearchScreen(this, category); stack.add(s); show(s, true) }
+    fun openSearch(category: String? = null, query: String = "") { stack.clear(); val s = SearchScreen(this, category, query); stack.add(s); show(s, true) }
     fun openWeb(url: String, title: String) = push(WebScreen(this, url, title))
     fun openSettings() = push(SettingsScreen(this))
+    fun openAssistant() = push(com.firsat360.app.screens.AssistantScreen(this))
 
     fun openExternal(url: String) {
         val scheme = Uri.parse(url).scheme?.lowercase()

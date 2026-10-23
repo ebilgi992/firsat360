@@ -58,6 +58,32 @@ var F360 = (function () {
     });
     return out;
   }
+  /** FlipHTML5 kitabının TÜM sayfaları (window.fliphtml5_pages). Yeni sürümler sayfa dosyalarını farklı klasör/CDN ve
+   *  sürüm sorgusuyla yükler; bu yüzden adres, görüntüleyicinin GERÇEKTEN yüklediği bir sayfa görselinden (Resource
+   *  Timing + DOM) türetilir. Eşleşme yoksa ilk 6 sn beklenir, sonra klasik "files/large/<ad>" yolu denenir. */
+  function flipPages() {
+    var pages = window.fliphtml5_pages; if (!Array.isArray(pages) || !pages.length) return null;
+    var names = pages.map(function (p) { var n = p && (Array.isArray(p.n) ? p.n[0] : p.n);
+      return n ? String(n).replace(/^(\.\.?\/)+/, '') : null; });
+    var seen = [];
+    try { performance.getEntriesByType('resource').forEach(function (e) { seen.push(e.name); }); } catch (e) { }
+    Array.prototype.forEach.call(document.images, function (i) { seen.push(i.currentSrc || i.src || ''); });
+    var best = null, rank = 9;
+    names.forEach(function (n) { if (!n) return; var b = n.split('/').pop().split('?')[0]; if (!b) return;
+      seen.forEach(function (s) { var sp = s.split('#')[0].split('?'); if (sp[0].slice(-(b.length + 1)) !== '/' + b) return;
+        var r = /\/large\//.test(sp[0]) ? 0 : /\/page\//.test(sp[0]) ? 1 : /\/mobile\//.test(sp[0]) ? 2 : /\/thumb\//.test(sp[0]) ? 4 : 3;
+        if (r < rank) { rank = r; best = { dir: sp[0].slice(0, sp[0].length - b.length).replace(/\/thumb\/$/, '/large/'), q: sp[1] || '' }; } }); });
+    window.__f360t = window.__f360t || Date.now();
+    var base = location.href.split('#')[0].split('?')[0]; if (!/\/$/.test(base)) base = base.replace(/\/[^\/]*\.[a-z]+$/i, '/'); if (!/\/$/.test(base)) base += '/';
+    if (!best && Date.now() - window.__f360t < 6000) return [];
+    var urls = [];
+    names.forEach(function (n) { if (!n) return;
+      if (/^https?:/.test(n)) { urls.push(n); return; }
+      if (best) { urls.push(best.dir + n.split('/').pop().split('?')[0] + (best.q ? '?' + best.q : '')); return; }
+      if (!/^files\//.test(n)) n = 'files/large/' + n;
+      urls.push(base + n); });
+    return urls;
+  }
   function out(o) { return JSON.stringify(o); }
-  return { abs: abs, challenge: challenge, brochurePdf: brochurePdf, scrollStep: scrollStep, bestSrc: bestSrc, portraitImages: portraitImages, out: out };
+  return { abs: abs, challenge: challenge, brochurePdf: brochurePdf, scrollStep: scrollStep, bestSrc: bestSrc, portraitImages: portraitImages, flipPages: flipPages, out: out };
 })();
