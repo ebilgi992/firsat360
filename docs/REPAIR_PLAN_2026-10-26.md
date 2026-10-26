@@ -28,10 +28,18 @@ Bu tarihli yayın incelendi; telefondaki kurulum ve bildirim teslimi uzaktan do�
 | TK Koop **Renax Bulaşık Makinesi Kapsülü 60'lı** (`tkkoop-6c7f2c1be60018`) | Listedeki ad kısaltılmış; `name_mismatch` | `/urun/renax-bulasik-makinesi-kapsulu-60li`: tam başlık ve 60'lı paketini oku; kısaltılmış liste adını rastgele genişletme | Tam Renax ürün adı/60'lı paket ve aynı sayfanın ana görseli; farklı paket reddedilir |
 | TK Koop **Solo Ultra Bambu Özlü Kağıt Havlu 16'lı** (`tkkoop-0bd3a7eb9d6a7c`) | Listedeki ad kısaltılmış; `name_mismatch` | `/urun/solo-ultra-bambu-ozlu-kagit-havlu-16li`: tam ad ve 16'lı ambalajı doğrula | Solo/Bambu/kağıt havlu/16'lı eşleşir; tuvalet kâğıdı veya farklı paket görseli reddedilir |
 
-TK Koop'ta h4/h5 başlıklarının da aday olması eklenmiştir; doğrulama eşiği gevşetilmemiştir.
-Bu bir ayrıştırıcı düzeltmesidir; dört canlı görselin düzelmiş sayılması için CI'daki resmî HTML kanıtı,
-regresyon testi ve sonraki canlı feed sonucu birlikte kontrol edilmelidir. `scripts/check_tk_images.py` dört
-sayfayı kibar istemciyle okur, HTML ve ayrıştırma raporunu `tk-evidence` artifact'ına koyar; 403/429/robots engelinde durur.
+TK Koop canlı HTML kanıtı, dalın [CI çalışmasındaki](https://github.com/ebilgi992/firsat360/actions/runs/40272082398)
+`tk-evidence` artifact'ından alındı. Dört sayfanın da `.urun_resim img` alanı
+`https://www.tkkoop.com.tr/assets/image/yok.png` döndürüyor. Ana adlar h4/h5 değil,
+`.urun_bilgi_sag .u_bilgi_2` div'i içinde. İlgisiz `base7/919.jpg` görseli “Diğer Ürünleri”
+alanındaki başka bir ürüne ait. Ayrıştırıcı bu iki alanı açıkça ayıracak şekilde düzeltildi.
+
+Dört HTML üzerinde yeni ayrıştırıcı ve eşleştirici çalıştırıldı; sonuçlar
+`docs/TK_IMAGE_EVIDENCE_2026-10-26.json` içinde. Hepsi doğru adla **no_image_on_page** sonucunu veriyor.
+Bu dört ürünün yanlış teşhisi giderildi; marketin yayımlamadığı fotoğraflar tamamlandı diye sayılmıyor.
+Resmî ana alana gerçek görsel eklendiğinde marka, paket adedi ve ölçü kontrollerinden sonra kabul edilecek.
+Banvit/Doyfarm çapraz eşleşmesi ve 30'lu/60'lı paket eşleşmesi için regresyon testleri eklendi.
+`scripts/check_tk_images.py` dört sayfayı kibar istemciyle okur; 403/429/robots engelinde durur.
 
 ## A101_Afis ve diğer depolar
 

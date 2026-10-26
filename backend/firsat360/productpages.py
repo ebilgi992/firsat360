@@ -96,7 +96,7 @@ def name_candidates(html: str, meta_name: str | None) -> list[str]:
     if root is not None:
         for n in root.css("[class*=similar], [class*=related], [class*=recommend], footer, header, nav"):
             n.decompose()
-        heads = [text_of(h) for h in root.css("h1, h2, h3, h4, h5, [class*=product-name], [class*=productName], "
+        heads = [text_of(h) for h in root.css("h1, h2, h3, [class*=product-name], [class*=productName], "
                                              "[class*=urun-adi], [class*=title]")]
         out += [h for h in heads if h and 3 <= len(h) <= 160]
         # Marka + ad aynı blokta iki başlık olarak yazılıyorsa (BİM) birleşik hâli de aday
@@ -109,6 +109,19 @@ def page_row(store: str, url: str, html: str, final_url: str | None = None) -> P
         # Ürün sayfası kaldırılmış, ana sayfaya/kategoriye yönlendirildi: bu sayfadaki görsel bu ürünün değildir.
         return PageImage(store=store, detail_url=url, page_name=None, page_variant=None, page_price_text=None,
                          image_url=None, gone=True)
+    if store == "tkkoop":
+        tree = parse(html)
+        title = tree.css_first(".urun_bilgi_sag .u_bilgi_2")
+        primary = tree.css_first(".urun_resim")
+        if title is not None and primary is not None:
+            # TK ana başlığı div içindedir; ürün kartları/slider başlıkları değildir.
+            # yok.png yer tutucusunda önerilen ürünlerin görsellerine geri düşülmez.
+            images = [urljoin(url, u) for u in all_image_urls(primary)]
+            image = next((u for u in images if _host_ok(u, STORE_HOSTS[store][1])
+                          and MAIN_IMAGE[store].search(u) and _IMG_FILE.search(u)
+                          and not SKIP_IMG.search(u)), None)
+            price = tree.css_first(".urun_bilgi_sag .ss_urun52a")
+            return PageImage(store, url, text_of(title), None, text_of(price), image)
     m = page_meta(html, url)
     img = m["image"]
     pat = MAIN_IMAGE.get(store)

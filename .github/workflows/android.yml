@@ -37,11 +37,20 @@ jobs:
           path: tk-evidence/
       - name: Doğrulanmış araç zinciri
         run: bash android-app/tools/setup-toolchain.sh "$RUNNER_TEMP/toolchain"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-toolchain
+          path: ${{ runner.temp }}/toolchain/
+          retention-days: 1
+      - name: Tarihsel JVM test verisi
+        env:
+          PYTHONPATH: backend
+        run: python scripts/export_core_test_feed.py "$RUNNER_TEMP/core-test-feed.json"
       - name: Android çekirdek testleri
         working-directory: android-app
         run: |
           "$RUNNER_TEMP/toolchain/kotlinc/bin/kotlinc" app/src/main/java/com/firsat360/app/core app/src/test/java -d "$RUNNER_TEMP/core.jar"
-          "$RUNNER_TEMP/toolchain/kotlinc/bin/kotlin" -cp "$RUNNER_TEMP/core.jar" com.firsat360.app.core.CoreTestsKt app/src/main/assets/feed.json
+          "$RUNNER_TEMP/toolchain/kotlinc/bin/kotlin" -cp "$RUNNER_TEMP/core.jar" com.firsat360.app.core.CoreTestsKt "$RUNNER_TEMP/core-test-feed.json"
       - name: APK oluştur ve imzasını doğrula
         env:
           TOOLCHAIN: ${{ runner.temp }}/toolchain
