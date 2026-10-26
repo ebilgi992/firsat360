@@ -20,11 +20,12 @@ data class AssistantReply(
  * Uydurmaz: veride olmayan fiyat veya ürün söylenmez.
  */
 class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long = System.nanoTime()) {
+    private var previousTerms: List<String> = emptyList()
     private val rnd = java.util.Random(seed)
     private val engine = SearchEngine(feed)
     private fun pick(vararg s: String) = s[rnd.nextInt(s.size)]
 
-    val starters = listOf("Bugün neler indirimde?", "En ucuz süt nerede?", "BİM'de bu hafta ne var?", "Uygulama nasıl çalışır?")
+    val starters = listOf("100 TL altı süt", "Litre fiyatına göre süt", "Bugün neler indirimde?", "En ucuz süt nerede?", "BİM'de bu hafta ne var?", "Uygulama nasıl çalışır?")
 
     fun hello(): AssistantReply {
         val n = activeCatalogs().size
@@ -38,10 +39,11 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
     }
 
     fun reply(input: String): AssistantReply {
-        val raw = input.trim()
+        val raw = input.trim().take(400)
         if (raw.isEmpty()) return AssistantReply("Bir şey yazmayı unuttun galiba 🙂 Ürün adı, market ya da soru yazabilirsin.",
             suggestions = starters)
-        val q = TrNorm.loose(raw)
+        val request = ShoppingRequest.parse(raw)
+        val q = TrNorm.loose(request.query)
         val words = TurkishText.words(q)
         fun has(vararg k: String) = k.any { key -> if (key.contains(' ')) q.contains(key) else words.any { it == key || (key.length >= 4 && it.startsWith(key)) } }
         // Sohbet/yardım niyetleri yalnızca TAM kelimeyle (ürün adlarıyla karışmasın: "robot süpürge", "renkli kalem")
@@ -77,11 +79,14 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         if (stores.isEmpty() && terms.isEmpty() && dealWords) return todayDeals(has("rastgele"))
 
         // --- market
-        if (stores.isNotEmpty() && terms.isEmpty()) return storeSummary(stores.first())
+        if (stores.isNotEmpty() && terms.isEmpty()) {
+            if (previousTerms.isNotEmpty() && !dealWords) return product(previousTerms, stores, true, request)
+            return storeSummary(stores.first())
+        }
 
         // --- kategori
         val cat = feed.categories.firstOrNull { c -> TrNorm.loose(c.name).let { n -> n.length >= 3 && (q.contains(n) || terms.any { t -> t.length >= 4 && n.startsWith(t) }) } }
-        if (cat != null && terms.size <= 2 && terms.none { stem(it) == "sut" }) {
+        if (cat != null && request.budget == null && request.pack == null && !request.unitSort && terms.size <= 2 && terms.none { stem(it) == "sut" }) {
             val l = live().filter { it.category == cat.id && (stores.isEmpty() || stores.any { s -> s.id == it.storeId }) }
                 .sortedByDescending { discount(it) ?: 0 }.take(6)
             if (l.isNotEmpty()) return AssistantReply("${cat.name} reyonunda gezindim, işte bu haftanın en dikkat çekenleri 👇",
@@ -89,7 +94,11 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         }
 
         // --- ürün
-        if (terms.isNotEmpty()) return product(terms, stores, cheap = has("ucuz", "fiyat", "kac", "kadar", "nerede", "hangi"))
+        if (terms.isNotEmpty()) {
+            previousTerms = terms
+            return product(terms, stores, cheap = has("ucuz", "fiyat", "kac", "kadar", "nerede", "hangi"), request = request)
+        }
+        if (previousTerms.isNotEmpty() && (request.budget != null || request.pack != null || request.unitSort)) return product(previousTerms, stores, true, request)
         if (dealWords) return todayDeals(false)
         return AssistantReply(pick("Hımm, bunu tam çözemedim 🙈", "Bunu anlayamadım ama pes etmem! 🤔") +
             " Bir ürün adı (ör. \"süt\"), bir market (ör. \"ŞOK\") ya da \"bugünün fırsatları\" yazmayı dener misin?", suggestions = starters)
@@ -153,7 +162,7 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
             action = "search:${s.name}", actionLabel = "${s.name} ürünleri")
     }
 
-    private fun product(terms: List<String>, stores: List<Store>, cheap: Boolean): AssistantReply {
+    private fun product(terms: List<String>, stores: List<Store>, cheap: Boolean, request: ShoppingRequest = ShoppingRequest("")): AssistantReply {
         val storeIds = stores.map { it.id }.toSet()
         fun run(t: List<String>) = engine.search(OfferQuery(text = t.joinToString(" "), storeIds = storeIds, sort = SortMode.RELEVANCE))
         var used = terms
@@ -161,11 +170,6 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         if (r.offers.isEmpty()) {
             val stemmed = terms.map { stem(it) }
             if (stemmed != terms) { r = run(stemmed); used = stemmed }
-        }
-        if (r.offers.isEmpty() && terms.size > 1) {
-            // Uzun cümlelerde yalnızca en uzun (en ayırt edici) kelimeyle dene
-            val one = listOf(terms.maxByOrNull { it.length }!!).map { stem(it) }
-            r = run(one); used = one
         }
         val label = r.suggestion ?: used.joinToString(" ")
         // Önce adı/açıklaması aranan kelimeyi gerçekten içerenler (kategori adından gelen eşleşmeler geride kalır)
@@ -175,23 +179,42 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         val milkIntent = ProductIntent.wantsDrinkableMilk(used)
         val pool = candidates.filter { o ->
             Dates.status(o.validFrom, o.validTo, today).kind != ValidityKind.EXPIRED &&
-                (!milkIntent || ProductIntent.drinkableMilk(o))
+                (!milkIntent || ProductIntent.drinkableMilk(o)) && request.accepts(o)
         }
         val nowOnes = pool.filter { isLive(it) }
-        val list = (nowOnes.ifEmpty { pool }).let { if (cheap) it.sortedBy { o -> o.price } else it }.take(6)
+        val available = nowOnes.ifEmpty { pool }
+        val kinds = available.mapNotNull { Pack.of(it)?.kind }.distinct()
+        val unitKind = request.unitKind ?: kinds.singleOrNull()
+        if (request.unitSort && unitKind == null && available.isNotEmpty()) return AssistantReply(
+            "Bu sonuçlarda farklı ölçü türleri var. Litre fiyatı mı, kilogram fiyatı mı karşılaştırayım?",
+            suggestions = listOf("Litre fiyatına göre ${used.joinToString(" ")}", "Kilogram fiyatına göre ${used.joinToString(" ")}"))
+        val comparable = if (request.unitSort) available.filter { Pack.of(it)?.kind == unitKind } else available
+        val ranked = when {
+            request.unitSort -> comparable.sortedWith(compareBy<Offer> { it.price / Pack.of(it)!!.amount }.thenBy { it.id })
+            cheap || request.budget != null -> comparable.sortedWith(compareBy<Offer> { PriceCents.of(it.price) }.thenBy { it.id })
+            else -> comparable
+        }
+        val list = ranked.take(6)
         val where = if (stores.isNotEmpty()) " ${stores.joinToString(", ") { it.name }} için" else ""
+        if (list.isEmpty() && stores.any { it.status == "error" }) return AssistantReply(
+            "${stores.filter { it.status == "error" }.joinToString(", ") { it.name }} kaynağı şu anda güncellenemiyor. Bu istek için güncel fiyat doğrulayamıyorum. Market ekranındaki resmî broşürü kontrol edebilirsin.",
+            suggestions = listOf("Bugün neler indirimde?", "En ucuz süt"))
         if (list.isEmpty()) return AssistantReply(pick("\"$label\"$where bu haftanın broşürlerinde yok gibi 😕",
             "Aradım taradım ama \"$label\"$where bulamadım 🔍") + " Başka bir adla dener misin? (ör. marka adı)",
             suggestions = listOf("Bugün neler indirimde?", "Ayçiçek yağı", "Deterjan"))
-        val best = (nowOnes.ifEmpty { pool }).minByOrNull { it.price }!!
+        val best = if (request.unitSort) ranked.first() else ranked.minByOrNull { it.price }!!
         val upcoming = nowOnes.isEmpty()
         val msg = buildString {
             append(if (r.fuzzy) "\"$label\" demek istedin sanırım 😊 " else "")
             append(if (list.size == 1) "Bir sonuç buldum!" else pick("${pool.size} sonuç buldum 🎯", "Buldum! ${pool.size} seçenek var 🙌"))
-            append(" Kayıtlı verilerde en düşük paket fiyatı ${at(best)} ${best.displayTitle}: ${Money.format(best.price)}")
+            if (request.unitSort) append(" Kayıtlı verilerde birim fiyatı en düşük seçenek ${at(best)} ${best.displayTitle}: ${Money.format(best.price / Pack.of(best)!!.amount)}/$unitKind (paket ${Money.format(best.price)})")
+            else append(" Kayıtlı verilerde en düşük paket fiyatı ${at(best)} ${best.displayTitle}: ${Money.format(best.price)}")
             discount(best)?.let { append(" (%$it indirim)") }
             append(".")
-            append(" Fiyatlar paket başınadır; farklı hacimler aynı litre fiyatı anlamına gelmez.")
+            if (!request.unitSort) append(" Kartlarda paket fiyatı gösterilir. Litre/kilogram fiyatına göre de karşılaştırabilirim.")
+            if (request.budget != null) append(" Bütçe: en fazla ${Money.format(request.budget / 100.0)}.")
+            request.pack?.let { append(" Ambalaj filtresi: ${it.amount} ${it.kind}.") }
+            append(" Şube ve stok durumu garanti edilmez.")
             if (upcoming) append(" Bunlar yakında başlayacak broşürlerde ⏳")
             else Dates.status(best.validFrom, best.validTo, today).takeIf { it.kind == ValidityKind.LAST_DAY }?.let { append(" Son gün, kaçırma! ⏰") }
         }
@@ -216,7 +239,7 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         /** Ürün aranırken atılan soru/dolgu kelimeleri (katlanmış). */
         val FILLER = setOf("en", "ucuz", "ucuzu", "ucuza", "fiyat", "fiyati", "fiyatlari", "kac", "para", "kadar", "nerede",
             "nerde", "var", "mi", "mu", "ne", "neler", "lira", "tl", "bul", "ara", "istiyorum", "almak", "alacagim", "lazim",
-            "bana", "icin", "hangi", "markette", "marketlerde", "bu", "hafta", "haftanin", "haftaki", "bugun", "bugunku",
+            "bunun", "urunun", "olarak", "peki", "olan", "olani", "sadece", "bana", "icin", "hangi", "markette", "marketlerde", "bu", "hafta", "haftanin", "haftaki", "bugun", "bugunku",
             "indirim", "indirimli", "indirimde", "firsat", "firsati", "kampanya", "kampanyali", "ve", "ile", "de", "da", "bir",
             "biraz", "goster", "listele", "oner", "acaba", "su", "o", "simdi", "guncel", "aktuel", "brosur", "brosurde",
             "katalog", "urun", "urunu", "urunler", "satiyor", "satan", "nereden", "alabilirim", "kim", "en iyi", "iyi",

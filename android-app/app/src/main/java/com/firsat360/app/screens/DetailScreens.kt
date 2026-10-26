@@ -384,7 +384,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     private fun listener() = object : com.firsat360.app.data.BridgeSession.Listener {
         override fun onProgress(pages: Int) {
             overlayText?.text = if (pages == 0) "Resmî siteden güncel broşürler alınıyor…" else "$pages broşür sayfası bulundu…"
-            if (pages >= 2) showPagesButton(pages)
+            if (pages >= 1) showPagesButton(pages)
         }
         override fun onNavigating() { overlayText?.text = "Resmî katalog açılıyor…" }
         override fun onChallenge(first: Boolean) {

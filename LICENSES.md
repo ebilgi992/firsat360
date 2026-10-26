@@ -7,6 +7,10 @@
 | The Agency ajan tanımları (`.claude/agents/`) | MIT | https://github.com/msitarzewski/agency-agents — `.claude/agents/LICENSE-agency-agents` |
 | Kotlin standart kütüphanesi 2.2.20 | Apache-2.0 | ProGuard ile küçültülerek APK'ya eklendi |
 
+## Fiyat hesaplama uyarlaması
+
+`PriceCents` kuruş normalizasyonu, [gokhancvs/market-fiyati-mcp](https://github.com/gokhancvs/market-fiyati-mcp/blob/main/src/money.ts) yaklaşımından Kotlin’e uyarlandı. Copyright (c) 2026 Gökhan Çavuş, MIT. Tam lisans: [LICENSE-market-fiyati-mcp](docs/LICENSE-market-fiyati-mcp.txt). Depo kodunun lisansı, üçüncü taraf fiyat verisine erişim/yeniden yayım izni sayılmaz.
+
 ## Derleme araçları (dağıtıma dahil değil)
 | Araç | Lisans | Kaynak |
 |---|---|---|
@@ -25,3 +29,4 @@ httpx (BSD-3), selectolax (MIT), pytest (MIT), Pillow (HPND; yalnızca simge ür
 ## Marka adları
 A101, BİM, ŞOK ve Migros adları yalnızca verinin kaynağını belirtmek için kullanılır. Mağaza logoları ve ürün
 görselleri uygulamaya dahil edilmemiştir. Uygulama simgesi özgün tasarımdır (`scripts/make_icons.py`).
+

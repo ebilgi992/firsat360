@@ -65,7 +65,7 @@ class BridgeSession(
 
     /** Kullanıcı "Sayfa sayfa aç" dedi: bulunanlarla bitir. */
     fun finishWithBest(): Boolean {
-        if (finished || best.size < 2) return false
+        if (finished || best.isEmpty()) return false
         finish(); listener.onImages(best); return true
     }
 
@@ -124,12 +124,12 @@ class BridgeSession(
         if (pages.size > best.size) best = pages
         // Geçiş: sayfa sonuna ulaşıldı VE son iki ölçüm aynı (tembel görseller yüklendi) → eksik sayfa kalmaz.
         val atEnd = res?.get("end") == true
-        if (pages.size >= 2 && pages.size == lastCount && atEnd) { finish(); listener.onImages(pages); return }
+        if (pages.isNotEmpty() && pages.size == lastCount && atEnd) { finish(); listener.onImages(pages); return }
         lastCount = pages.size
         listener.onProgress(pages.size)
         if (System.currentTimeMillis() > deadline) {
             finish()
-            if (best.size >= 2) listener.onImages(best) else listener.onGiveUp(best, "timeout")
+            if (best.isNotEmpty()) listener.onImages(best) else listener.onGiveUp(best, "timeout")
             return
         }
         schedule(w, POLL_MS)
@@ -148,3 +148,4 @@ class BridgeSession(
         const val CHALLENGE_POLL_MS = 3_000L
     }
 }
+

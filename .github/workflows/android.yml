@@ -1,14 +1,14 @@
 name: Android doğrulama ve beta sürümü
 on:
   push:
-    branches: [main, codex/quality-update-1.8]
+    branches: [main, codex/reader-assistant-1.9]
     paths: ['android-app/**', 'backend/**', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
   group: android-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   verify-build:
     runs-on: ubuntu-latest
@@ -52,21 +52,21 @@ jobs:
         run: |
           bash android-app/build-nogradle.sh
           mkdir -p release
-          cp android-app/build-nogradle/FIRSAT360-1.8.0-beta-debug.apk release/FIRSAT360-20-app.apk
+          cp android-app/build-nogradle/FIRSAT360-1.9.0-beta-debug.apk release/FIRSAT360-21-app.apk
           APP_ID=com.firsat360.beta APK_SUFFIX=-yeni-paket bash android-app/build-nogradle.sh
-          cp android-app/build-nogradle/FIRSAT360-1.8.0-beta-yeni-paket-debug.apk release/FIRSAT360-20-beta.apk
+          cp android-app/build-nogradle/FIRSAT360-1.9.0-beta-yeni-paket-debug.apk release/FIRSAT360-21-beta.apk
           cd release
           for apk in *.apk; do sha256sum "$apk" > "$apk.sha256"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: FIRSAT360-1.8.0-beta
+          name: FIRSAT360-1.9.0-beta
           path: release/*
       - name: GitHub beta sürümünü yayınla
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! gh release view v1.8.0-beta >/dev/null 2>&1; then
-            gh release create v1.8.0-beta --target "$GITHUB_SHA" --prerelease --title "FIRSAT360 1.8.0 Beta" --notes "Canlı veri adresi, bildirim teslimi, içilecek süt araması, uygulama içi güncelleme ve web vitrini. Android kurulum onayı gereklidir. Bu beta herkese açık geliştirme anahtarıyla imzalanmıştır."
+          if ! gh release view v1.9.0-beta >/dev/null 2>&1; then
+            gh release create v1.9.0-beta --target "$GITHUB_SHA" --prerelease --title "FIRSAT360 1.9.0 Beta" --notes "Broşür görselleri öncelikli okuyucu, tek sayfa afiş desteği, bütçe/ambalaj/birim fiyat asistanı, resmî Instagram bağlantıları ve veri ayrıştırma iyileştirmeleri. Android kurulum onayı gereklidir. Bu beta herkese açık geliştirme anahtarıyla imzalanmıştır."
           fi
-          gh release upload v1.8.0-beta release/* --clobber
+          gh release upload v1.9.0-beta release/* --clobber

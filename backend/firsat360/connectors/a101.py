@@ -118,6 +118,47 @@ def parse_html_products(html: str) -> tuple[list[OfferData], int]:
     return offers, rejected
 
 
+def parse_jsonld_products(html: str) -> list[OfferData]:
+    """Resmî sayfanın Product JSON-LD'si: birimi açık TRY fiyat, kendi ürün adresi ve CDN'i."""
+    from urllib.parse import urlparse
+    tree = parse(html)
+    out = []
+    def walk(node):
+        if isinstance(node, list):
+            for item in node: walk(item)
+        elif isinstance(node, dict):
+            types = node.get("@type", [])
+            if types == "Product" or isinstance(types, list) and "Product" in types:
+                name, url = node.get("name"), node.get("url")
+                full = urljoin(BASE, url) if isinstance(url, str) else ""
+                host = (urlparse(full).hostname or "").lower()
+                offers = node.get("offers", [])
+                if isinstance(offers, dict): offers = [offers]
+                if isinstance(name, str) and (host == "a101.com.tr" or host.endswith(".a101.com.tr")) and full.startswith("https://") and PRODUCT_RE.search(full):
+                    # Bir üründe birden çok belirsiz varyant fiyatı seçilmez.
+                    values = [x for x in offers if isinstance(x, dict) and x.get("priceCurrency") == "TRY"] if isinstance(offers, list) else []
+                    prices = {parse_price(str(x.get("price", ""))) for x in values}
+                    prices.discard(None)
+                    if len(prices) == 1:
+                        price = next(iter(prices))
+                        image = node.get("image")
+                        if isinstance(image, list): image = image[0] if image else None
+                        if isinstance(image, dict): image = image.get("url")
+                        ih = (urlparse(image).hostname or "").lower() if isinstance(image, str) else ""
+                        image = image if isinstance(image, str) and image.startswith("https://") and (ih == "a101.com.tr" or ih.endswith(".a101.com.tr")) else None
+                        out.append(OfferData(name=clean(name), price=price, price_text=str(price) + " TL", source_url=LIST_URL,
+                            catalog_id=CATALOG_ID, product_url=full, image_url=image, image_large_url=image,
+                            image_status="listing" if image else None, channel=_channel(full)))
+            for key, value in node.items():
+                if isinstance(value, (dict, list)): walk(value)
+    for script in tree.css('script[type="application/ld+json"]'):
+        try: walk(json.loads(script.text()))
+        except (ValueError, TypeError): continue
+    grouped = {}
+    for offer in out: grouped.setdefault(offer.product_url, []).append(offer)
+    return [items[0] for items in grouped.values() if len({o.price for o in items}) == 1]
+
+
 class A101Connector(Connector):
     store_id = "a101"
     method = "live_html"
@@ -129,6 +170,9 @@ class A101Connector(Connector):
         if offers:
             result.method = "live_embedded_json"
         else:
+            offers = parse_jsonld_products(html)
+            if offers: result.method = "live_embedded_json"
+        if not offers:
             offers, rejected = parse_html_products(html)
             if rejected:
                 result.warnings.append(f"{rejected} ürün belirsiz fiyat nedeniyle reddedildi")
@@ -137,3 +181,4 @@ class A101Connector(Connector):
         result.catalogs.append(CatalogData(id=CATALOG_ID, title="Aldın Aldın", kind="aktuel", official_url=LIST_URL))
         result.offers = offers
         return result
+

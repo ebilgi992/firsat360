@@ -17,6 +17,7 @@ import com.firsat360.app.data.CrashLog
 import com.firsat360.app.data.Repository
 import com.firsat360.app.screens.CatalogScreen
 import com.firsat360.app.screens.FavoritesScreen
+import com.firsat360.app.screens.openBridge
 import com.firsat360.app.screens.HomeScreen
 import com.firsat360.app.screens.OfferScreen
 import com.firsat360.app.screens.SearchScreen
@@ -473,14 +474,21 @@ class MainActivity : Activity() {
     fun openCatalogList(newOnly: Boolean) = push(com.firsat360.app.screens.CatalogListScreen(this, newOnly))
     fun openCatalog(id: String) {
         val c = feed.catalog(id) ?: return
-        when {
-            c.offerCount > 0 -> push(CatalogScreen(this, id))
-            c.hasPdf -> push(com.firsat360.app.screens.PdfScreen(this, id))
-            c.hasPages && com.firsat360.app.data.ImageLoader.enabled -> openReader(id)
-            // Flipbook / resmî katalog sayfası: uygulama içinde tam ekran katalog görünümü
-            else -> push(WebScreen(this, c.officialUrl, c.title, catalog = true))
+        when (com.firsat360.app.core.CatalogOpening.target(c, com.firsat360.app.data.ImageLoader.enabled)) {
+            com.firsat360.app.core.CatalogOpening.Target.PAGES -> openReader(id)
+            com.firsat360.app.core.CatalogOpening.Target.PDF -> push(com.firsat360.app.screens.PdfScreen(this, id,
+                if (c.hasPdf) null else c.copy(pdfUrl = com.firsat360.app.core.CatalogOpening.pdf(c))))
+            com.firsat360.app.core.CatalogOpening.Target.PRODUCTS -> push(CatalogScreen(this, id))
+            com.firsat360.app.core.CatalogOpening.Target.WEB -> {
+                val bridge = feed.clientBridge[c.storeId]
+                val store = feed.store(c.storeId)
+                if (store != null) openBridge(store, bridge, c.officialUrl, c.title)
+                else push(WebScreen(this, c.officialUrl, c.title, catalog = true, storeId = c.storeId,
+                    profile = bridge?.profile ?: "generic", allowedHosts = bridge?.allowedHosts ?: emptyList()))
+            }
         }
     }
+
     fun openReader(id: String, page: Int = 0) = push(com.firsat360.app.screens.CatalogReaderScreen(this, id, page))
     fun openStore(id: String) { stack.clear(); val s = StoresScreen(this, id); stack.add(s); show(s, true) }
     fun openSearch(category: String? = null, query: String = "") { stack.clear(); val s = SearchScreen(this, category, query); stack.add(s); show(s, true) }

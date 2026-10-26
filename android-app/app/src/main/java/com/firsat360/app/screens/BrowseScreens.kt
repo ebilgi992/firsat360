@@ -165,6 +165,9 @@ class StoresScreen(a: MainActivity, initial: String?) : Screen(a) {
             card.addView(a.button("Güncel broşürü aç", Icon.CATALOG, true) { a.openBridge(store, bridge) }, lp(t = dp(16)))
             if (sub != null) card.addView(a.text(sub, 12.5f, Theme.p.text3, Theme.regular, 1, Gravity.CENTER), lp(t = dp(6)))
         }
+        com.firsat360.app.core.SocialSources.instagram[store.id]?.let { social ->
+            card.addView(a.button("Instagram’daki resmî paylaşımlar", Icon.EXTERNAL, false) { a.openExternal(social) }, lp(t = dp(10)))
+        }
         val btns = a.hbox()
         btns.addView(a.button("Resmî sayfa", Icon.GLOBE, false) { a.openWeb(store.catalogUrl, store.name) }, lp(0, WRAP, weight = 1f))
         if (custom) btns.addView(a.button("Kaldır", Icon.TRASH, false) {
@@ -389,3 +392,4 @@ class SearchScreen(a: MainActivity, initialCategory: String? = null, initialQuer
         }
     }
 }
+

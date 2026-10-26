@@ -1,4 +1,4 @@
-# FIRSAT360 — 1.8.0 Beta
+# FIRSAT360 — 1.9.0 Beta
 
 Market broşürleri, ürün fiyatları, alışveriş listesi ve cihazda çalışan Fırsat Asistanı.
 Android 8.0 ve üzeri; ücretsiz, hesap gerektirmez. Canlı yayın GitHub Actions ile toplanıp GitHub Pages'te yayımlanır.
@@ -7,13 +7,21 @@ Android 8.0 ve üzeri; ücretsiz, hesap gerektirmez. Canlı yayın GitHub Action
 
 [GitHub sürümleri ve APK seçenekleri](https://github.com/ebilgi992/firsat360/releases)
 
-- **Standart APK:** `FIRSAT360-20-app.apk` — paket `com.firsat360.app`.
-- **Alternatif paket:** `FIRSAT360-20-beta.apk` — yalnız `com.firsat360.beta` kuruluysa seçin.
+- **Standart APK:** `FIRSAT360-21-app.apk` — paket `com.firsat360.app`.
+- **Alternatif paket:** `FIRSAT360-21-beta.apk` — yalnız `com.firsat360.beta` kuruluysa seçin.
 - Mevcut uygulamanın üzerine kurmak için aynı paket ve imza gerekir. Bu beta önceki beta ile aynı,
   depodaki herkese açık geliştirme anahtarıyla imzalanır. Özel üretim imzası değildir.
 - APK yanındaki `.sha256` dosyası bütünlük kontrolü içindir. Android kurulum onayı ister.
 
 [Web vitrini](https://ebilgi992.github.io/firsat360/) · [Ürün bazlı düzeltme planı](docs/REPAIR_PLAN_2026-10-26.md)
+
+## 1.9 değişiklikleri
+
+Broşür görselleri/PDF artık ürün listesinden önce açılır; tek sayfalık afişler de okunur. Asistan bütçe,
+ambalaj hacmi ve litre/kilogram fiyatıyla karşılaştırır; açık ürün özelliklerini kaybetmez. Market ekranında
+resmî Instagram bağlantıları bulunur. A101 yapılandırılmış ürün verisi ve TK Koop tam ad ayrıştırması geliştirildi.
+
+[Ayrıntılı sürüm ve kaynak inceleme raporu](docs/RELEASE_1.9.md).
 
 ## 1.8 değişiklikleri
 
@@ -51,7 +59,7 @@ kotlin -cp /tmp/core.jar com.firsat360.app.core.CoreTestsKt /tmp/core-test-feed.
 ```
 
 JVM testleri 12–13 Ekim tarihsel kaynaklarından üretilir; değişen canlı APK verisi test girdisi değildir.
-Doğrulama: **166 Python testi geçti, 25 atlandı; 198 Kotlin testi geçti**. CI ayrıca APK oluşturur, minSdk 26
+Doğrulama: **175 Python testi geçti, 25 atlandı; 216 Kotlin testi geçti**. CI ayrıca APK oluşturur, minSdk 26
 API başvurularını, açılış sırasını ve imzayı denetler. Dal testi başarıyla tamamlanmadan APK yayımlanmaz.
 
 `android-app/tools/setup-toolchain.sh` araç zincirini SHA-256 ile doğrular. Derleme:
