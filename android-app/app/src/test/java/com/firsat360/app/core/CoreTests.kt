@@ -466,6 +466,7 @@ fun main(args: Array<String>) {
         val synthetic = feed.copy(offers = listOf(drink, drink2) + others)
         val response = Assistant(synthetic, LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt")
         check("asst.drinkableMilk", response.offers.map { it.id } == listOf("drink", "drink2")) { response.offers.toString() }
+        check("asst.explicitMilkPowder", Assistant(synthetic, LocalDate.of(2026, 10, 26), 1).reply("süt tozu").offers.map { it.id } == listOf("powder"))
         check("asst.noMilkFallback", Assistant(feed.copy(offers = others), LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt").offers.isEmpty())
     }
 

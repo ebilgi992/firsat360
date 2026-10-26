@@ -9,6 +9,9 @@
 name: gunluk-veri
 
 on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "config/**", "docs/**", ".github/workflows/daily.yml"]
   schedule:
     - cron: "5 5 * * *"    # 08:05 Europe/Istanbul (UTC+3)
     - cron: "5 21 * * *"   # 00:05 Europe/Istanbul

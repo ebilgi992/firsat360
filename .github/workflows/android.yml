@@ -37,11 +37,6 @@ jobs:
           path: tk-evidence/
       - name: Doğrulanmış araç zinciri
         run: bash android-app/tools/setup-toolchain.sh "$RUNNER_TEMP/toolchain"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: build-toolchain
-          path: ${{ runner.temp }}/toolchain/
-          retention-days: 1
       - name: Tarihsel JVM test verisi
         env:
           PYTHONPATH: backend

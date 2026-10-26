@@ -44,7 +44,7 @@ Banvit/Doyfarm çapraz eşleşmesi ve 30'lu/60'lı paket eşleşmesi için regre
 ## A101_Afis ve diğer depolar
 
 - [codermert/A101_Afis](https://github.com/codermert/A101_Afis): incelemede `A101.json` yalnız
-  `{"error":"Veriler alınamadı"}` içeriyordu. Ürün/fiyat kaynağı değildir; broşür bağlantısı keşif kaynağıdır.
+  `{"error":"Veriler alınamadı"}` içeriyordu. Son depo güncellemesi 9 Ağustos 2024; aktif güncel kaynak olarak doğrulanamadı. Ürün/fiyat kaynağı değildir; broşür bağlantısı keşif kaynağıdır.
   Entegrasyon hata/boş/72 saatten eski JSON'u ve resmî CDN dışı URL'yi reddeder. Güncel commit kampanya tarihi
   kabul edilmez. Sağlıklı broşür adayları `status.json/community_a101` altında resmî tarih doğrulaması bekler;
   resmî ürün doğrulaması veya A101 kaynak başarısı olarak yazılmaz. Kod kopyalanmadı; özel bir adaptör yazıldı.

@@ -1,13 +1,14 @@
 """Eski anlık görüntüye dayalı JVM testlerini değişen canlı APK verisinden ayırır."""
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from firsat360.connectors.snapshot import snapshot_dirs
 from firsat360.db import Base
 from firsat360.feed import build_feed
+from firsat360.deals import daily_deals
 from firsat360.pipeline import import_snapshots
 
 engine = create_engine('sqlite://')
@@ -16,6 +17,7 @@ sf = sessionmaker(engine, expire_on_commit=False)
 import_snapshots(sf, snapshot_dirs(Path('data/snapshots')))
 with sf() as session:
     feed = build_feed(session, today=date(2026, 10, 13))
+    feed["daily_deals"] = daily_deals(session, date(2026, 10, 13), now=datetime(2026, 10, 13, 10, tzinfo=timezone.utc))
 # Bu fixture 12–13 Ekim kaynaklarını kapsar; sonraki marketler canlı paket içinde kalır.
 ids = ['a101','bim','sok','migros','tkkoop','hakmar','watsons','metro','bizimtoptan','gratis']
 feed['stores'] = [next(s for s in feed['stores'] if s['id'] == i) for i in ids]

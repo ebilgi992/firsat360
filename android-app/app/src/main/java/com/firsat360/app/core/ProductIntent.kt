@@ -2,6 +2,9 @@ package com.firsat360.app.core
 
 /** Ürün türü, kelime parçasından ve reyon adından bağımsız doğrulanır. */
 object ProductIntent {
+    fun wantsDrinkableMilk(terms: List<String>): Boolean = terms.any { Assistant.stem(it) == "sut" } &&
+        terms.none { it in setOf("toz", "tozu", "recel", "receli", "vucut", "yuz", "krem", "kremi", "temizleme", "mama", "mamasi", "devam", "bebek", "pompa", "pompasi", "kopurtucu", "kopurtucusu") }
+
     fun drinkableMilk(o: Offer): Boolean {
         val words = TrNorm.tokens(o.displayTitle + " " + (o.variant ?: ""))
         if ("sut" !in words) return false
