@@ -2,8 +2,9 @@
 <!-- Güncel verinin yayımlandığı sabit adres (GitHub Pages'teki feed.json). Derlemede FEED_URL ile verilir;
      boşsa uygulama içindeki veriyle çalışır. Kullanıcıya gösterilmez ve değiştirilemez. -->
 <resources>
-    <string name="feed_url" translatable="false"></string>
+    <string name="feed_url" translatable="false">https://ebilgi992.github.io/firsat360/feed.json</string>
     <!-- "Hatalı bilgi bildir": GitHub'da önceden doldurulmuş issue formu. Günlük çalıştırmadaki kalite orkestratörü
          "[Hatalı veri]" başlıklı bildirimleri okur, ürünü resmî sayfasından yeniden doğrular ve yanıtlar. -->
     <string name="report_url" translatable="false">https://github.com/ebilgi992/firsat360/issues/new</string>
 </resources>
+

@@ -23,6 +23,7 @@ _STOP = {"ve", "ile", "li", "lu", "lı", "lü", "adet", "cesit", "cesitleri", "f
 _SIZE_RE = re.compile(r"(?<![0-9])(\d+(?:[.,]\d+)?)\s*(?:x\s*(\d+(?:[.,]\d+)?)\s*)?(kg|gr|g|ml|lt|l|cl|cc)(?![a-z])")
 _TO_BASE = {"kg": ("g", 1000), "gr": ("g", 1), "g": ("g", 1), "l": ("ml", 1000), "lt": ("ml", 1000),
             "ml": ("ml", 1), "cl": ("ml", 10), "cc": ("ml", 1)}
+_COUNT_RE = re.compile(r"(?<![0-9])(\d+)\s*['’]?\s*(?:li|lu|adet)(?![a-z])")
 NAME_THRESHOLD = 0.5
 KEEP_ON_FAILED_CHECK = ("listing", "official_json")
 JUNK_NAMES = {"product-thumb", "product thumb", "product-image", "image", "img", "thumbnail", "urun", "urun gorseli"}
@@ -37,6 +38,8 @@ def sizes(*texts: str | None) -> set[tuple[str, float]]:
     """Metindeki tüm ambalaj ölçüleri, temel birime çevrilmiş: '2,5 KG' → {('g', 2500.0)}; '3x140 g' → {('g', 420.0)}."""
     out = set()
     for t in texts:
+        for count in _COUNT_RE.finditer(fold(t or "")):
+            out.add(("adet", float(count.group(1))))
         for m in _SIZE_RE.finditer(fold(t or "")):
             a = float(m.group(1).replace(",", "."))
             b = float(m.group(2).replace(",", ".")) if m.group(2) else 1.0
@@ -145,6 +148,9 @@ def verify(store: str, product_url: str | None, name: str, brand: str | None, va
     base = dict(score=round(min(best_s, 1.0), 3), page_name=shown_name, page_price=pp, price_conflict=conflict)
     if page_sizes and our_sizes and not (page_sizes & our_sizes):
         return Match(None, "size_mismatch", **base)
+    required_brand = (tokens(name) & {"banvit", "doyfarm", "renax", "solo"}) if store == "tkkoop" else set()
+    if required_brand and not required_brand.issubset(tokens(shown_name)):
+        return Match(None, "name_mismatch", **base)
     if best_s < NAME_THRESHOLD:
         return Match(None, "name_mismatch", **base)
     size_text = None
@@ -236,3 +242,4 @@ def apply_to_db(session, rows: list[PageImage], checked_at=None) -> dict:
             o.image_status = m.status
             o.image_rights = "none"
     return stats
+

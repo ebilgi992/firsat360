@@ -91,7 +91,7 @@ class Repository(private val ctx: Context) {
     fun refresh(force: Boolean = false, done: (Feed?, String?) -> Unit) {
         if (feedUrl.isBlank()) { main.post { done(null, null) }; return }
         if (refreshing) { main.post { done(null, null) }; return }
-        if (!force && System.currentTimeMillis() - lastCheckAt < 30 * 60 * 1000L) { main.post { done(null, null) }; return }
+        if (!force && System.currentTimeMillis() - lastSuccessAt < 30 * 60 * 1000L) { main.post { done(null, null) }; return }
         refreshing = true
         Thread {
             val r = Sync.fetch(ctx, attempts = if (force) 2 else 3)
@@ -157,3 +157,4 @@ object Sync {
         ctx.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: false
     } catch (e: Exception) { false }
 }
+

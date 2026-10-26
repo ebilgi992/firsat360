@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 from .connectors.base import ConnectorError, PoliteClient, RobotsDisallowed
 from .connectors.extra import SKIP_IMG, page_meta
 from .connectors.htmlutil import all_image_urls, parse, text_of
-from .db import Offer
+from .db import Offer, Store
 from .imagematch import PageImage, apply_to_db
 
 log = logging.getLogger("firsat360.productpages")
@@ -109,6 +109,19 @@ def page_row(store: str, url: str, html: str, final_url: str | None = None) -> P
         # Ürün sayfası kaldırılmış, ana sayfaya/kategoriye yönlendirildi: bu sayfadaki görsel bu ürünün değildir.
         return PageImage(store=store, detail_url=url, page_name=None, page_variant=None, page_price_text=None,
                          image_url=None, gone=True)
+    if store == "tkkoop":
+        tree = parse(html)
+        title = tree.css_first(".urun_bilgi_sag .u_bilgi_2")
+        primary = tree.css_first(".urun_resim")
+        if title is not None and primary is not None:
+            # TK ana başlığı div içindedir; ürün kartları/slider başlıkları değildir.
+            # yok.png yer tutucusunda önerilen ürünlerin görsellerine geri düşülmez.
+            images = [urljoin(url, u) for u in all_image_urls(primary)]
+            image = next((u for u in images if _host_ok(u, STORE_HOSTS[store][1])
+                          and MAIN_IMAGE[store].search(u) and _IMG_FILE.search(u)
+                          and not SKIP_IMG.search(u)), None)
+            price = tree.css_first(".urun_bilgi_sag .ss_urun52a")
+            return PageImage(store, url, text_of(title), None, text_of(price), image)
     m = page_meta(html, url)
     img = m["image"]
     pat = MAIN_IMAGE.get(store)
@@ -139,6 +152,10 @@ def verify_product_pages(sf: sessionmaker, client: PoliteClient, per_store: int 
         if stores and store not in stores:
             continue
         with sf() as s:
+            source = s.get(Store, store)
+            if source and source.status == "error" and any(k in (source.last_error or "").lower() for k in ("403", "429", "robots", "cloudflare")):
+                out[store] = {"pages": 0, "errors": 0, "blocked": True}
+                continue
             todo = s.scalars(select(Offer).where(
                 Offer.store_id == store, Offer.published.is_(True), Offer.product_url.is_not(None),
                 or_(Offer.image_status.is_(None), Offer.image_status != "verified",
@@ -164,3 +181,4 @@ def verify_product_pages(sf: sessionmaker, client: PoliteClient, per_store: int 
                 s.commit()
         out[store] = {"pages": len(rows), "errors": errors, **stats}
     return out
+

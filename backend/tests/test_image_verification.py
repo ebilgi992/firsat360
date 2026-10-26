@@ -120,3 +120,34 @@ def test_verified_image_survives_reimport_without_image(loaded_all):
         o = s.scalars(select(Offer).where(Offer.store_id == "bim", Offer.image_status == "verified")).first()
         assert o is not None and o.image_url.startswith("https://cdn1.bim.com.tr/uploads/aktuel-urunler/")
         assert s.get(Catalog, "hakmar-kirtasiye-2026").valid_from.isoformat() == "2026-08-21"
+
+
+
+def test_tk_brands_and_pack_counts_do_not_cross_match():
+    from firsat360.imagematch import PageImage, index_pages, verify
+    url = 'https://www.tkkoop.com.tr/urun/banvit-pilic-nugget-1000-g'
+    page = PageImage('tkkoop', url, 'Doyfarm Piliç Nugget 1 kg', None, None,
+                     'https://www.tkkoop.com.tr/storage/assets/images/urun/doyfarm.jpg')
+    result = verify('tkkoop', url, 'Banvit Piliç Nugget 1000 g', None, None, None, None, index_pages([page]))
+    assert result.status == 'name_mismatch'
+    page.page_name = 'Banvit Piliç Nugget 1 kg'
+    assert verify('tkkoop', url, 'Banvit Piliç Nugget 1000 g', None, None, None, None, index_pages([page])).status == 'verified'
+    page.page_name = "Renax Bulaşık Makinesi Kapsülü 30'lu"
+    assert verify('tkkoop', url, "Renax Bulaşık Makinesi Kapsülü 60'lı", None, None, None, None, index_pages([page])).status == 'size_mismatch'
+
+
+def test_tk_primary_placeholder_never_borrows_related_product_image():
+    from firsat360.productpages import page_row
+    from firsat360.imagematch import index_pages, verify
+    html = '''<main><div class="urun_resim"><img src="/assets/image/yok.png"></div>
+    <div class="urun_bilgi_sag"><div class="u_bilgi_2">BANVİT PİLİÇ NUGGET 1000 G</div>
+    <div class="ss_urun52a">169,00 TL</div></div>
+    <div class="product-card"><h3>Banvit Piliç Nugget 1000 G</h3>
+    <img src="/assets/images/urun/base7/919.jpg"></div></main>'''
+    url = 'https://www.tkkoop.com.tr/urun/banvit-pilic-nugget-1000-g'
+    row = page_row('tkkoop', url, html, url)
+    assert row.page_name == 'BANVİT PİLİÇ NUGGET 1000 G'
+    assert row.image_url is None
+    assert verify('tkkoop', url, 'Banvit Piliç Nugget 1000 g', None, None, None, None, index_pages([row])).status == 'no_image_on_page'
+    row = page_row('tkkoop', url, html.replace('/assets/image/yok.png', '/assets/images/urun/banvit.jpg'), url)
+    assert row.image_url.endswith('/assets/images/urun/banvit.jpg')

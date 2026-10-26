@@ -99,3 +99,29 @@ def test_tk_pattern_accepts_subfolders_rejects_seo():
     assert p.search("https://www.tkkoop.com.tr/assets/images/urun/base22/123029.jpg")
     assert p.search("https://www.tkkoop.com.tr/assets/images/urun/esk-govde-tavuk_1763707592.png")
     assert not p.search("https://www.tkkoop.com.tr/storage/assets/images/seo/")
+
+
+
+def test_missing_images_have_product_evidence_and_keep_issue_open(tmp_path):
+    sf = _db(tmp_path)
+    with sf() as s:
+        s.add(Store(id='bim', name='BİM', official_url='u', catalog_url='u', status='ok'))
+        s.add(_offer('missing', name='Süt 1 L', image_status='name_mismatch'))
+        s.commit()
+    report = orchestrate(Context(sf=sf, today=NOW.date(), now=NOW))
+    assert report['unresolved_images']
+    product = report['image_metrics']['bim']['missing_products'][0]
+    assert product['id'] == 'missing' and product['reason'] == 'name_mismatch'
+    assert 'Görseli eksik ürün: 1' in markdown_summary(report)
+
+
+def test_blocked_store_is_not_retried_for_image_verification(tmp_path):
+    sf = _db(tmp_path)
+    with sf() as s:
+        s.add(Store(id='a101', name='A101', official_url='u', catalog_url='u', status='error', last_error='Cloudflare 403'))
+        s.add(_offer('a101-missing', store_id='a101', image_status='page_empty'))
+        s.commit()
+    called = []
+    report = orchestrate(Context(sf=sf, today=NOW.date(), now=NOW, reverify=lambda stores: called.append(stores)))
+    assert not called
+    assert 'erişim engelli' in next(i['fix'] for i in report['issues'] if i['code'] == 'missing_images')

@@ -685,6 +685,11 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
                 notif.addView(a.text("Favori ve eklediğiniz marketlerde yeni broşür çıkınca ayrıca haber verilir. Pil tasarrufu " +
                     "bildirimi birkaç dakika geciktirebilir.", 12.5f, Theme.p.text3, Theme.regular), lp(t = dp(10)))
             }
+            notif.addView(a.button("Deneme bildirimi gönder", Icon.BELL, false) {
+                val notice = com.firsat360.app.core.Notice("new_catalogs", "test-notification", "FIRSAT360 bildirim testi", "Bildirim izni ve kanal çalışıyor. Günlük özet yalnızca yeni katalog olduğunda gelir.", "")
+                if (com.firsat360.app.data.Notifier.post(a, notice)) a.toast("Deneme bildirimi gönderildi")
+                else { a.toast("Bildirim izni veya kanal kapalı"); a.openNotificationSettings() }
+            }, lp(t = dp(12)))
             notif.addView(a.text("Hangi marketler?", 13.5f, Theme.p.text2, Theme.semibold), lp(t = dp(16)))
             val muted = a.user.mutedStores()
             for (s in f.stores) toggle(notif, s.name, null, s.id !in muted) {
@@ -744,6 +749,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         // ---- Hakkında
         val about = section("Hakkında", Icon.INFO)
         valueRow(about, "Sürüm", "${BuildInfo.VERSION} (${BuildInfo.VERSION_CODE})", null)
+        valueRow(about, "Güncellemeleri kontrol et", "Kontrol et") { com.firsat360.app.data.AppUpdater.check(a, manual = true) }
         valueRow(about, "Geliştirici", BuildInfo.DEVELOPER) { a.openExternal(BuildInfo.DEVELOPER_GITHUB) }
         valueRow(about, "Web sitesi", "Aç") { a.openExternal(BuildInfo.WEBSITE) }
         valueRow(about, "Gizlilik politikası", "Aç") { a.openExternal(BuildInfo.PRIVACY_URL) }
@@ -796,3 +802,4 @@ class Sparkline(ctx: android.content.Context, private val values: List<Double>) 
         c.drawPath(path, line)
     }
 }
+

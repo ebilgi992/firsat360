@@ -133,6 +133,7 @@ class MainActivity : Activity() {
                     if (user.seenCatalogs() == null) user.markCatalogsSeen(f.catalogs.map { it.id })
                     com.firsat360.app.data.Notifier.schedule(this)
                     content.postDelayed(askLater, 4000)
+                    com.firsat360.app.data.AppUpdater.check(this)
                     // Açılışta güncel veriyi kontrol et (değişmemişse indirilmez; hata olursa mevcut veri kalır)
                     repo.refresh { nf, _ -> if (nf != null) onFeedUpdated() }
                 }
@@ -248,7 +249,7 @@ class MainActivity : Activity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 701) {
             val ok = grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED
-            if (ok) toast("Bildirimler açıldı") else try {
+            if (ok) { toast("Bildirimler açıldı"); com.firsat360.app.data.Notifier.checkSoon(this) } else try {
                 android.app.AlertDialog.Builder(this)
                     .setTitle("Bildirim izni verilmedi")
                     .setMessage("Katalog bildirimlerini almak için: Ayarlar › Uygulamalar › FIRSAT360 › Bildirimler › İzin ver. " +
@@ -522,3 +523,4 @@ class MainActivity : Activity() {
         }, FrameLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
     }
 }
+

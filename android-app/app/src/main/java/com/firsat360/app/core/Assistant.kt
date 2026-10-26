@@ -81,7 +81,7 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
 
         // --- kategori
         val cat = feed.categories.firstOrNull { c -> TrNorm.loose(c.name).let { n -> n.length >= 3 && (q.contains(n) || terms.any { t -> t.length >= 4 && n.startsWith(t) }) } }
-        if (cat != null && terms.size <= 2) {
+        if (cat != null && terms.size <= 2 && terms.none { stem(it) == "sut" }) {
             val l = live().filter { it.category == cat.id && (stores.isEmpty() || stores.any { s -> s.id == it.storeId }) }
                 .sortedByDescending { discount(it) ?: 0 }.take(6)
             if (l.isNotEmpty()) return AssistantReply("${cat.name} reyonunda gezindim, işte bu haftanın en dikkat çekenleri 👇",
@@ -170,8 +170,13 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         val label = r.suggestion ?: used.joinToString(" ")
         // Önce adı/açıklaması aranan kelimeyi gerçekten içerenler (kategori adından gelen eşleşmeler geride kalır)
         val keys = TurkishText.words(TrNorm.loose(label))
-        val named = r.offers.filter { o -> TrNorm.loose(o.displayTitle + " " + (o.variant ?: "")).let { t -> keys.all { t.contains(it) } } }
-        val pool = named.ifEmpty { r.offers }
+        val named = r.offers.filter { o -> TrNorm.loose(o.displayTitle + " " + (o.variant ?: "")).let { t -> keys.all { key -> TurkishText.words(t).any { it == key || (key.length >= 4 && it.startsWith(key)) } } } }
+        val candidates = named.ifEmpty { r.offers }
+        val milkIntent = ProductIntent.wantsDrinkableMilk(used)
+        val pool = candidates.filter { o ->
+            Dates.status(o.validFrom, o.validTo, today).kind != ValidityKind.EXPIRED &&
+                (!milkIntent || ProductIntent.drinkableMilk(o))
+        }
         val nowOnes = pool.filter { isLive(it) }
         val list = (nowOnes.ifEmpty { pool }).let { if (cheap) it.sortedBy { o -> o.price } else it }.take(6)
         val where = if (stores.isNotEmpty()) " ${stores.joinToString(", ") { it.name }} için" else ""
@@ -183,9 +188,10 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         val msg = buildString {
             append(if (r.fuzzy) "\"$label\" demek istedin sanırım 😊 " else "")
             append(if (list.size == 1) "Bir sonuç buldum!" else pick("${pool.size} sonuç buldum 🎯", "Buldum! ${pool.size} seçenek var 🙌"))
-            append(" En ucuzu ${at(best)} ${best.displayTitle}: ${Money.format(best.price)}")
+            append(" Kayıtlı verilerde en düşük paket fiyatı ${at(best)} ${best.displayTitle}: ${Money.format(best.price)}")
             discount(best)?.let { append(" (%$it indirim)") }
             append(".")
+            append(" Fiyatlar paket başınadır; farklı hacimler aynı litre fiyatı anlamına gelmez.")
             if (upcoming) append(" Bunlar yakında başlayacak broşürlerde ⏳")
             else Dates.status(best.validFrom, best.validTo, today).takeIf { it.kind == ValidityKind.LAST_DAY }?.let { append(" Son gün, kaçırma! ⏰") }
         }
@@ -214,7 +220,7 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
             "indirim", "indirimli", "indirimde", "firsat", "firsati", "kampanya", "kampanyali", "ve", "ile", "de", "da", "bir",
             "biraz", "goster", "listele", "oner", "acaba", "su", "o", "simdi", "guncel", "aktuel", "brosur", "brosurde",
             "katalog", "urun", "urunu", "urunler", "satiyor", "satan", "nereden", "alabilirim", "kim", "en iyi", "iyi",
-            "market", "marketi", "marketler", "magaza", "lutfen", "rica", "bakar", "misin", "misiniz", "ister", "isterim")
+            "market", "marketi", "marketler", "magaza", "lutfen", "rica", "bakar", "misin", "misiniz", "ister", "isterim", "icilecek", "icmelik", "icmek", "icecegim")
         private val SUFFIXES = listOf("lerinin", "larinin", "lerini", "larini", "leri", "lari", "nin", "nun", "nın", "ler", "lar",
             "dan", "den", "tan", "ten", "yi", "yu", "ya", "ye", "in", "un", "da", "de", "ta", "te", "u", "i", "a", "e")
         private val LOC = mapOf("a101" to "'de", "bim" to "'de", "carrefoursa" to "'da", "happycenter" to "'da", "metro" to "'da",
@@ -235,3 +241,4 @@ class Assistant(private val feed: Feed, private val today: LocalDate, seed: Long
         }
     }
 }
+

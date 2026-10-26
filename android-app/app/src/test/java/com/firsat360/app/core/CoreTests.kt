@@ -28,20 +28,20 @@ fun main(args: Array<String>) {
     // Gerçek feed (12.10 + 13.10.2026 anlık görüntüleri)
     val feed = Feed.parse(feedText)
     check("feed.real", !feed.isDemo && feed.dataMode == "real")
-    check("feed.count", feed.offers.size == 531) { "${feed.offers.size}" }
+    check("feed.count", feed.offers.size == 530) { "${feed.offers.size}" }
     check("feed.skipped", feed.skipped == 0) { "${feed.skipped}" }
     check("feed.stores", feed.stores.map { it.id } == listOf("a101", "bim", "sok", "migros", "tkkoop", "hakmar", "watsons",
         "metro", "bizimtoptan", "gratis")) { feed.stores.map { it.id }.toString() }
     check("feed.byStore", feed.offers.groupingBy { it.storeId }.eachCount() ==
-        mapOf("a101" to 39, "bim" to 347, "migros" to 30, "sok" to 50, "tkkoop" to 65)) { feed.offers.groupingBy { it.storeId }.eachCount().toString() }
+        mapOf("a101" to 39, "bim" to 346, "migros" to 30, "sok" to 50, "tkkoop" to 65)) { feed.offers.groupingBy { it.storeId }.eachCount().toString() }
     check("store.color", feed.store("sok")?.color == 0xFFF2B600.toInt() && feed.store("tkkoop")?.short == "TK")
     check("store.colorParse", Store.parseColor("#0b8a3e") == 0xFF0B8A3E.toInt() && Store.parseColor("red") == null &&
         Store.parseColor(null) == null)
 
     // Görseller: yalnızca https, doğrulama etiketi, görselsiz ürün dürüstçe görselsiz
     val withImg = feed.offers.filter { it.hasImage }
-    check("img.count", withImg.size == 525) { "${withImg.size}" }
-    check("img.verified", feed.offers.count { it.imageVerified } == 495 && feed.offers.filter { it.imageVerified }
+    check("img.count", withImg.size == 524) { "${withImg.size}" }
+    check("img.verified", feed.offers.count { it.imageVerified } == 494 && feed.offers.filter { it.imageVerified }
         .all { it.imagePageUrl != null && it.imageUrl!!.startsWith("https://") })
     check("img.none", feed.offers.filter { !it.hasImage }.all { it.imageSource == null } &&
         feed.offers.any { !it.hasImage && it.imageStatus == "no_image_on_page" })
@@ -84,7 +84,7 @@ fun main(args: Array<String>) {
     val second = hits[1].range  // ilk eşleşme akışın kendisi, ikincisi ilk ürün
     val mixed = feedText.replaceRange(second, "\"data_mode\": \"demo\"")
     val mixedFeed = Feed.parse(mixed)
-    check("feed.noMix", mixedFeed.offers.size == 530 && mixedFeed.skipped == 1 &&
+    check("feed.noMix", mixedFeed.offers.size == 529 && mixedFeed.skipped == 1 &&
         mixedFeed.offers.all { it.dataMode == "real" }) { "${mixedFeed.offers.size} ${mixedFeed.skipped}" }
 
     // Türkçe arama
@@ -259,13 +259,13 @@ fun main(args: Array<String>) {
     check("fetch.304", r2.status == FeedFetch.Status.NOT_MODIFIED && target.length() == body.size.toLong())
     mode = "bad"
     val r3 = ff.fetch(null, null, validate = { Feed.parse(it) }, sleep = {})
-    check("fetch.badKeepsCache", r3.status == FeedFetch.Status.FAILED && Feed.parse(target.readText()).offers.size == 531 &&
+    check("fetch.badKeepsCache", r3.status == FeedFetch.Status.FAILED && Feed.parse(target.readText()).offers.size == 530 &&
         !File(target.path + ".part").exists())
     mode = "down"; srvHits = 0
     val slept = ArrayList<Long>()
     val r4 = ff.fetch(null, null, attempts = 3, validate = { Feed.parse(it) }, sleep = { slept.add(it) })
     check("fetch.retryBackoff", r4.status == FeedFetch.Status.FAILED && srvHits == 3 && slept == listOf(2000L, 4000L)) { "$srvHits $slept" }
-    check("fetch.downKeepsCache", target.exists() && Feed.parse(target.readText()).offers.size == 531)
+    check("fetch.downKeepsCache", target.exists() && Feed.parse(target.readText()).offers.size == 530)
     mode = "ok"
     check("fetch.recovers", ff.fetch(null, null, validate = { Feed.parse(it) }, sleep = {}).status == FeedFetch.Status.UPDATED)
     server.stop(0)
@@ -453,7 +453,25 @@ fun main(args: Array<String>) {
         check("asst.noInvent", asst.reply("uzay mekiği fiyatı").offers.isEmpty())
     }
 
+    // 1.8: içilecek süt, reyon/alt-dize eşleşmelerinden ayrılır.
+    run {
+        val sample = feed.offers.first()
+        fun offer(id: String, name: String, price: Double) = sample.copy(id = id, name = name, brand = null,
+            variant = null, category = "sut-kahvaltilik", price = price, validFrom = "2026-10-01", validTo = "2026-10-30")
+        val drink = offer("drink", "UHT Tam Yağlı Süt 1 L", 35.0)
+        val drink2 = offer("drink2", "Laktozsuz Süt 1 L", 45.0)
+        val others = listOf(offer("powder", "Süt Tozu 200 g", 2.0), offer("jam", "Süt Reçeli", 3.0),
+            offer("biscuit", "Sütlü Bisküvi", 1.0), offer("body", "Vücut Sütü", 1.0),
+            offer("expired", "Süt 1 L", 1.0).copy(validTo = "2026-10-20"))
+        val synthetic = feed.copy(offers = listOf(drink, drink2) + others)
+        val response = Assistant(synthetic, LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt")
+        check("asst.drinkableMilk", response.offers.map { it.id } == listOf("drink", "drink2")) { response.offers.toString() }
+        check("asst.explicitMilkPowder", Assistant(synthetic, LocalDate.of(2026, 10, 26), 1).reply("süt tozu").offers.map { it.id } == listOf("powder"))
+        check("asst.noMilkFallback", Assistant(feed.copy(offers = others), LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt").offers.isEmpty())
+    }
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)
 }
+
