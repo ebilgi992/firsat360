@@ -51,6 +51,22 @@ uygulamaya kopyalanmadı veya çalıştırılmadı; mesaj gönderilmedi. Uyumlul
 JSON ve depo/commit metadatasını denetler. Kaynak tekrar aktif ve taze olursa broşür adayları tanınır; resmî kampanya
 tarihi doğrulanmadan ürün/fiyat veya güncel katalog üretilmez. Eski 2023 görselleri uygulamada bugünkü broşür sayılmaz.
 
+## current-products-online incelemesi ve uyarlama
+
+[AbdulazizFMMS/current-products-online](https://github.com/AbdulazizFMMS/current-products-online) bir Android istemcisidir;
+son depo güncellemesi 20 Nisan 2025. `Post` modeli Blogger alanlarını (`title`, `content`, `published`, `labels`, `url`)
+ve istemci hem Blogger JSON hem uzak uygulama yapılandırmasını kullanır. Hazır güncel broşür veri kümesi veya
+herkese açık canlı Blogger besleme adresi depoda sunulmuyor. Yapılandırma, uygulama kimliğine bağlı erişim anahtarıyla
+alınıyor. Başka uygulamanın anahtarı çözülmedi, kullanılmadı ve projeye aktarılmadı. Açık lisans dosyası bulunmadığından
+Java kodu kopyalanmadı.
+
+Bağımsız `backend/firsat360/blogger.py` adaptörü Blogger v2 (`feed.entry`) ve v3 (`items`) JSON alanlarını okur;
+yayın tarihi, kampanya tarihi ve gerçek market CDN görsellerini denetler. Küçük resim yerine gönderinin büyük görsel
+bağlantısını seçer. Tarihsiz/eski içerik ve doğrulanmamış üçüncü taraf görsel aynaları güncel resmî katalog sayılmaz.
+`config/public_brochure_feeds.json` içinde store/url eşleştirmesiyle herkese açık, anahtarsız HTTPS besleme tanımlanabilir.
+Varsayılan liste boştur; günlük `status.json/community_blogger` durumu `not_configured` olur. Canlı veri aktarımı
+başlamış gibi gösterilmez. Veriyi gerçekten bağlamak için kullanıma açık Blogger/JSON besleme adresi gereklidir.
+
 ## Instagram
 
 Resmî A101 (`a101iletisim`), BİM (`bimturkiye`), ŞOK (`sokmarketler`) ve Migros (`migros_tr`) hesapları market ekranına

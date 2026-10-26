@@ -240,6 +240,20 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
             robot_client.close()
         report["community_a101_robot"] = robot_community
 
+    blogger_community = None
+    if live:
+        from .blogger import discover_blogger_feeds
+        from .connectors.base import PoliteClient
+        client = PoliteClient(settings.user_agent, min_interval_s=settings.min_request_interval_s, transport=transport,
+                              **({"sleep": sleep} if sleep is not None else {}))
+        try:
+            sources = json.loads((ROOT / "config/public_brochure_feeds.json").read_text(encoding="utf-8")).get("sources", [])
+            blogger_community = discover_blogger_feeds(client, sources, now)
+        except Exception as exc:
+            blogger_community = {"state": "unavailable", "error": str(exc)[:200]}
+        finally:
+            client.close()
+        report["community_blogger"] = blogger_community
     # 2b) Ürün görselleri: her ürünün kendi resmî sayfasından otomatik doğrulama (yalnızca yeni/eskimiş olanlar)
     if live and verify_pages:
         from .connectors.base import PoliteClient
@@ -307,6 +321,7 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
         st = status_dict(s)
         if community is not None: st["community_a101"] = community
         if robot_community is not None: st["community_a101_robot"] = robot_community
+        if blogger_community is not None: st["community_blogger"] = blogger_community
         if report.get("quality"):
             from .quality import compact
             st["quality"] = compact(report["quality"])
