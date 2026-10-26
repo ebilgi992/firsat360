@@ -23,7 +23,7 @@ object DeviceBrochures {
 
     data class Entry(val title: String, val sourceUrl: String, val pages: List<String>, val savedAt: Long,
                      val pdfs: List<Pdf> = emptyList(), val cover: String? = null) {
-        val hasContent: Boolean get() = pages.size >= 2 || pdfs.isNotEmpty()
+        val hasContent: Boolean get() = pages.isNotEmpty() || pdfs.isNotEmpty()
         /** Kapak: PDF'in cihazda çizilen ilk sayfası veya ilk sayfa görseli. */
         val coverUrl: String? get() = cover ?: pages.firstOrNull()
         /** İçerik anahtarı: aynı dosya adı yeniden kullanılsa da başlık/tarih/sayfa sayısı değişince "yeni broşür". */
@@ -117,3 +117,4 @@ object DeviceBrochures {
 
     private fun q(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") + "\""
 }
+

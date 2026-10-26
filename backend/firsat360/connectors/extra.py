@@ -110,7 +110,7 @@ def parse_tk_campaign(html: str, url: str, observed: date) -> tuple[CatalogData,
         toks = price_tokens(text_of(card))
         if len(toks) > 2:
             continue  # birden çok ürünü kapsayan kap
-        name = text_of(a) or ""
+        name = a.attributes.get("title") or text_of(a) or ""
         if not name or price_tokens(name):
             for sel in ("h2", "h3", "h4", ".name", ".title", "[class*=name]", "[class*=title]"):
                 n = card.css_first(sel)
@@ -696,3 +696,4 @@ class FuncConnector(Connector):
         if not res.catalogs:
             raise ConnectorError(f"{self.store_id}: {self.url} sayfasında katalog bulunamadı")
         return res
+

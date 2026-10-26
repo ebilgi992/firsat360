@@ -22,6 +22,7 @@ import com.firsat360.app.ui.*
  */
 class AssistantScreen(a: MainActivity) : Screen(a) {
     override val tab: Tab get() = Tab.HOME
+    private var busy = false
     private var log: LinearLayout? = null
     private var scroll: ScrollView? = null
     private var chips: LinearLayout? = null
@@ -29,7 +30,7 @@ class AssistantScreen(a: MainActivity) : Screen(a) {
 
     private fun bot(): Assistant {
         val f = a.feed
-        if (engine?.first !== f) engine = f to Assistant(f, a.today)
+        if (engine?.first !== f || engineDay != a.today) { engine = f to Assistant(f, a.today); engineDay = a.today }
         return engine!!.second
     }
 
@@ -45,10 +46,10 @@ class AssistantScreen(a: MainActivity) : Screen(a) {
         }, lp(dp(40), dp(40), l = dp(10)))
         val tt = a.vbox()
         tt.addView(a.text("Fırsat Asistanı", 22f, Theme.p.text, Theme.display, 1).apply { accessibilityHeading() })
-        tt.addView(a.text("Cihazında çalışır, ücretsiz, soruların paylaşılmaz", 12.5f, Theme.p.text2, Theme.regular, 1))
+        tt.addView(a.text("Bütçe, ambalaj ve birim fiyat karşılaştırması", 12.5f, Theme.p.text2, Theme.regular, 1))
         top.addView(tt, lp(0, WRAP, l = dp(10), weight = 1f))
         top.addView(a.iconButton(Icon.REFRESH, Theme.p.text2, desc = "Sohbeti temizle") {
-            history.clear(); a.refreshCurrent()
+            if (busy) a.toast("Yanıt tamamlandıktan sonra temizleyebilirsin") else { history.clear(); engine = null; a.refreshCurrent() }
         })
         root.addView(top)
 
@@ -72,6 +73,7 @@ class AssistantScreen(a: MainActivity) : Screen(a) {
             setHintTextColor(Theme.p.text3); setTextColor(Theme.p.text)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f); typeface = Theme.regular
             background = null; maxLines = 3
+            filters = arrayOf(android.text.InputFilter.LengthFilter(400))
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             imeOptions = EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_EXTRACT_UI
             setPadding(dp(16), dp(12), dp(8), dp(12))
@@ -94,6 +96,9 @@ class AssistantScreen(a: MainActivity) : Screen(a) {
     private fun send(text: String? = null) {
         val t = (text ?: input?.text?.toString() ?: "").trim()
         if (t.isEmpty()) return
+        if (busy) { a.toast("Yanıt hazırlanıyor…"); return }
+        busy = true
+        val assistant = bot()
         input?.setText("")
         val mine = AssistantReply(t)
         history += true to mine
@@ -101,21 +106,26 @@ class AssistantScreen(a: MainActivity) : Screen(a) {
         val typing = a.text("Yazıyor…", 13f, Theme.p.text3, Theme.medium)
         log?.addView(typing, lp(t = dp(8)))
         scrollDown()
-        val r = try { bot().reply(t) } catch (e: Exception) {
-            com.firsat360.app.core.AppLog.w("asistan", e.toString())
-            AssistantReply("Ups, bir şeyler ters gitti 😅 Bir daha dener misin?")
+        worker.execute {
+            val r = try { assistant.reply(t) } catch (e: Exception) {
+                com.firsat360.app.core.AppLog.w("asistan", e.javaClass.simpleName)
+                AssistantReply("Soruyu işleyemedim. Ürün adı, market veya bütçe yazarak yeniden deneyebilirsin.")
+            }
+            a.runOnUiThread {
+                busy = false
+                history += false to r
+                while (history.size > 60) history.removeAt(0)
+                if (log?.isAttachedToWindow == true && !a.isDestroyed && !a.isFinishing) {
+                    log?.removeView(typing)
+                    render(false, r)
+                    log?.announceForAccessibility(r.text)
+                    setChips(r.suggestions.ifEmpty { assistant.starters })
+                    scrollDown()
+                }
+            }
         }
-        // Kısa "yazıyor" hissi: yanıt anında hazır, yine de doğal görünsün
-        log?.postDelayed({
-            log?.removeView(typing)
-            history += false to r
-            while (history.size > 60) history.removeAt(0)
-            render(false, r)
-            log?.announceForAccessibility(r.text)
-            setChips(r.suggestions.ifEmpty { bot().starters })
-            scrollDown()
-        }, 420)
     }
+
 
     private fun scrollDown() { scroll?.post { scroll?.fullScroll(View.FOCUS_DOWN) } }
 
@@ -177,8 +187,11 @@ class AssistantScreen(a: MainActivity) : Screen(a) {
     }
 
     companion object {
+        private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
         /** (benim mesajım mı, içerik) — uygulama açık kaldıkça korunur. */
         private val history = ArrayList<Pair<Boolean, AssistantReply>>()
+        private var engineDay: java.time.LocalDate? = null
         private var engine: Pair<com.firsat360.app.core.Feed, Assistant>? = null
     }
 }
+

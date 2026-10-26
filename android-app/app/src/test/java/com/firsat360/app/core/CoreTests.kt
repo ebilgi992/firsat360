@@ -470,6 +470,37 @@ fun main(args: Array<String>) {
         check("asst.noMilkFallback", Assistant(feed.copy(offers = others), LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt").offers.isEmpty())
     }
 
+    // 1.9: broşür önce açılır; ürün listesi okuyucunun ayrı eylemidir.
+    run {
+        val c = feed.catalogs.first().copy(offerCount = 10, pages = listOf(CatalogPage("https://market.test/p.jpg", null, null, null, true)), pdfUrl = "https://market.test/x.pdf")
+        check("reader.pagesBeforeProducts", CatalogOpening.target(c, true) == CatalogOpening.Target.PAGES)
+        check("reader.pdfWhenImagesDisabled", CatalogOpening.target(c, false) == CatalogOpening.Target.PDF)
+        check("reader.productsFallback", CatalogOpening.target(c.copy(pages = emptyList(), pdfUrl = null), true) == CatalogOpening.Target.PRODUCTS)
+        check("reader.webExtraction", CatalogOpening.target(c.copy(pages = emptyList(), pdfUrl = null, offerCount = 0), true) == CatalogOpening.Target.WEB)
+        check("reader.directPdf", CatalogOpening.target(c.copy(pages = emptyList(), pdfUrl = null, officialUrl = "https://market.test/book.pdf?v=2"), true) == CatalogOpening.Target.PDF)
+        check("reader.singlePoster", CatalogOpening.pages(c.copy(pages = emptyList(), kind = "poster", coverUrl = "https://market.test/cover.jpg")).size == 1)
+        check("reader.coverNotWholeBook", CatalogOpening.pages(c.copy(pages = emptyList(), kind = "aktuel", coverUrl = "https://market.test/cover.jpg")).isEmpty())
+        check("reader.cacheSource", CatalogOpening.sameSource("https://market.test/a/#p1", "https://market.test/a") && !CatalogOpening.sameSource("https://market.test/old", "https://market.test/new"))
+    }
+    run {
+        check("money.precise", PriceCents.of(1.005) == 101L && PriceCents.of(19.995) == 2000L)
+        check("money.invalid", runCatching { PriceCents.of(Double.NaN) }.isFailure)
+        check("pack.decimal", Pack.parse("Süt 1,5 L") == Pack("L", 1.5))
+        check("pack.multi", Pack.parse("6x200 ml Süt") == Pack("L", 1.2))
+        val request = ShoppingRequest.parse("100 TL altı 1 litre süt")
+        check("request.budgetPack", request.budget == 10000L && request.pack == Pack("L", 1.0) && TrNorm.loose(request.query) == "sut") { request.toString() }
+        val base = feed.offers.first().copy(brand = null, variant = null, category = "sut-kahvaltilik", validFrom = "2026-10-01", validTo = "2026-10-30", pagePriceConflict = null)
+        val one = base.copy(id = "oneL", name = "UHT Süt 1 L", price = 35.0)
+        val three = base.copy(id = "threeL", name = "UHT Süt 3 L", price = 80.0)
+        val bad = base.copy(id = "conflict", name = "Süt 1 L", price = 10.0, pagePriceConflict = 45.0)
+        val f = feed.copy(offers = listOf(one, three, bad))
+        val asst = Assistant(f, LocalDate.of(2026, 10, 26), 1)
+        check("asst.unitPrice", asst.reply("Litre fiyatına göre süt").offers.firstOrNull()?.id == "threeL")
+        check("asst.budgetSize", asst.reply("100 TL altı 1 litre süt").offers.map { it.id } == listOf("oneL"))
+        check("asst.budgetEmpty", asst.reply("20 TL altı süt").offers.isEmpty())
+        check("asst.strictModifier", asst.reply("laktozsuz süt").offers.isEmpty())
+    }
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)

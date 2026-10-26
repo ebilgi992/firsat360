@@ -482,12 +482,7 @@ fun minuteLabel(m: Int): String = String.format(java.util.Locale.ROOT, "%02d.%02
 /** Broşürü en iyi biçimde açar: sayfa görselleri → yakınlaştırılabilir okuyucu; PDF → PDF; diğerleri → resmî sayfa. */
 fun MainActivity.openBrochure(e: com.firsat360.app.core.ShelfEntry) {
     val c = e.catalog
-    when {
-        c != null && c.hasPages && com.firsat360.app.data.ImageLoader.enabled -> openReader(c.id)
-        c != null && c.hasPdf -> push(PdfScreen(this, c.id))
-        c != null && !c.webOnly -> openCatalog(c.id)
-        else -> openBridge(e.store, e.bridge, c?.officialUrl)
-    }
+    if (c != null) openCatalog(c.id) else openBridge(e.store, e.bridge)
 }
 
 /**
@@ -495,17 +490,17 @@ fun MainActivity.openBrochure(e: com.firsat360.app.core.ShelfEntry) {
  * doğrudan yerel okuyucu (sayfalar) veya PDF okuyucu; yoksa resmî sayfa yükleme katmanıyla açılır, profil betiği
  * broşürü okur ve yerel okuyucuya geçer.
  */
-fun MainActivity.openBridge(store: com.firsat360.app.core.Store, bridge: com.firsat360.app.core.BridgeEntry?, fallbackUrl: String? = null) {
+fun MainActivity.openBridge(store: com.firsat360.app.core.Store, bridge: com.firsat360.app.core.BridgeEntry?, fallbackUrl: String? = null, catalogTitle: String? = null) {
     val cached = com.firsat360.app.data.DeviceBrochures.get(this, store.id)
-    if (cached != null) {
+    if (cached != null && (fallbackUrl == null || com.firsat360.app.core.CatalogOpening.sameSource(cached.sourceUrl, fallbackUrl))) {
         if (cached.pdfs.isNotEmpty()) { openDevicePdf(store, cached); return }
         if (com.firsat360.app.data.ImageLoader.enabled) {
             val ps = cached.pages.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", cached.sourceUrl, true) }
-            push(CatalogReaderScreen(this, null, 0, null, "${store.name} broşür", extraPages = ps))
+            push(CatalogReaderScreen(this, null, 0, null, (catalogTitle ?: "${store.name} broşür"), extraPages = ps))
             return
         }
     }
-    push(WebScreen(this, bridge?.url ?: fallbackUrl ?: store.brochureUrl ?: store.catalogUrl, "${store.name} broşür",
+    push(WebScreen(this, fallbackUrl ?: bridge?.url ?: store.brochureUrl ?: store.catalogUrl, (catalogTitle ?: "${store.name} broşür"),
         catalog = true, storeId = store.id, profile = bridge?.profile ?: "generic",
         allowedHosts = bridge?.allowedHosts ?: emptyList()))
 }
@@ -562,3 +557,4 @@ class ShelfOrderScreen(a: MainActivity) : Screen(a) {
         a.refreshCurrent()
     }
 }
+

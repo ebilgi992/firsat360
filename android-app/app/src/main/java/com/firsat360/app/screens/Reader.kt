@@ -41,11 +41,12 @@ class CatalogReaderScreen(
     private var error: View? = null
     private var thumbs: LinearLayout? = null
     private var thumbScroll: HorizontalScrollView? = null
+    private var requestId = 0
     private var chrome = true
     private var bars: List<View> = emptyList()
 
     private val pages: List<CatalogPage>
-        get() = extraPages ?: single?.let { listOf(it) } ?: (a.feed.catalog(catalogId)?.pages ?: emptyList())
+        get() = extraPages ?: single?.let { listOf(it) } ?: (a.feed.catalog(catalogId)?.let { com.firsat360.app.core.CatalogOpening.pages(it) } ?: emptyList())
 
     override fun create(): View {
         val f = a.feed
@@ -100,6 +101,9 @@ class CatalogReaderScreen(
         titles.addView(a.text(sub, 12f, dim, Theme.medium, 1), lp(t = dp(2)))
         top.addView(titles, lp(0, WRAP, l = dp(12), weight = 1f))
         if (catalogId != null && c != null) {
+            if (c.offerCount > 0) top.addView(a.iconButton(Icon.LIST, onDark, 0x33FFFFFF, "Katalogdaki ürünler") {
+                a.push(CatalogScreen(a, c.id))
+            }, lp(dp(42), dp(42), l = dp(8)))
             val fav = a.user.favoriteCatalogs().contains(c.id)
             top.addView(a.iconButton(if (fav) Icon.STAR_FILLED else Icon.STAR, if (fav) 0xFFFFC53D.toInt() else onDark, 0x33FFFFFF,
                 if (fav) "Katalog favorilerden çıkar" else "Katalogu favorilere ekle") {
@@ -200,9 +204,10 @@ class CatalogReaderScreen(
         // Görüntüleyici klasörü değişmişse (large → page → mobile, webp ↔ jpg) sırayla denenir.
         val tries = variants(p.url)
         val at = index
+        val request = ++requestId
         fun attempt(i: Int) {
             ImageLoader.load(zv, tries[i], maxPx, if (i == tries.lastIndex) p.thumbUrl else null, rgb565 = true, local = if (i == 0) local else null) { ok ->
-                if (at != index) return@load
+                if (at != index || request != requestId) return@load
                 if (!ok && i + 1 < tries.size) { attempt(i + 1); return@load }
                 progress?.visibility = View.GONE
                 error?.visibility = if (ok) View.GONE else View.VISIBLE
@@ -238,9 +243,12 @@ class CatalogReaderScreen(
         if (chrome) for (b in bars) b.visibility = View.VISIBLE
     }
 
+    override fun onHide() { requestId++; pageView?.animate()?.cancel() }
+
     override fun onBack(): Boolean {
         val zv = pageView ?: return false
         if (zv.isZoomed()) { zv.reset(); return true }
         return false
     }
 }
+

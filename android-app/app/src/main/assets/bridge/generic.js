@@ -27,7 +27,7 @@
   if (onVendor) fb = null;
   var end = F360.scrollStep();
   var urls = F360.portraitImages(function (u) { return !/\/catalog\/product\/|\/products?\/|logo|icon|avatar/i.test(u); });
-  if (urls.length >= 2) return F360.out({ type: 'images', urls: urls, end: end });
+  if (urls.length >= 1) return F360.out({ type: 'images', urls: urls, end: end });
   if (pdfs.length && end) return F360.out({ type: 'pdf', items: pdfs });  // önce görseller yüklensin
   if (fb && end) return F360.out({ type: 'navigate', url: F360.abs(fb.getAttribute('href') || fb.getAttribute('src')) });
   return F360.out({ type: urls.length ? 'images' : 'pending', urls: urls, end: end });
