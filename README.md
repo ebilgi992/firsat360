@@ -59,7 +59,7 @@ kotlin -cp /tmp/core.jar com.firsat360.app.core.CoreTestsKt /tmp/core-test-feed.
 ```
 
 JVM testleri 12–13 Ekim tarihsel kaynaklarından üretilir; değişen canlı APK verisi test girdisi değildir.
-Doğrulama: **168 Python testi geçti, 25 atlandı; 215 Kotlin testi geçti**. CI ayrıca APK oluşturur, minSdk 26
+Doğrulama: **169 Python testi geçti, 25 atlandı; 216 Kotlin testi geçti**. CI ayrıca APK oluşturur, minSdk 26
 API başvurularını, açılış sırasını ve imzayı denetler. Dal testi başarıyla tamamlanmadan APK yayımlanmaz.
 
 `android-app/tools/setup-toolchain.sh` araç zincirini SHA-256 ile doğrular. Derleme:

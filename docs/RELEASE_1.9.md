@@ -53,7 +53,7 @@ Kaynak örnekleri:
 
 ## Doğrulama ve sınırlar
 
-Kotlin çekirdek testleri: 215 geçti. Python ve tam APK kontrolleri CI'da çalıştırılır: kaynak ayrıştırma,
+Kotlin çekirdek testleri: 216 geçti. Python ve tam APK kontrolleri CI'da çalıştırılır: kaynak ayrıştırma,
 izinli alan/kuruş/miktar sınırları, okuyucu açılış önceliği, tam Android derleme, minSdk 26 başvuruları ve v2/v3 imza.
 Gerçek telefonda her marketin WebView sürümü, uzak sayfanın o andaki durumu ve bildirim teslimi test edilmedi.
 Dış sitelerin erişim ve içerik değişiklikleri için hatasız çalışma garantisi verilemez; mevcut veri ve resmî bağlantı

@@ -478,6 +478,7 @@ fun main(args: Array<String>) {
         check("reader.productsFallback", CatalogOpening.target(c.copy(pages = emptyList(), pdfUrl = null), true) == CatalogOpening.Target.PRODUCTS)
         check("reader.webExtraction", CatalogOpening.target(c.copy(pages = emptyList(), pdfUrl = null, offerCount = 0), true) == CatalogOpening.Target.WEB)
         check("reader.directPdf", CatalogOpening.target(c.copy(pages = emptyList(), pdfUrl = null, officialUrl = "https://market.test/book.pdf?v=2"), true) == CatalogOpening.Target.PDF)
+        check("reader.directImage", CatalogOpening.pages(c.copy(pages = emptyList(), officialUrl = "https://market.test/afis.jpg?v=2")).size == 1)
         check("reader.singlePoster", CatalogOpening.pages(c.copy(pages = emptyList(), kind = "poster", coverUrl = "https://market.test/cover.jpg")).size == 1)
         check("reader.coverNotWholeBook", CatalogOpening.pages(c.copy(pages = emptyList(), kind = "aktuel", coverUrl = "https://market.test/cover.jpg")).isEmpty())
         check("reader.cacheSource", CatalogOpening.sameSource("https://market.test/a/#p1", "https://market.test/a") && !CatalogOpening.sameSource("https://market.test/old", "https://market.test/new"))
