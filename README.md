@@ -1,48 +1,70 @@
-# FIRSAT360 — Aktüel katalog ve fırsat uygulaması (Beta 0.6.1)
+# FIRSAT360 — 1.8.0 Beta
 
-Marketlerin aktüel katalogları, broşürleri ve indirimli ürünleri tek uygulamada. **Tamamen ücretsiz çalışır:**
-sunucu, yönetim paneli veya ücretli servis yoktur. Veri her gün GitHub Actions ile otomatik toplanır ve GitHub
-Pages'te yayımlanır; uygulama oradan okur.
+Market broşürleri, ürün fiyatları, alışveriş listesi ve cihazda çalışan Fırsat Asistanı.
+Android 8.0 ve üzeri; ücretsiz, hesap gerektirmez. Canlı yayın GitHub Actions ile toplanıp GitHub Pages'te yayımlanır.
 
-```
-android-app/   Android uygulaması (Kotlin, ek kütüphane yok) + Gradle'sız derleme betiği
-backend/       Günlük veri hattı (Python): 10 marketin otomatik bağlayıcıları, görsel doğrulama, duyuru, feed üretimi
-config/        app_config.json — uygulamanın uzaktan ayarları (GitHub'da düzenlenir)
-data/          İlk kurulum tohumu: 12–13.10.2026 doğrulanmış okumalar
-.github/       Günlük iş akışı (08:05 ve 00:05)
-docs/          Kurulum, test, güvenlik, Play yayın, kaynak belgeleri
-```
+## İndir
 
-## Kurulum
-- **Uygulama:** `dist/FIRSAT360-0.6.1-beta-debug.apk` → telefona aktarın → kurun (Android 8.0+). Önceki beta'ların
-  üzerine güncellenir. `com.firsat360.beta` (yeni-paket) kurduysanız `…-yeni-paket-debug.apk`'yı kurun.
-- **Canlı veri (ücretsiz):** `docs/CANLI_KURULUM.md` — GitHub'da depo + Pages + Actions açılır, APK yayın adresiyle
-  derlenir (`FEED_URL=https://<kullanıcı>.github.io/firsat360/feed.json bash android-app/build-nogradle.sh`).
-- **Elle güncelleme:** GitHub → Actions → "gunluk-veri" → Run workflow (telefondaki GitHub uygulamasından da olur).
-- **Uzaktan ayar:** GitHub'da `config/app_config.json` dosyasını düzenleyin; sonraki çalıştırmada uygulamaya ulaşır.
+[GitHub sürümleri ve APK seçenekleri](https://github.com/ebilgi992/firsat360/releases)
 
-## Uygulamada neler var
-- **Ana sayfa:** arama, Günün İndirimleri, Kataloglar (yeni olanlar "YENİ"), Marketler.
-- **Kataloglar uygulama içinde:** sayfa görselli kataloglar yakınlaştırılabilir okuyucuda, PDF kataloglar PDF
-  okuyucuda, flipbook kataloglar (Bizim Toptan, A101 afişleri, Migroskop dijital…) tam ekran uygulama içi görünümde.
-  Watsons ve Metro (Publitas) ile Gratis (FlipHTML5) kataloglarının sayfaları günlük çalıştırmada otomatik çekilir.
-- **Arama:** Türkçe harf duyarlı, market adıyla ("bim", "BİM market"), yazım hatası toleranslı.
-- **Bildirim:** "🛒 Günün katalogları yayınlandı!" — günde tek özet, saat ve market seçimi.
-- Ürün: resmî fotoğraf, fiyat, önceki fiyat, diğer marketlerde fiyat, alışveriş listesi, favoriler.
+- **Standart APK:** `FIRSAT360-20-app.apk` — paket `com.firsat360.app`.
+- **Alternatif paket:** `FIRSAT360-20-beta.apk` — yalnız `com.firsat360.beta` kuruluysa seçin.
+- Mevcut uygulamanın üzerine kurmak için aynı paket ve imza gerekir. Bu beta önceki beta ile aynı,
+  depodaki herkese açık geliştirme anahtarıyla imzalanır. Özel üretim imzası değildir.
+- APK yanındaki `.sha256` dosyası bütünlük kontrolü içindir. Android kurulum onayı ister.
 
-## Geliştirici
+[Web vitrini](https://ebilgi992.github.io/firsat360/) · [Ürün bazlı düzeltme planı](docs/REPAIR_PLAN_2026-10-26.md)
+
+## 1.8 değişiklikleri
+
+- Varsayılan canlı feed adresi, çevrim dışı önbellek ve başarısız kontrol sonrası tekrar yenileme.
+- Bildirim izni/kanalı engelinde yeni katalog adaylarının korunması; Ayarlar'da deneme bildirimi.
+- “En ucuz süt” sorgusunda içilecek süt; açıkça “süt tozu” sorgusunda süt tozu. Süresi bitmiş ürün önerilmez.
+  En düşük fiyat kayıtlı veriler içindeki **paket fiyatıdır**, farklı hacimlerde litre fiyatı iddiası değildir.
+- Açılış ve Ayarlar'da güncelleme kontrolü. Uygulama içinde indirme, SHA-256/paket/sürüm/imza kontrolü ve
+  Android'in kullanıcı onaylı kurucusu. Sistem güncelleme sırasında uygulamayı yeniden başlatabilir.
+- Gerçek yayını okuyan web vitrini, market filtresi ve yayımlanmış APK seçenekleri.
+- Kalite raporunda kaynak hataları ile görseli eksik ürünlerin ayrı sayılması ve ürün bazlı kanıt.
+
+## Bilinen dış kaynak eksikleri
+
+- A101 Cloudflare engeli aşılmaz. Kaynak engelliyken ek ürün sayfası istekleri ve kalite tekrarları atlanır;
+  eski ürünler güncel gösterilmez. A101_Afis yardımcı broşür keşfi için denetlenir; hata, eski çıktı ve resmî CDN
+  dışı adresler reddedilir. İncelemede bu depo çalışan güncel veri sağlamıyordu.
+- TK Koop'taki Banvit Nugget 1000 g, Doyfarm Nugget 1 kg, Renax 60'lı kapsül ve Solo Bambu 16'lı havlunun resmî
+  detay sayfaları `yok.png` yayımlıyor. Başlık ayrıştırması düzeltildi; ilgisiz ürün fotoğrafı kullanılmaz.
+  [Dört gerçek HTML üzerindeki doğrulama sonucu](docs/TK_IMAGE_EVIDENCE_2026-10-26.json).
+- Android pil tasarrufu ve zorla durdurma bildirimleri geciktirebilir. Gerçek telefonda bildirim ve kurulum
+  teslimi ayrıca kontrol edilmelidir. Ayarlar › Deneme bildirimi gönder, izin ve kanalı denetlemeyi sağlar.
+
+## Geliştirme
+
 ```bash
-cd backend && pip install -r requirements.txt && python -m pytest -q          # veri hattı testleri
-python -m firsat360 daily --no-live                                              # gömülü veriden feed üret
-cd android-app && kotlinc app/src/main/java/com/firsat360/app/core app/src/test/java -d /tmp/core.jar \
-  && kotlin -cp /tmp/core.jar com.firsat360.app.core.CoreTestsKt app/src/main/assets/feed.json   # çekirdek testleri
-TOOLCHAIN=~/firsat360-toolchain bash android-app/build-nogradle.sh              # debug APK
-RELEASE=1 bash android-app/build-nogradle.sh                                    # imzasız release APK + AAB
+cd backend
+pip install -r requirements.txt
+python -m pytest -q
+cd ..
+PYTHONPATH=backend python scripts/export_core_test_feed.py /tmp/core-test-feed.json
+cd android-app
+kotlinc app/src/main/java/com/firsat360/app/core app/src/test/java -d /tmp/core.jar
+kotlin -cp /tmp/core.jar com.firsat360.app.core.CoreTestsKt /tmp/core-test-feed.json
 ```
-Araç zinciri: `android-app/tools/setup-toolchain.sh`. İmza: `android-app/signing/` (yalnızca beta için herkese açık
-debug anahtarı); Play için kendi yükleme anahtarınız (`docs/PLAY_YAYIN.md`).
 
-## Görsel ve veri politikası
-Görseller ve kataloglar marketlerin **kendi adreslerinden** gösterilir; kopyalanmaz, yeniden yayımlanmaz. robots.txt'ye
-uyulur, erişim engelleri aşılmaz. Herkese açık yayından önce marketlerden izin alınması önerilir (`docs/KAYNAKLAR.md`).
-Test sonuçları ve bilinen eksikler: `docs/TEST_RAPORU.md`.
+JVM testleri 12–13 Ekim tarihsel kaynaklarından üretilir; değişen canlı APK verisi test girdisi değildir.
+Doğrulama: **166 Python testi geçti, 25 atlandı; 198 Kotlin testi geçti**. CI ayrıca APK oluşturur, minSdk 26
+API başvurularını, açılış sırasını ve imzayı denetler. Dal testi başarıyla tamamlanmadan APK yayımlanmaz.
+
+`android-app/tools/setup-toolchain.sh` araç zincirini SHA-256 ile doğrular. Derleme:
+`TOOLCHAIN=<araç-dizini> bash android-app/build-nogradle.sh`.
+Canlı veri adresi varsayılan olarak `https://ebilgi992.github.io/firsat360/feed.json`; `FEED_URL` ile değiştirilebilir.
+
+`gunluk-veri` günde iki kez (08:05 ve 00:05 Türkiye saati), ilgili ana dal değişikliklerinde veya elle çalışır.
+Android derleme iş akışı ana dalda beta GitHub sürümünü ve iki paket seçeneğini yayımlar.
+
+## Kaynak ve görsel politikası
+
+Görseller resmî market adreslerinden bağlantıyla gösterilir; başka ürünün fotoğrafı atanmaz. robots.txt ve
+403/429 erişim engellerine uyulur. Resmî kaynaktan doğrulanamayan fiyat, tarih veya görsel uydurulmaz.
+Diğer market depoları yalnız güncellik, erişim ve kullanım koşulları doğrulanırsa eklenir.
+
+Kurulum: [CANLI_KURULUM](docs/CANLI_KURULUM.md) · [Gizlilik](docs/privacy.html) · [Kaynaklar](docs/KAYNAKLAR.md)
