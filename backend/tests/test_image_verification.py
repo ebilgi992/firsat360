@@ -120,3 +120,17 @@ def test_verified_image_survives_reimport_without_image(loaded_all):
         o = s.scalars(select(Offer).where(Offer.store_id == "bim", Offer.image_status == "verified")).first()
         assert o is not None and o.image_url.startswith("https://cdn1.bim.com.tr/uploads/aktuel-urunler/")
         assert s.get(Catalog, "hakmar-kirtasiye-2026").valid_from.isoformat() == "2026-08-21"
+
+
+
+def test_tk_brands_and_pack_counts_do_not_cross_match():
+    from firsat360.imagematch import PageImage, index_pages, verify
+    url = 'https://www.tkkoop.com.tr/urun/banvit-pilic-nugget-1000-g'
+    page = PageImage('tkkoop', url, 'Doyfarm Piliç Nugget 1 kg', None, None,
+                     'https://www.tkkoop.com.tr/storage/assets/images/urun/doyfarm.jpg')
+    result = verify('tkkoop', url, 'Banvit Piliç Nugget 1000 g', None, None, None, None, index_pages([page]))
+    assert result.status == 'name_mismatch'
+    page.page_name = 'Banvit Piliç Nugget 1 kg'
+    assert verify('tkkoop', url, 'Banvit Piliç Nugget 1000 g', None, None, None, None, index_pages([page])).status == 'verified'
+    page.page_name = "Renax Bulaşık Makinesi Kapsülü 30'lu"
+    assert verify('tkkoop', url, "Renax Bulaşık Makinesi Kapsülü 60'lı", None, None, None, None, index_pages([page])).status == 'size_mismatch'

@@ -7,7 +7,7 @@ object ProductIntent {
         if ("sut" !in words) return false
         val excluded = setOf("tozu", "toz", "krem", "kremi", "losyon", "losyonu", "sabun", "sabunu",
             "temizleme", "vucut", "dus", "bebek", "devam", "mama", "mamasi", "sutlac", "tatli", "tatlisi",
-            "recel", "receli", "biskuvi", "biskuvisi", "cikolatasi", "cicegi", "pompa", "pompasi", "kopurtucu", "kopurtucusu")
+            "recel", "receli", "biskuvi", "biskuvisi", "cikolata", "cikolatasi", "cicegi", "pompa", "pompasi", "kopurtucu", "kopurtucusu")
         if (words.any { it in excluded }) return false
         return o.category !in setOf("kisisel-bakim", "temizlik", "ev-yasam", "elektronik")
     }
