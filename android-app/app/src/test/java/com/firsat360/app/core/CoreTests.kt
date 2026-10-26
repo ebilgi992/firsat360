@@ -453,7 +453,24 @@ fun main(args: Array<String>) {
         check("asst.noInvent", asst.reply("uzay mekiği fiyatı").offers.isEmpty())
     }
 
+    // 1.8: içilecek süt, reyon/alt-dize eşleşmelerinden ayrılır.
+    run {
+        val sample = feed.offers.first()
+        fun offer(id: String, name: String, price: Double) = sample.copy(id = id, name = name, brand = null,
+            variant = null, category = "sut-kahvaltilik", price = price, validFrom = "2026-10-01", validTo = "2026-10-30")
+        val drink = offer("drink", "UHT Tam Yağlı Süt 1 L", 35.0)
+        val drink2 = offer("drink2", "Laktozsuz Süt 1 L", 45.0)
+        val others = listOf(offer("powder", "Süt Tozu 200 g", 2.0), offer("jam", "Süt Reçeli", 3.0),
+            offer("biscuit", "Sütlü Bisküvi", 1.0), offer("body", "Vücut Sütü", 1.0),
+            offer("expired", "Süt 1 L", 1.0).copy(validTo = "2026-10-20"))
+        val synthetic = feed.copy(offers = listOf(drink, drink2) + others)
+        val response = Assistant(synthetic, LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt")
+        check("asst.drinkableMilk", response.offers.map { it.id } == listOf("drink", "drink2")) { response.offers.toString() }
+        check("asst.noMilkFallback", Assistant(feed.copy(offers = others), LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt").offers.isEmpty())
+    }
+
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")
     failures.forEach { println("  BAŞARISIZ: $it") }
     if (failures.isNotEmpty()) kotlin.system.exitProcess(1)
 }
+

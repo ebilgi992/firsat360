@@ -97,9 +97,11 @@ jobs:
           fi
           python -m firsat360 daily $ARGS | tee ../site-report.json
 
-      - name: Gizlilik politikasını yayına ekle
+      - name: Web sitesini yayına ekle
         if: always()
-        run: mkdir -p site && cp docs/privacy.html site/privacy.html
+        run: |
+          mkdir -p site
+          cp docs/index.html docs/style.css docs/app.js docs/privacy.html site/
 
       - name: Durum özetini iş sayfasına yaz
         if: always()
@@ -137,3 +139,4 @@ jobs:
       - id: deploy
         if: always() && hashFiles('site/feed.json') != ''
         uses: actions/deploy-pages@v4
+

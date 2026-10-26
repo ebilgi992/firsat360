@@ -158,13 +158,16 @@ class ProductImageAgent:
         out: dict[str, dict] = {}
         with ctx.sf() as s:
             for o in s.scalars(select(Offer).where(Offer.published.is_(True))):
-                m = out.setdefault(o.store_id, {"products": 0, "with_image": 0, "verified": 0, "missing_reasons": {}})
+                m = out.setdefault(o.store_id, {"products": 0, "with_image": 0, "verified": 0, "missing_reasons": {}, "missing_products": []})
                 m["products"] += 1
                 if o.image_url:
                     m["with_image"] += 1
                     if o.image_status in ("verified", "official_json"):
                         m["verified"] += 1
                 else:
+                    m["missing_products"].append({"id": o.id, "name": o.name, "url": o.product_url,
+                        "reason": o.image_status or "none", "checked_at": str(o.image_checked_at or ""),
+                        "observed_at": str(o.last_seen_at or "")})
                     r = o.image_status or "none"
                     m["missing_reasons"][r] = m["missing_reasons"].get(r, 0) + 1
         for m in out.values():
@@ -212,6 +215,9 @@ class ProductImageAgent:
             return "bu mağazada ürün sayfası doğrulaması yok (görsel yalnızca resmî liste/JSON'dan gelir)"
         cutoff = ctx.now - timedelta(days=1)
         with ctx.sf() as s:
+            source = s.get(Store, sid)
+            if source and source.status == "error" and any(k in (source.last_error or "").lower() for k in ("403", "429", "robots", "cloudflare")):
+                return "kaynak erişim engelli; ürün sayfası yeniden denenmedi, görsel doğrulanmadı"
             todo = [o for o in s.scalars(select(Offer).where(Offer.store_id == sid, Offer.published.is_(True),
                                                              Offer.image_url.is_(None)))
                     if o.image_checked_at is None or _aware(o.image_checked_at) < cutoff]
@@ -363,7 +369,7 @@ def orchestrate(ctx: Context, agents=AGENTS) -> dict:
     for i in found:
         if (i.agent, i.code, i.store) in fixed_codes:
             j = still.get((i.agent, i.code, i.store))
-            i.resolved = j is None or j.count < i.count
+            i.resolved = j is None
             if j is not None and j.count < i.count:
                 i.fix_result = f"{i.fix_result} · kalan: {j.count}"
     remaining = [i for i in after if i.severity == "error"]
@@ -372,6 +378,7 @@ def orchestrate(ctx: Context, agents=AGENTS) -> dict:
         "issues": [i.as_dict() for i in found],
         "fixed": sum(1 for i in found if i.resolved),
         "remaining_errors": [i.as_dict() for i in remaining],
+        "unresolved_images": [i.as_dict() for i in after if i.code == "missing_images"],
         "image_metrics": ProductImageAgent().metrics(ctx),
     }
     for i in remaining:
@@ -392,8 +399,11 @@ def markdown_summary(report: dict) -> str:
     for i in report.get("issues", []):
         res = "✅" if i["resolved"] else ("❌" if i["resolved"] is False else "—")
         lines.append(f"| {i['agent']} | {i['message']} | {i['store'] or ''} | {i['fix'] or ''} | {res} |")
-    if report.get("remaining_errors"):
-        lines += ["", f"**Kalan hata: {len(report['remaining_errors'])}**"]
+    missing = sum(m["products"] - m["with_image"] for m in report.get("image_metrics", {}).values())
+    lines += ["", f"**Kalan kaynak/veri hatası: {len(report.get('remaining_errors', []))} · Görseli eksik ürün: {missing}**"]
+    for sid, m in sorted(report.get("image_metrics", {}).items()):
+        for p in m.get("missing_products", []):
+            lines.append(f"- {sid}: {p['name']} (`{p['id']}`) — {p['reason']} — {p['url']} — kontrol: {p['checked_at']}")
     return "\n".join(lines)
 
 
@@ -430,7 +440,7 @@ class GitHubReports:
         """Kalan hata varsa tek bir "kalite raporu" issue'su açık tutulur/güncellenir; hata kalmayınca kapatılır."""
         existing = next((i for i in self._issues() if i.get("title") == self.QUALITY_TITLE), None)
         body = markdown_summary(report)
-        if report.get("remaining_errors"):
+        if report.get("remaining_errors") or report.get("unresolved_images"):
             if existing:
                 self.http.patch(f"/repos/{self.repo}/issues/{existing['number']}", json={"body": body}).raise_for_status()
             else:
@@ -450,9 +460,11 @@ def compact(report: dict) -> dict:
     """status.json için kısa sürüm (uygulamadaki Kaynak durumu ekranı bunu okur)."""
     return {"checked_at": report["checked_at"], "fixed": report["fixed"],
             "remaining_errors": [{k: i[k] for k in ("agent", "store", "message")} for i in report["remaining_errors"]],
-            "image_metrics": {k: {"products": v["products"], "with_image": v["with_image"], "image_rate": v["image_rate"]}
+            "unresolved_images": report.get("unresolved_images", []),
+            "image_metrics": {k: {"missing_products": v.get("missing_products", []), "products": v["products"], "with_image": v["with_image"], "image_rate": v["image_rate"]}
                               for k, v in report["image_metrics"].items()}}
 
 
 def dumps(report: dict) -> str:
     return json.dumps(report, ensure_ascii=False, indent=1, default=str)
+

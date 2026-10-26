@@ -215,6 +215,20 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
                                              if x in settings.enabled_live_stores], sleep=sleep)
         except Exception as exc:  # noqa: BLE001
             report["errors"].append(f"canlı tarama: {exc.__class__.__name__}: {exc}")
+    # Bağımsız GitHub keşfi: A101 erişim engelini aşmaz; resmî veriyi başarılı saymaz.
+    community = None
+    if live and (only is None or "a101" in only):
+        from .community import discover_a101
+        from .connectors.base import PoliteClient
+        client = PoliteClient(settings.user_agent, min_interval_s=settings.min_request_interval_s, transport=transport,
+                              **({"sleep": sleep} if sleep is not None else {}))
+        try:
+            community = discover_a101(client, now)
+        except Exception as exc:
+            community = {"state": "unavailable", "source": "https://github.com/codermert/A101_Afis", "error": str(exc)[:300]}
+        finally:
+            client.close()
+        report["community_a101"] = community
     # 2b) Ürün görselleri: her ürünün kendi resmî sayfasından otomatik doğrulama (yalnızca yeni/eskimiş olanlar)
     if live and verify_pages:
         from .connectors.base import PoliteClient
@@ -280,6 +294,7 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
         report["feed"] = str(path)
         status_path = Path(path).with_name("status.json")
         st = status_dict(s)
+        if community is not None: st["community_a101"] = community
         if report.get("quality"):
             from .quality import compact
             st["quality"] = compact(report["quality"])
@@ -409,3 +424,4 @@ def announcements_for_feed(session: Session, now: datetime, days: int = 14) -> l
 
 def today_tr(now: datetime | None = None) -> date:
     return (now or datetime.now(timezone.utc)).astimezone(TR).date()
+

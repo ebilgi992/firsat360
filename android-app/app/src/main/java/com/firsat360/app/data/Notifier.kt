@@ -55,7 +55,9 @@ object Notifier {
     fun permitted(ctx: Context): Boolean = try {
         (Build.VERSION.SDK_INT < 33 ||
             ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
-            (ctx.getSystemService(NotificationManager::class.java)?.areNotificationsEnabled() ?: true)
+            (ctx.getSystemService(NotificationManager::class.java)?.let { nm ->
+                nm.areNotificationsEnabled() && (nm.getNotificationChannel(CH_CATALOG)?.importance != NotificationManager.IMPORTANCE_NONE)
+            } ?: false)
     } catch (e: Exception) { false }
 
     /** Bildirimi gösterir. Gösterildiyse true (izin yoksa false; uygulama çökmez). */
@@ -101,8 +103,9 @@ object Notifier {
                 if (post(ctx, n)) { us.addNotified(listOf(n.key)); us.lastNotifiedAt = System.currentTimeMillis(); shown = n }
                 else if (!permitted(ctx)) AppLog.w("notify.denied")
             }
-            // İzin yoksa da işlendi sayılır: izin sonradan verilince eski kataloglar yığılmaz.
-            if (n != null || d.handled.isNotEmpty()) us.markCatalogsSeen(d.handled)
+            // İzin/kanal engelinde yeni katalog kaybolmaz; 72 saatlik yaş sınırı yığılmayı önler.
+            val consumed = if (shown != null) d.handled else d.handled - Digest.fresh(feed, seen, now).filter { it.storeId !in us.mutedStores() }.map { it.id }.toSet()
+            us.markCatalogsSeen(consumed)
             shown
         } catch (e: Exception) { AppLog.e("notify.eval", e.message); null }
     }
@@ -211,3 +214,4 @@ class BootReceiver : BroadcastReceiver() {
         if (a == Intent.ACTION_BOOT_COMPLETED || a == Intent.ACTION_MY_PACKAGE_REPLACED) Notifier.schedule(ctx)
     }
 }
+

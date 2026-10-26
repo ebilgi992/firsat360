@@ -1,0 +1,68 @@
+name: Android doğrulama ve beta sürümü
+on:
+  push:
+    branches: [main, codex/quality-update-1.8]
+    paths: ['android-app/**', 'backend/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r backend/requirements.txt
+      - name: Veri hattı testleri
+        working-directory: backend
+        run: python -m pytest -q
+      - name: TK Koop resmî sayfa kanıtları
+        continue-on-error: true
+        env:
+          PYTHONPATH: backend
+        run: python scripts/check_tk_images.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tk-evidence
+          path: tk-evidence/
+      - name: Doğrulanmış araç zinciri
+        run: bash android-app/tools/setup-toolchain.sh "$RUNNER_TEMP/toolchain"
+      - name: Android çekirdek testleri
+        working-directory: android-app
+        run: |
+          "$RUNNER_TEMP/toolchain/kotlinc/bin/kotlinc" app/src/main/java/com/firsat360/app/core app/src/test/java -d "$RUNNER_TEMP/core.jar"
+          "$RUNNER_TEMP/toolchain/kotlinc/bin/kotlin" -cp "$RUNNER_TEMP/core.jar" com.firsat360.app.core.CoreTestsKt app/src/main/assets/feed.json
+      - name: APK oluştur ve imzasını doğrula
+        env:
+          TOOLCHAIN: ${{ runner.temp }}/toolchain
+        run: |
+          bash android-app/build-nogradle.sh
+          mkdir -p release
+          cp android-app/build-nogradle/FIRSAT360-1.8.0-beta-debug.apk release/FIRSAT360-20-app.apk
+          APP_ID=com.firsat360.beta APK_SUFFIX=-yeni-paket bash android-app/build-nogradle.sh
+          cp android-app/build-nogradle/FIRSAT360-1.8.0-beta-yeni-paket-debug.apk release/FIRSAT360-20-beta.apk
+          cd release
+          for apk in *.apk; do sha256sum "$apk" > "$apk.sha256"; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FIRSAT360-1.8.0-beta
+          path: release/*
+      - name: GitHub beta sürümünü yayınla
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view v1.8.0-beta >/dev/null 2>&1; then
+            gh release create v1.8.0-beta --target "$GITHUB_SHA" --prerelease --title "FIRSAT360 1.8.0 Beta" --notes "Canlı veri adresi, bildirim teslimi, içilecek süt araması, uygulama içi güncelleme ve web vitrini. Android kurulum onayı gereklidir. Bu beta herkese açık geliştirme anahtarıyla imzalanmıştır."
+          fi
+          gh release upload v1.8.0-beta release/* --clobber

@@ -744,6 +744,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         // ---- Hakkında
         val about = section("Hakkında", Icon.INFO)
         valueRow(about, "Sürüm", "${BuildInfo.VERSION} (${BuildInfo.VERSION_CODE})", null)
+        valueRow(about, "Güncellemeleri kontrol et", "Kontrol et") { com.firsat360.app.data.AppUpdater.check(a, manual = true) }
         valueRow(about, "Geliştirici", BuildInfo.DEVELOPER) { a.openExternal(BuildInfo.DEVELOPER_GITHUB) }
         valueRow(about, "Web sitesi", "Aç") { a.openExternal(BuildInfo.WEBSITE) }
         valueRow(about, "Gizlilik politikası", "Aç") { a.openExternal(BuildInfo.PRIVACY_URL) }
@@ -796,3 +797,4 @@ class Sparkline(ctx: android.content.Context, private val values: List<Double>) 
         c.drawPath(path, line)
     }
 }
+

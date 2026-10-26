@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker
 from .connectors.base import ConnectorError, PoliteClient, RobotsDisallowed
 from .connectors.extra import SKIP_IMG, page_meta
 from .connectors.htmlutil import all_image_urls, parse, text_of
-from .db import Offer
+from .db import Offer, Store
 from .imagematch import PageImage, apply_to_db
 
 log = logging.getLogger("firsat360.productpages")
@@ -96,7 +96,7 @@ def name_candidates(html: str, meta_name: str | None) -> list[str]:
     if root is not None:
         for n in root.css("[class*=similar], [class*=related], [class*=recommend], footer, header, nav"):
             n.decompose()
-        heads = [text_of(h) for h in root.css("h1, h2, h3, [class*=product-name], [class*=productName], "
+        heads = [text_of(h) for h in root.css("h1, h2, h3, h4, h5, [class*=product-name], [class*=productName], "
                                              "[class*=urun-adi], [class*=title]")]
         out += [h for h in heads if h and 3 <= len(h) <= 160]
         # Marka + ad aynı blokta iki başlık olarak yazılıyorsa (BİM) birleşik hâli de aday
@@ -139,6 +139,10 @@ def verify_product_pages(sf: sessionmaker, client: PoliteClient, per_store: int 
         if stores and store not in stores:
             continue
         with sf() as s:
+            source = s.get(Store, store)
+            if source and source.status == "error" and any(k in (source.last_error or "").lower() for k in ("403", "429", "robots", "cloudflare")):
+                out[store] = {"pages": 0, "errors": 0, "blocked": True}
+                continue
             todo = s.scalars(select(Offer).where(
                 Offer.store_id == store, Offer.published.is_(True), Offer.product_url.is_not(None),
                 or_(Offer.image_status.is_(None), Offer.image_status != "verified",
@@ -164,3 +168,4 @@ def verify_product_pages(sf: sessionmaker, client: PoliteClient, per_store: int 
                 s.commit()
         out[store] = {"pages": len(rows), "errors": errors, **stats}
     return out
+
