@@ -38,6 +38,19 @@ A101 için resmî sayfada gömülü `Product` JSON-LD alternatifi eklendi. Yaln�
 adresi ve resmî CDN görseli kabul edilir. Belirsiz çoklu varyant fiyatı reddedilir. Bu ayrıştırıcı 403 engelini aşmaz;
 engelli kaynağın çalıştığı iddia edilmez. TK Koop'ta kartın tam `title` alanı kullanılarak kesilmiş ürün/ambalaj adları düzeltilir.
 
+## Kullanıcının belirttiği A101AktuelRobot entegrasyonu
+
+[keyiflerolsun/A101AktuelRobot](https://github.com/keyiflerolsun/A101AktuelRobot) için yayımlı `A101.json`
+şemasını okuyan bağımsız adaptör günlük veri hattına eklendi. Sonuç `status.json/community_a101_robot` alanındadır.
+Repo 29 Eylül 2023'ten beri arşivli; yayımlı JSON Eylül 2023 CMS görselleri içeriyor. Gerçek JSON adaptörde denendi:
+arşiv/güncellik kontrolünden geçmedi. Bugün commit edilmiş gibi denendiğinde de eski CMS görsel tarihleri reddedildi.
+[Makine tarafından doğrulanan kontrol özeti](A101_ROBOT_CHECK_2026-10-26.json).
+
+Kaynağın robot kodu GPL-3.0, Telegram ve `aiocfscrape.CloudflareScraper` kullanıyor. Bot kodu/koruma çözme bağımlılığı
+uygulamaya kopyalanmadı veya çalıştırılmadı; mesaj gönderilmedi. Uyumluluk adaptörü kendi kodumuzdur; yalnız yayımlı
+JSON ve depo/commit metadatasını denetler. Kaynak tekrar aktif ve taze olursa broşür adayları tanınır; resmî kampanya
+tarihi doğrulanmadan ürün/fiyat veya güncel katalog üretilmez. Eski 2023 görselleri uygulamada bugünkü broşür sayılmaz.
+
 ## Instagram
 
 Resmî A101 (`a101iletisim`), BİM (`bimturkiye`), ŞOK (`sokmarketler`) ve Migros (`migros_tr`) hesapları market ekranına

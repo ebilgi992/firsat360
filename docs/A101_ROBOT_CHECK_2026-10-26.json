@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/keyiflerolsun/A101AktuelRobot",
+  "checked_date": "2026-10-26",
+  "archived": true,
+  "pushed_at": "2023-09-29T13:05:29Z",
+  "groups": {
+    "Bu Hafta": 21,
+    "Gelecek Hafta": 28,
+    "Haftanın Yıldızları": 10,
+    "Büyük olduğu için UCUZ": 14
+  },
+  "images_total": 73,
+  "code_executed": false,
+  "telegram_messages_sent": false,
+  "current_source": {
+    "accepted": false,
+    "reason": "A101AktuelRobot arşivlenmiş; çalışan güncel kaynak değil"
+  },
+  "fresh_commit_republishing_old_images": {
+    "accepted": false,
+    "reason": "A101AktuelRobot eski CMS görseli yayımlıyor"
+  },
+  "state": "archived_not_a_current_source"
+}
