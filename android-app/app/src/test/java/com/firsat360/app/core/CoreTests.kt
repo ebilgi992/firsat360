@@ -426,50 +426,6 @@ fun main(args: Array<String>) {
     }
     check("trdates.none", TrDates.range("Haftanın Fırsatları", d21) == null)
 
-    // Fırsat Asistanı (cihazda, kural tabanlı)
-    run {
-        val asst = Assistant(feed, LocalDate.of(2026, 10, 14), seed = 7)
-        val hi = asst.reply("Merhaba")
-        check("asst.hello", hi.text.contains("Asistan") && hi.suggestions.isNotEmpty()) { hi.text }
-        val milk = asst.reply("en ucuz süt nerede?")
-        check("asst.product", milk.offers.isNotEmpty() && milk.text.contains("₺") &&
-            milk.offers.all { TrNorm.loose(it.displayTitle + " " + (it.variant ?: "")).contains("sut") }) { milk.text }
-        val bim = asst.reply("BİM'de bu hafta ne var")
-        check("asst.store", bim.text.startsWith("BİM") && bim.action == "search:BİM") { bim.text }
-        val deals = asst.reply("bugün neler indirimde")
-        check("asst.deals", deals.offers.isNotEmpty()) { deals.text }
-        check("asst.notGreeting", !asst.reply("sabun").text.contains("Ben Fırsat Asistanı"))
-        check("asst.help", asst.reply("market nasıl eklerim").action == "add_store")
-        check("asst.offlineNotDeal", asst.reply("indirimli deterjan").action != null)
-        val miss = asst.reply("xqzvw")
-        check("asst.fallback", miss.offers.isEmpty() && miss.suggestions.isNotEmpty()) { miss.text }
-        check("asst.stem", Assistant.stem("sutun") == "sut" && Assistant.stem("deterjanlar") == "deterjan")
-        check("asst.robot", !asst.reply("robot süpürge").text.contains("Ben Fırsat Asistanı"))
-        check("asst.renk", asst.reply("renkli kalem").action != "settings")
-        check("asst.hesap", !asst.reply("hesap makinesi").text.contains("kişisel veri"))
-        check("asst.loc", Assistant.locative("sok" to "ŞOK") == "ŞOK'ta" && Assistant.locative("x" to "Hakmar") == "Hakmar'da" &&
-            Assistant.locative("y" to "Yunus Market") == "Yunus Market'te" && Assistant.locative("z" to "Özdilek") == "Özdilek'te" &&
-            Assistant.locative("bim" to "BİM") == "BİM'de") { Assistant.locative("y" to "Yunus Market") }
-        check("asst.noInvent", asst.reply("uzay mekiği fiyatı").offers.isEmpty())
-    }
-
-    // 1.8: içilecek süt, reyon/alt-dize eşleşmelerinden ayrılır.
-    run {
-        val sample = feed.offers.first()
-        fun offer(id: String, name: String, price: Double) = sample.copy(id = id, name = name, brand = null,
-            variant = null, category = "sut-kahvaltilik", price = price, validFrom = "2026-10-01", validTo = "2026-10-30")
-        val drink = offer("drink", "UHT Tam Yağlı Süt 1 L", 35.0)
-        val drink2 = offer("drink2", "Laktozsuz Süt 1 L", 45.0)
-        val others = listOf(offer("powder", "Süt Tozu 200 g", 2.0), offer("jam", "Süt Reçeli", 3.0),
-            offer("biscuit", "Sütlü Bisküvi", 1.0), offer("body", "Vücut Sütü", 1.0),
-            offer("expired", "Süt 1 L", 1.0).copy(validTo = "2026-10-20"))
-        val synthetic = feed.copy(offers = listOf(drink, drink2) + others)
-        val response = Assistant(synthetic, LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt")
-        check("asst.drinkableMilk", response.offers.map { it.id } == listOf("drink", "drink2")) { response.offers.toString() }
-        check("asst.explicitMilkPowder", Assistant(synthetic, LocalDate.of(2026, 10, 26), 1).reply("süt tozu").offers.map { it.id } == listOf("powder"))
-        check("asst.noMilkFallback", Assistant(feed.copy(offers = others), LocalDate.of(2026, 10, 26), 1).reply("en ucuz süt").offers.isEmpty())
-    }
-
     // 1.9: broşür önce açılır; ürün listesi okuyucunun ayrı eylemidir.
     run {
         val c = feed.catalogs.first().copy(offerCount = 10, pages = listOf(CatalogPage("https://market.test/p.jpg", null, null, null, true)), pdfUrl = "https://market.test/x.pdf")
@@ -490,16 +446,6 @@ fun main(args: Array<String>) {
         check("pack.multi", Pack.parse("6x200 ml Süt") == Pack("L", 1.2))
         val request = ShoppingRequest.parse("100 TL altı 1 litre süt")
         check("request.budgetPack", request.budget == 10000L && request.pack == Pack("L", 1.0) && TrNorm.loose(request.query) == "sut") { request.toString() }
-        val base = feed.offers.first().copy(brand = null, variant = null, category = "sut-kahvaltilik", validFrom = "2026-10-01", validTo = "2026-10-30", pagePriceConflict = null)
-        val one = base.copy(id = "oneL", name = "UHT Süt 1 L", price = 35.0)
-        val three = base.copy(id = "threeL", name = "UHT Süt 3 L", price = 80.0)
-        val bad = base.copy(id = "conflict", name = "Süt 1 L", price = 10.0, pagePriceConflict = 45.0)
-        val f = feed.copy(offers = listOf(one, three, bad))
-        val asst = Assistant(f, LocalDate.of(2026, 10, 26), 1)
-        check("asst.unitPrice", asst.reply("Litre fiyatına göre süt").offers.firstOrNull()?.id == "threeL")
-        check("asst.budgetSize", asst.reply("100 TL altı 1 litre süt").offers.map { it.id } == listOf("oneL"))
-        check("asst.budgetEmpty", asst.reply("20 TL altı süt").offers.isEmpty())
-        check("asst.strictModifier", asst.reply("laktozsuz süt").offers.isEmpty())
     }
 
     println("Çekirdek testleri: $passed geçti, ${failures.size} başarısız")

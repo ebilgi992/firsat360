@@ -87,8 +87,10 @@ class MainActivity : Activity() {
         applyStorageSettings()
         com.firsat360.app.data.ImageLoader.init(this)
         com.firsat360.app.data.ImageLoader.enabled = user.showImages
+        val app = applicationContext
+        val appUser = com.firsat360.app.data.UserStore(app)  // etkinliği tutmaz (yeniden kurulumda sızıntı olmaz)
         com.firsat360.app.data.ImageLoader.allowNetwork = {
-            user.imagesOnMobile || !com.firsat360.app.data.Sync.metered(this)
+            appUser.imagesOnMobile || !com.firsat360.app.data.Sync.metered(app)
         }
         com.firsat360.app.data.Notifier.channels(this)
         Thread { com.firsat360.app.data.Maintenance.run(applicationContext) }.start()
@@ -111,7 +113,7 @@ class MainActivity : Activity() {
         if (applicationInfo.targetSdkVersion >= 35 && android.os.Build.VERSION.SDK_INT >= 35) {
             root.setOnApplyWindowInsetsListener { v, insets ->
                 @Suppress("DEPRECATION")
-                v.setPadding(0, insets.systemWindowInsetTop, 0, insets.systemWindowInsetBottom)
+                v.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
                 insets
             }
             root.requestApplyInsets()
@@ -122,7 +124,7 @@ class MainActivity : Activity() {
             try {
                 if (f == null) showFatal(err ?: "Veri yüklenemedi") else {
                     Theme.registerStores(feed.stores)
-                    com.firsat360.app.ui.StoreLogos.register(feed.stores)
+                    com.firsat360.app.ui.StoreLogos.register(feed.stores, this); com.firsat360.app.ui.Collage.reset(feed)
                     switchTab(Tab.HOME)
                     // Görünüm değişince etkinlik yeniden kurulur; kullanıcı Ayarlar'a geri döner.
                     if (getSharedPreferences("ui_state", MODE_PRIVATE).getBoolean("reopen_settings", false)) {
@@ -199,6 +201,8 @@ class MainActivity : Activity() {
 
     /** Bildirime veya push bağlantısına (firsat360://…) dokunulduğunda ilgili ekranı açar. */
     private fun handleOpenIntent(i: Intent?) {
+        // Son uygulamalardan yeniden açılış: eski bildirim/bağlantı yeniden işlenmez
+        if (i != null && (i.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
         try {
             var kind = i?.getStringExtra("open_kind")
             var id = i?.getStringExtra("open_id") ?: ""
@@ -242,7 +246,7 @@ class MainActivity : Activity() {
             }
         }
         com.firsat360.app.data.Notifier.schedule(this)
-        if (on) toast("Her gün ${com.firsat360.app.screens.minuteLabel(user.notifyMinute)}'da yeni kataloglar bildirilecek")
+        if (on) toast("Yeni kataloglar her gün saat ${com.firsat360.app.screens.minuteLabel(user.notifyMinute)} civarında bildirilecek")
         refreshCurrent()
     }
 
@@ -275,7 +279,7 @@ class MainActivity : Activity() {
 
     /** Yeni veri geldiğinde: mağaza renklerini kaydet, ana sayfadaysak yenile. */
     fun onFeedUpdated() {
-        repo.feed?.let { Theme.registerStores(it.stores); com.firsat360.app.ui.StoreLogos.register(it.stores) }
+        repo.feed?.let { Theme.registerStores(it.stores); com.firsat360.app.ui.StoreLogos.register(it.stores, this); com.firsat360.app.ui.Collage.reset(it) }
         val top = stack.lastOrNull()
         if (top is HomeScreen || top is StoresScreen || top is com.firsat360.app.screens.DealsScreen) refreshCurrent()
     }
@@ -300,7 +304,8 @@ class MainActivity : Activity() {
                     toast("İndiriliyor…")
                     Thread {
                         val ok = com.firsat360.app.data.OfflineStore.save(applicationContext, c, { _, _ -> }, { false })
-                        runOnUiThread { toast(if (ok) "Kaydedildi: internetsiz açılabilir" else "Kaydedilemedi; bağlantıyı kontrol edin"); refreshCurrent() }
+                        runOnUiThread { toast(if (ok) "Kaydedildi: internetsiz açılabilir" else "Kaydedilemedi; bağlantıyı kontrol edin")
+                            if (stack.lastOrNull() !is com.firsat360.app.screens.PdfScreen) refreshCurrent() }
                     }.start()
                 }
                 .setNegativeButton("Vazgeç", null).show()
@@ -332,7 +337,8 @@ class MainActivity : Activity() {
             if (changed) {
                 val st = repo.feed?.store(sid)
                 // Bildirim yalnızca kullanıcının eklediği veya favori marketlerde (gereksiz bildirim yok)
-                if (st != null && (com.firsat360.app.data.CustomStores.isCustom(sid) || sid in user.favoriteStores()))
+                if (st != null && user.notifyCatalogs && sid !in user.mutedStores() &&
+                    (com.firsat360.app.data.CustomStores.isCustom(sid) || sid in user.favoriteStores()))
                     com.firsat360.app.data.Notifier.post(this, com.firsat360.app.core.Notice("store", "brochure-$sid-${System.currentTimeMillis() / 86_400_000L}",
                         "${st.name}: yeni broşür", "Resmî sayfasında yeni broşür yayımlandı. Görmek için dokunun.", sid))
             }
@@ -340,43 +346,57 @@ class MainActivity : Activity() {
     }
 
     private fun buildNav(): LinearLayout = LinearLayout(this).apply {
-        // Yüzen alt menü: zemin rengi üzerinde yuvarlatılmış, ince çizgili kapsül; seçili sekme kehribar.
+        // Sahne alt menüsü: tam genişlik, içerikten zemine yumuşak geçiş; seçili sekme beyaz ve kalın, diğerleri gri.
         orientation = LinearLayout.HORIZONTAL
-        setBackgroundColor(Theme.p.bg)
-        setPadding(dp(12), dp(4), dp(12), dp(10))
-        val bar = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            background = surfaceBg(24f, Theme.p.surface)
-            elevation = dp(6).toFloat()
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-        }
-        addView(bar, lp(MATCH, WRAP))
+        background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Theme.tint(Theme.p.bg, 0.92f), Theme.p.bg))
+        setPadding(dp(4), dp(8), dp(4), dp(6))
         for (t in Tab.values()) {
             val item = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 setGravity(Gravity.CENTER)
-                setPadding(0, dp(6), 0, dp(4))
+                setPadding(0, dp(4), 0, dp(4))
+                minimumHeight = dp(52)
                 contentDescription = t.label
             }
-            val icon = IconView(context, t.icon, Theme.p.text3, 24)
-            val label = context.text(t.label, 11.5f, Theme.p.text3, Theme.medium, 1)
+            val icon = IconView(context, t.icon, Theme.p.text3, 25)
+            val label = context.text(t.label, 11f, Theme.p.text3, Theme.medium, 1)
             item.addView(icon)
-            item.addView(label, lp(WRAP, WRAP, t = dp(3)))
+            item.addView(label, lp(WRAP, WRAP, t = dp(4)))
             item.onTap { if (repo.feed != null) switchTab(t) }
-            item.background = ripple(null, 20f)
+            item.background = ripple(null, 24f)
             navItems[t] = icon to label
-            bar.addView(item, lp(0, WRAP, weight = 1f))
+            addView(item, lp(0, WRAP, weight = 1f))
         }
     }
 
     private fun highlight(tab: Tab) {
         for ((t, pair) in navItems) {
             val on = t == tab
-            pair.first.color = if (on) Theme.p.accent else Theme.p.text3
+            pair.first.color = if (on) Theme.p.text else Theme.p.text3
             pair.first.icon = if (t == Tab.FAVORITES && on) Icon.HEART_FILLED else t.icon
-            pair.second.setTextColor(if (on) Theme.p.accent else Theme.p.text3)
+            pair.second.setTextColor(if (on) Theme.p.text else Theme.p.text3)
             pair.second.typeface = if (on) Theme.semibold else Theme.medium
             (pair.first.parent as? View)?.let { it.contentDescription = t.label + if (on) " (seçili)" else ""; it.isSelected = on }
+        }
+    }
+
+    private var lastShown: Screen? = null
+
+    private fun firstScroll(v: View): View? {
+        if (v is android.widget.ScrollView || v is android.widget.AbsListView) return v
+        if (v is android.view.ViewGroup) for (i in 0 until v.childCount) firstScroll(v.getChildAt(i))?.let { return it }
+        return null
+    }
+    private fun firstScrollY(v: View): Int = when (val s = firstScroll(v)) {
+        is android.widget.ScrollView -> s.scrollY
+        is android.widget.AbsListView -> s.firstVisiblePosition
+        else -> -1
+    }
+    private fun restoreScroll(v: View, y: Int) {
+        when (val s = firstScroll(v)) {
+            is android.widget.ScrollView -> s.scrollTo(0, y)
+            is android.widget.AbsListView -> s.setSelection(y)
         }
     }
 
@@ -391,8 +411,13 @@ class MainActivity : Activity() {
             emptyState(Icon.INFO, "Bu ekran açılamadı", "Beklenmeyen bir hata oluştu. Raporu paylaşarak bize iletebilirsiniz.",
                 "Hata raporunu paylaş") { share(report) }
         }
+        // Yenilemede (aynı ekran yeniden kurulur) kaydırma konumu korunur: kalbe/anahtara dokununca başa atlamaz.
+        val old = content.getChildAt(0)
+        val keepY = if (!forward && old != null && stack.lastOrNull() === screen && lastShown === screen) firstScrollY(old) else -1
+        lastShown = screen
         content.removeAllViews()
         content.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
+        if (keepY > 0) { v.post { restoreScroll(v, keepY) }; highlight(stack.firstOrNull()?.tab ?: screen.tab); updateBackCallback(); return }
         v.alpha = 0f
         v.translationX = if (forward) dp(24).toFloat() else -dp(24).toFloat()
         v.animate().alpha(1f).translationX(0f).setDuration(180).start()
@@ -494,7 +519,6 @@ class MainActivity : Activity() {
     fun openSearch(category: String? = null, query: String = "") { stack.clear(); val s = SearchScreen(this, category, query); stack.add(s); show(s, true) }
     fun openWeb(url: String, title: String) = push(WebScreen(this, url, title))
     fun openSettings() = push(SettingsScreen(this))
-    fun openAssistant() = push(com.firsat360.app.screens.AssistantScreen(this))
 
     fun openExternal(url: String) {
         val scheme = Uri.parse(url).scheme?.lowercase()

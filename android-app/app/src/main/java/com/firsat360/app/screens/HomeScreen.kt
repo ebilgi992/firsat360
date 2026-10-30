@@ -39,40 +39,28 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val col = a.vbox()
         col.setPadding(0, 0, 0, dp(28))
 
-        // ---- Üst bölüm: yazı markası, tarih, ayarlar
+        // ---- Üst bölüm (Sahne): selamlama, ayarlar; altında hızlı geçiş çipleri
         val top = a.hbox(Gravity.CENTER_VERTICAL)
-        top.setPadding(dp(20), dp(18), dp(12), dp(2))
+        top.setPadding(dp(16), dp(18), dp(8), dp(4))
+        val h = java.time.LocalTime.now(com.firsat360.app.core.Dates.TR).hour
+        val hello = when (h) { in 5..11 -> "Günaydın"; in 12..17 -> "İyi günler"; in 18..22 -> "İyi akşamlar"; else -> "İyi geceler" }
         val titleCol = a.vbox()
-        titleCol.addView(a.text("FIRSAT360", 30f, Theme.p.text, Theme.display, 1).apply { contentDescription = "FIRSAT360" })
-        titleCol.addView(a.text("${Dates.long(a.today)}, bu haftanın broşürleri", 13.5f, Theme.p.text2, Theme.medium, 1), lp(t = dp(1)))
+        titleCol.addView(a.text(hello, 25f, Theme.p.text, Theme.bold, 1).apply { accessibilityHeading() })
+        titleCol.addView(a.text("${Dates.long(a.today)} · bu haftanın broşürleri", 13f, Theme.p.text2, Theme.medium, 1), lp(t = dp(1)))
         top.addView(titleCol, lp(0, WRAP, weight = 1f))
-        top.addView(a.iconButton(Icon.SPARK, Theme.p.onLabel, Theme.p.label, "Fırsat Asistanı") { a.openAssistant() }.apply {
-            background = rounded(Theme.p.label, 16f) }, lp(dp(48), dp(48), r = dp(8)))
-        top.addView(a.iconButton(Icon.SETTINGS, desc = "Ayarlar") { a.openSettings() })
+        top.addView(a.iconButton(Icon.SEARCH, Theme.p.text, android.graphics.Color.TRANSPARENT, "Ara") { a.switchTab(Tab.SEARCH) })
+        top.addView(a.iconButton(Icon.SETTINGS, Theme.p.text, android.graphics.Color.TRANSPARENT, "Ayarlar") { a.openSettings() })
         col.addView(top)
-
-        // ---- Arama
-        val search = a.hbox().apply {
-            setPadding(dp(16), dp(15), dp(16), dp(15))
-            background = ripple(surfaceBg(18f), 18f)
-            contentDescription = "Ara: ürün, marka veya market"
-            addView(IconView(a, Icon.SEARCH, Theme.p.text2, 20))
-            addView(a.text("Ürün, marka veya market ara", 15.5f, Theme.p.text3, Theme.regular, 1), lp(0, WRAP, l = dp(12), weight = 1f))
-            onTap { a.switchTab(Tab.SEARCH) }
+        val chips = a.hbox().apply { setPadding(dp(16), dp(8), dp(16), dp(4)) }
+        for ((label, go) in listOf<Pair<String, () -> Unit>>(
+            "Broşürler" to { a.openCatalogList(false) }, "İndirimler" to { a.openDeals() },
+            "Marketler" to { a.switchTab(Tab.STORES) }, "Listem" to { a.switchTab(Tab.LIST) })) {
+            chips.addView(a.text(label, 14f, Theme.p.text, Theme.medium, 1, Gravity.CENTER).apply {
+                setPadding(dp(16), dp(9), dp(16), dp(9)); minHeight = dp(40)
+                background = ripple(rounded(Theme.p.surface2, 20f), 20f); onTap(go)
+            }, lp(WRAP, WRAP, r = dp(8)))
         }
-        col.addView(search, lp(l = dp(20), r = dp(20), t = dp(16)))
-        // Asistan kısayolu: tek satır, sohbet başlatır
-        val ask = a.hbox(Gravity.CENTER_VERTICAL).apply {
-            setPadding(dp(14), dp(11), dp(14), dp(11))
-            background = ripple(rounded(Theme.p.accentSoft, 16f), 16f)
-            contentDescription = "Fırsat Asistanı'na sor"
-            addView(IconView(a, Icon.SPARK, Theme.p.accent, 18))
-            addView(a.text("Asistana sor: \"En ucuz süt nerede?\"", 14f, Theme.p.text, Theme.medium, 1), lp(0, WRAP, l = dp(10), weight = 1f))
-            addView(IconView(a, Icon.CHEVRON, Theme.p.text2, 16))
-            onTap { a.openAssistant() }
-            pressFeedback(0.98f)
-        }
-        col.addView(ask, lp(l = dp(20), r = dp(20), t = dp(10)))
+        col.addView(a.hscroll(chips))
 
         // Önceki açılışta kaydedilmiş hata raporu (beta tanılama; kullanıcı paylaşmadıkça gönderilmez)
         com.firsat360.app.data.CrashLog.pending(a)?.let { crash ->
@@ -98,8 +86,9 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         // ---- Vitrin: marketlerin güncel broşürleri, kapak büyük; arka planı kapağın kendisinden (içerik renk verir)
         val home = com.firsat360.app.core.HomeCatalogs.build(f, a.user.chainOrder, a.today, a.user.favoriteStores(), a.user.region)
         shelf = home.shelf
+        if (shelf.size >= 2) col.addView(quickGrid(shelf.take(6)), lp(l = dp(12), r = dp(12), t = dp(14)))
         if (shelf.isNotEmpty()) {
-            col.addView(a.sectionHeader("Vitrin", "Sırala") { a.push(ShelfOrderScreen(a)) })
+            col.addView(a.sectionHeader("Bu haftanın broşürleri", "Sırala") { a.push(ShelfOrderScreen(a)) })
             col.addView(buildVitrin())
             col.addView(a.text("Resmî market sayfalarından, ${Dates.relative(f.generatedAt, a.now)} güncellendi", 12.5f,
                 Theme.p.text3, Theme.regular, 1, Gravity.CENTER), lp(l = dp(20), r = dp(20), t = dp(10)))
@@ -144,28 +133,18 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         val favStores = a.user.favoriteStores()
         val byStore = f.catalogs.filter { it.kind != "link_only" && Dates.status(it.validFrom, it.validTo, a.today).kind != ValidityKind.EXPIRED }
             .groupBy { it.storeId }
-        val grid = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), 0) }
         val stores = f.stores.sortedWith(compareBy({ if (it.id in favStores) 0 else 1 }, { it.chainRank }, { it.sort }))
         val counts = f.listOffers.groupingBy { it.storeId }.eachCount()
-        for (chunk in (stores.map { it as Any } + listOf("add")).chunked(3)) {
-            val r = a.hbox(Gravity.TOP)
-            for (x in chunk) {
-                if (x is String) { r.addView(addTile(), lp(0, MATCH, l = dp(4), r = dp(4), weight = 1f)); continue }
-                val s = x as com.firsat360.app.core.Store
-                val n = counts[s.id] ?: 0
-                val nc = byStore[s.id]?.size ?: 0
-                val sub = when {
-                    n > 0 -> "$n fırsat"
-                    f.clientBridge.containsKey(s.id) -> "Broşür"
-                    nc > 0 -> "$nc katalog"
-                    else -> "Broşür"
-                }
-                r.addView(storeTile(s.id, s.name, sub, s.id in favStores) { a.openStore(s.id) }, lp(0, MATCH, l = dp(4), r = dp(4), weight = 1f))
-            }
-            repeat(3 - chunk.size) { r.addView(a.space(), lp(0, 1, l = dp(4), r = dp(4), weight = 1f)) }
-            grid.addView(r, lp(b = dp(8)))
+        // Sahne: yuvarlak market simgeleri (sanatçı satırı gibi), altında ad ve kısa durum
+        val srow = a.hbox(Gravity.TOP).apply { setPadding(dp(12), dp(4), dp(12), dp(4)) }
+        for (s0 in stores) {
+            val n = counts[s0.id] ?: 0
+            val nc = byStore[s0.id]?.size ?: 0
+            val sub = when { n > 0 -> "$n fırsat"; nc > 0 -> "$nc katalog"; else -> "Broşür" }
+            srow.addView(storeCircle(s0.id, s0.name, sub, s0.id in favStores) { a.openStore(s0.id) }, lp(dp(104), WRAP))
         }
-        col.addView(grid)
+        srow.addView(addCircle(), lp(dp(104), WRAP))
+        col.addView(a.hscroll(srow))
 
         // ---- Bildirim önerisi (bir kez)
         if (!a.user.askedNotifications && !a.user.notifyCatalogs) {
@@ -177,7 +156,7 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             }, LinearLayout.LayoutParams(dp(44), dp(44)))
             val t = a.vbox()
             t.addView(a.text("Yeni broşür çıkınca haber verelim", 16.5f, Theme.p.text, Theme.semibold))
-            t.addView(a.text("Her sabah ${minuteLabel(a.user.notifyMinute)}'da tek bir özet: hangi markette yeni katalog var.",
+            t.addView(a.text("Her gün saat ${minuteLabel(a.user.notifyMinute)}\'de tek bir özet: hangi markette yeni katalog var.",
                 13f, Theme.p.text2, Theme.regular), lp(t = dp(3)))
             h.addView(t, lp(0, WRAP, l = dp(12), weight = 1f))
             card.addView(h)
@@ -269,11 +248,11 @@ class HomeScreen(a: MainActivity) : Screen(a) {
             val sc = Theme.store(e.store.id)
             background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Theme.blend(sc, 0xFF000000.toInt(), 0.15f), Theme.blend(sc, 0xFF000000.toInt(), 0.65f))).apply {
-                cornerRadius = dp(26).toFloat() }
+                cornerRadius = dp(12).toFloat() }
             clipToOutline = true
             outlineProvider = object : android.view.ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) =
-                    outline.setRoundRect(0, 0, view.width, view.height, dp(26).toFloat())
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(12).toFloat())
             }
             elevation = dp(8).toFloat()
         }
@@ -313,6 +292,10 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         ph.addView(a.text(if (e.bridge != null) "Dokunun, resmî sayfadan\nhemen açalım" else "Broşürü açmak için dokunun",
             13.5f, 0xE6FFFFFF.toInt(), Theme.medium, 3, Gravity.CENTER), lp(WRAP, WRAP, t = dp(12)))
         coverBox.addView(ph, FrameLayout.LayoutParams(MATCH, MATCH))
+        if (cover == null && showImages && c != null) Collage.view(a, c)?.let {
+            ph.visibility = View.GONE; coverBox.background = rounded(0xFFFFFFFF.toInt(), 12f)
+            coverBox.addView(it, FrameLayout.LayoutParams(MATCH, MATCH))
+        }
         if (cover != null && showImages) {
             val img = NetImage(a, 0f).apply {
                 scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
@@ -394,34 +377,58 @@ class HomeScreen(a: MainActivity) : Screen(a) {
         onTap(onClick)
     }
 
-    private fun storeTile(id: String, name: String, sub: String, fav: Boolean, onClick: () -> Unit): View = a.vbox().apply {
-        setPadding(dp(12), dp(12), dp(10), dp(12))
-        background = ripple(surfaceBg(18f), 18f)
+    /** Hızlı erişim ızgarası: 2 sütun, solda küçük kapak/logo, sağda kalın ad (son çalınanlar gibi). */
+    private fun quickGrid(list: List<com.firsat360.app.core.ShelfEntry>): View {
+        val g = a.vbox()
+        for (pair in list.chunked(2)) {
+            val r = a.hbox()
+            for (e in pair) {
+                val cached = if (e.bridge != null) com.firsat360.app.data.DeviceBrochures.get(a, e.store.id, freshOnly = false) else null
+                val cover = cached?.coverUrl ?: e.catalog?.coverUrl ?: e.catalog?.pages?.firstOrNull()?.let { it.thumbUrl ?: it.url }
+                val t = a.hbox(Gravity.CENTER_VERTICAL).apply {
+                    background = ripple(rounded(Theme.p.surface2, 6f), 6f)
+                    clipToOutline = true
+                    contentDescription = "${e.store.name} broşürü"
+                    onTap { a.openBrochure(e) }
+                }
+                val art = android.widget.FrameLayout(a)
+                if (cover != null && com.firsat360.app.data.ImageLoader.enabled) {
+                    art.setBackgroundColor(0xFFFFFFFF.toInt())
+                    art.addView(NetImage(a, 0f).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP; load(cover, dp(120)) },
+                        android.widget.FrameLayout.LayoutParams(MATCH, MATCH))
+                } else art.addView(a.storeLogo(e.store.id, e.store.name, 56, 0f), android.widget.FrameLayout.LayoutParams(MATCH, MATCH))
+                t.addView(art, LinearLayout.LayoutParams(dp(56), dp(56)))
+                t.addView(a.text(e.store.name, 14f, Theme.p.text, Theme.bold, 2), lp(0, WRAP, l = dp(10), r = dp(8), weight = 1f))
+                r.addView(t, lp(0, dp(56), l = dp(4), r = dp(4), weight = 1f))
+            }
+            if (pair.size == 1) r.addView(a.space(), lp(0, 1, l = dp(4), r = dp(4), weight = 1f))
+            g.addView(r, lp(b = dp(8)))
+        }
+        return g
+    }
+
+    private fun storeCircle(id: String, name: String, sub: String, fav: Boolean, onClick: () -> Unit): View = a.vbox().apply { setGravity(Gravity.CENTER_HORIZONTAL)
+        setPadding(dp(4), dp(4), dp(4), dp(4))
         contentDescription = (if (fav) "Favori market, " else "") + "$name, $sub"
-        val top = a.hbox()
-        top.addView(a.storeLogo(id, name, 42), LinearLayout.LayoutParams(dp(42), dp(42)))
-        top.addView(a.flex())
-        if (fav) top.addView(IconView(a, Icon.STAR_FILLED, Theme.p.accent, 16))
-        addView(top)
-        addView(a.text(name, 14.5f, Theme.p.text, Theme.semibold, 1), lp(t = dp(10)))
-        addView(a.text(sub, 12f, Theme.p.text3, Theme.medium, 1), lp(t = dp(1)))
+        background = ripple(null, 12f)
+        addView(a.storeLogo(id, name, 84, 42f), LinearLayout.LayoutParams(dp(84), dp(84)))
+        addView(a.text(name, 13.5f, Theme.p.text, Theme.semibold, 1, Gravity.CENTER), lp(MATCH, WRAP, t = dp(8)))
+        addView(a.text(sub, 12f, Theme.p.text2, Theme.regular, 1, Gravity.CENTER), lp(MATCH, WRAP, t = dp(1)))
         onTap(onClick)
         pressFeedback()
     }
 
-    /** "Market ekle": kullanıcı kendi marketini broşür sayfası adresiyle ekler. */
-    private fun addTile(): View = a.vbox().apply {
-        setPadding(dp(12), dp(12), dp(10), dp(12))
-        background = ripple(rounded(0, 18f, Theme.p.outline, 1.5f), 18f)
-        contentDescription = "Market ekle: broşür sayfasının adresiyle"
-        addView(FrameLayout(a).apply {
-            background = rounded(Theme.p.accentSoft, 12f)
-            addView(IconView(a, Icon.PLUS, Theme.p.accent, 20), FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
-        }, LinearLayout.LayoutParams(dp(42), dp(42)))
-        addView(a.text("Market ekle", 14.5f, Theme.p.text, Theme.semibold, 1), lp(t = dp(10)))
-        addView(a.text("Adresiyle", 12f, Theme.p.text3, Theme.medium, 1), lp(t = dp(1)))
+    private fun addCircle(): View = a.vbox().apply { setGravity(Gravity.CENTER_HORIZONTAL)
+        setPadding(dp(4), dp(4), dp(4), dp(4))
+        contentDescription = "Market ekle"
+        background = ripple(null, 12f)
+        addView(android.widget.FrameLayout(a).apply {
+            background = rounded(Theme.p.surface2, 42f)
+            addView(IconView(a, Icon.PLUS, Theme.p.text, 30), android.widget.FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
+        }, LinearLayout.LayoutParams(dp(84), dp(84)))
+        addView(a.text("Market ekle", 13.5f, Theme.p.text, Theme.semibold, 1, Gravity.CENTER), lp(MATCH, WRAP, t = dp(8)))
+        addView(a.text("Adresle", 12f, Theme.p.text2, Theme.regular, 1, Gravity.CENTER), lp(MATCH, WRAP, t = dp(1)))
         onTap { a.push(AddStoreScreen(a)) }
-        pressFeedback()
     }
 }
 

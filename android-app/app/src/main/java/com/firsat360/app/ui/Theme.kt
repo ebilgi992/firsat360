@@ -36,27 +36,30 @@ object Theme {
 
     // Tasarım dili (1.6.0 "Vitrin"): içerik (broşür kapakları) renk verir; arayüz sakin grafit/porselen, tek vurgu
     // kehribar (fiyat ve etkin öğeler), kırmızı YALNIZCA indirim. Kartlar ince çizgili ve katmanlı (gölge yerine derinlik).
+    // Tasarım dili (1.8.0 "Sahne"): müzik uygulamalarının koyu sahnesi — saf koyu zemin (#121212), katman katman
+    // gri yüzeyler, tek canlı vurgu yeşil (etkin öğe, birincil düğme), beyaz kalın başlıklar, gri ikincil metin.
+    // İçerik (broşür kapakları) renk verir; kırmızı YALNIZCA indirim.
     private val light = Palette(
         dark = false,
-        bg = 0xFFF3F4F7.toInt(), surface = 0xFFFFFFFF.toInt(), surface2 = 0xFFEDEFF3.toInt(), outline = 0xFFE1E4EA.toInt(),
-        text = 0xFF0E1420.toInt(), text2 = 0xFF4C566A.toInt(), text3 = 0xFF5F687D.toInt(),
-        accent = 0xFF9A6400.toInt(), accentSoft = 0xFFFFF1D1.toInt(), onAccent = Color.WHITE,
-        warn = 0xFF9A5B00.toInt(), warnSoft = 0xFFFFF1CC.toInt(), ok = 0xFF1E7F4F.toInt(), okSoft = 0xFFDDF2E6.toInt(),
-        danger = 0xFFD62828.toInt(), dangerSoft = 0xFFFBE2E2.toInt(), ripple = 0x1F0E1420,
-        ink = 0xFF0C1017.toInt(), ink2 = 0xFF151B25.toInt(), accent2 = 0xFFD62828.toInt(), gold = 0xFFFFC53D.toInt(),
-        deal = 0xFFD62828.toInt(),
-        label = 0xFFFFC53D.toInt(), onLabel = 0xFF14110A.toInt(), labelShade = 0xFFE0A520.toInt(),
+        bg = 0xFFF6F6F6.toInt(), surface = 0xFFFFFFFF.toInt(), surface2 = 0xFFEDEDED.toInt(), outline = 0xFFE2E2E2.toInt(),
+        text = 0xFF121212.toInt(), text2 = 0xFF535353.toInt(), text3 = 0xFF6A6A6A.toInt(),
+        accent = 0xFF1DB954.toInt(), accentSoft = 0xFFD9F7E3.toInt(), onAccent = 0xFF000000.toInt(),
+        warn = 0xFF9A5B00.toInt(), warnSoft = 0xFFFFF1CC.toInt(), ok = 0xFF13803E.toInt(), okSoft = 0xFFDDF2E6.toInt(),
+        danger = 0xFFD62828.toInt(), dangerSoft = 0xFFFBE2E2.toInt(), ripple = 0x1F121212,
+        ink = 0xFF121212.toInt(), ink2 = 0xFF181818.toInt(), accent2 = 0xFFD62828.toInt(), gold = 0xFF1DB954.toInt(),
+        deal = 0xFFE22134.toInt(),
+        label = 0xFF1DB954.toInt(), onLabel = 0xFF000000.toInt(), labelShade = 0xFF169C46.toInt(),
     )
     private val darkP = Palette(
         dark = true,
-        bg = 0xFF0C1017.toInt(), surface = 0xFF151B25.toInt(), surface2 = 0xFF1D2532.toInt(), outline = 0xFF232B38.toInt(),
-        text = 0xFFF3F5F8.toInt(), text2 = 0xFFA4AEC0.toInt(), text3 = 0xFF8A93AA.toInt(),
-        accent = 0xFFFFC53D.toInt(), accentSoft = 0xFF3A2E12.toInt(), onAccent = 0xFF14110A.toInt(),
-        warn = 0xFFFFC857.toInt(), warnSoft = 0xFF332810.toInt(), ok = 0xFF5BD69A.toInt(), okSoft = 0xFF12301F.toInt(),
-        danger = 0xFFFF6B6B.toInt(), dangerSoft = 0xFF3A1A1E.toInt(), ripple = 0x29FFFFFF,
-        ink = 0xFF080B10.toInt(), ink2 = 0xFF151B25.toInt(), accent2 = 0xFFD62828.toInt(), gold = 0xFFFFC53D.toInt(),
-        deal = 0xFFD62828.toInt(),
-        label = 0xFFFFC53D.toInt(), onLabel = 0xFF14110A.toInt(), labelShade = 0xFFD9A11F.toInt(),
+        bg = 0xFF121212.toInt(), surface = 0xFF181818.toInt(), surface2 = 0xFF282828.toInt(), outline = 0xFF2A2A2A.toInt(),
+        text = 0xFFFFFFFF.toInt(), text2 = 0xFFB3B3B3.toInt(), text3 = 0xFF8F8F8F.toInt(),
+        accent = 0xFF1ED760.toInt(), accentSoft = 0xFF14361F.toInt(), onAccent = 0xFF000000.toInt(),
+        warn = 0xFFFFC857.toInt(), warnSoft = 0xFF332810.toInt(), ok = 0xFF1ED760.toInt(), okSoft = 0xFF12301F.toInt(),
+        danger = 0xFFFF5A5F.toInt(), dangerSoft = 0xFF3A1A1E.toInt(), ripple = 0x29FFFFFF,
+        ink = 0xFF000000.toInt(), ink2 = 0xFF181818.toInt(), accent2 = 0xFFE22134.toInt(), gold = 0xFF1ED760.toInt(),
+        deal = 0xFFE22134.toInt(),
+        label = 0xFF1ED760.toInt(), onLabel = 0xFF000000.toInt(), labelShade = 0xFF19B550.toInt(),
     )
 
     /** Varsayılan marka renkleri; feed'deki "color" alanı geldiğinde [registerStores] ile güncellenir. */

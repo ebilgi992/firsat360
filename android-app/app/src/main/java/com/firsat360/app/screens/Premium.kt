@@ -157,7 +157,7 @@ class PdfScreen(a: MainActivity, private val catalogId: String,
             main.post {
                 if (cancelled) return@post
                 if (file == null) {
-                    body.removeAllViews()
+                    body.removeAllViews(); body.setBackgroundColor(Theme.p.bg)
                     body.addView(a.emptyState(Icon.INFO, "Katalog açılamadı", "İnternet bağlantınızı kontrol edin veya " +
                         "kataloğu marketin sayfasında açın.", "Resmî sayfada aç") { a.openWeb(c.officialUrl, c.title) },
                         FrameLayout.LayoutParams(MATCH, WRAP, Gravity.CENTER))
@@ -176,6 +176,7 @@ class PdfScreen(a: MainActivity, private val catalogId: String,
         }
         body.removeAllViews()
         if (r == null) {
+            body.setBackgroundColor(Theme.p.bg)
             body.addView(a.emptyState(Icon.INFO, "PDF açılamadı", "Dosya bozuk olabilir; tekrar açmayı deneyin.", null, null),
                 FrameLayout.LayoutParams(MATCH, WRAP, Gravity.CENTER))
             return

@@ -57,7 +57,8 @@ class CatalogReaderScreen(
         val root = FrameLayout(a).apply { setBackgroundColor(dark) }
 
         if (ps.isEmpty()) {
-            root.addView(a.emptyState(Icon.CATALOG, "Bu katalogun sayfa görseli yok",
+            root.setBackgroundColor(Theme.p.bg)
+            root.addView(a.emptyState(Icon.CATALOG, "Bu kataloğun sayfa görseli yok",
                 "Mağaza görselleri yayınlamadıysa veya görsel kullanımı kapalıysa resmî sayfadan inceleyebilirsiniz.",
                 "Resmî sayfayı aç") { c?.let { a.openWeb(it.officialUrl, it.title) } },
                 FrameLayout.LayoutParams(MATCH, WRAP, Gravity.CENTER))
@@ -68,9 +69,9 @@ class CatalogReaderScreen(
         val zv = ZoomImageView(a)
         zv.onSwipe = { dir -> go(index + dir, dir) }
         zv.onTap = { toggleChrome() }
-        // Sayfa üst/alt çubukların ARASINDA durur: sayaç ve küçük resimler sayfanın üzerine binmez.
-        root.addView(zv, FrameLayout.LayoutParams(MATCH, MATCH).apply {
-            topMargin = dp(68); bottomMargin = if (ps.size > 1) dp(148) else dp(60) })
+        // Tam ekran; yakınlaştırılmamış sayfa çubukların arasına sığar, yakınlaşınca çubuklar gizlenir ve tüm ekran kullanılır.
+        root.addView(zv, FrameLayout.LayoutParams(MATCH, MATCH))
+        zv.onZoom = { z -> if (z == chrome) toggleChrome() }
         pageView = zv
         val pb = ProgressBar(a).apply { isIndeterminate = true }
         root.addView(pb, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER))
@@ -93,7 +94,7 @@ class CatalogReaderScreen(
             background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(0xE60B0D12.toInt(), 0x000B0D12))
         }
-        top.addView(a.iconButton(Icon.CLOSE, onDark, 0x33FFFFFF, "Kapat") { a.onBackPressedCompat() }.apply {
+        top.addView(a.iconButton(Icon.CLOSE, onDark, 0x33FFFFFF, "Kapat") { pageView?.reset(); a.onBackPressedCompat() }.apply {
             background = rounded(0x33FFFFFF, 8f) })
         val titles = a.vbox()
         titles.addView(a.text(singleTitle ?: c?.title ?: "", 15f, onDark, Theme.semibold, 1))
@@ -106,7 +107,7 @@ class CatalogReaderScreen(
             }, lp(dp(42), dp(42), l = dp(8)))
             val fav = a.user.favoriteCatalogs().contains(c.id)
             top.addView(a.iconButton(if (fav) Icon.STAR_FILLED else Icon.STAR, if (fav) 0xFFFFC53D.toInt() else onDark, 0x33FFFFFF,
-                if (fav) "Katalog favorilerden çıkar" else "Katalogu favorilere ekle") {
+                if (fav) "Katalog favorilerden çıkar" else "Kataloğu favorilere ekle") {
                 val now = a.user.toggleFavoriteCatalog(c.id)
                 a.toast(if (now) "Katalog favorilere eklendi" else "Katalog favorilerden çıkarıldı")
                 a.refreshCurrent()
@@ -159,12 +160,7 @@ class CatalogReaderScreen(
         root.addView(bottom, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.BOTTOM))
         bars = listOf(top, bottom)
         // Çubukların gerçek yüksekliği (büyük yazı boyutu dahil) ölçülünce sayfa aralarına yerleşir
-        root.post {
-            (zv.layoutParams as? FrameLayout.LayoutParams)?.let { p ->
-                if (top.height > 0 && bottom.height > 0 && (p.topMargin != top.height || p.bottomMargin != bottom.height)) {
-                    p.topMargin = top.height; p.bottomMargin = bottom.height; zv.layoutParams = p }
-            }
-        }
+        root.post { zv.insetTop = top.height; zv.insetBottom = bottom.height }
 
         root.post { showPage(0) }
         return root

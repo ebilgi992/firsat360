@@ -21,8 +21,11 @@ object DeviceBrochures {
 
     data class Pdf(val url: String, val title: String, val dates: String)
 
+    /** Köprü betiklerinin sürümü: eski betikle kaydedilmiş SAYFA listeleri (ör. yanlış FlipHTML5 adresleri) yok sayılır. */
+    const val FORMAT = 2
+
     data class Entry(val title: String, val sourceUrl: String, val pages: List<String>, val savedAt: Long,
-                     val pdfs: List<Pdf> = emptyList(), val cover: String? = null) {
+                     val pdfs: List<Pdf> = emptyList(), val cover: String? = null, val v: Int = FORMAT) {
         val hasContent: Boolean get() = pages.isNotEmpty() || pdfs.isNotEmpty()
         /** Kapak: PDF'in cihazda çizilen ilk sayfası veya ilk sayfa görseli. */
         val coverUrl: String? get() = cover ?: pages.firstOrNull()
@@ -68,7 +71,7 @@ object DeviceBrochures {
     /** Güncel kayıt; [freshOnly] ise yalnızca [FRESH_MS] içinde okunmuşsa. */
     fun get(ctx: Context, storeId: String, freshOnly: Boolean = true, now: Long = System.currentTimeMillis()): Entry? {
         val e = read(ctx, storeId) ?: return null
-        if (!e.hasContent) return null
+        if (!e.hasContent || (e.v < FORMAT && e.pdfs.isEmpty())) return null
         return if (freshOnly && now - e.savedAt > FRESH_MS) null else e
     }
 
@@ -81,6 +84,12 @@ object DeviceBrochures {
     fun lastAttempt(ctx: Context, storeId: String): Long = prefs(ctx).getLong("$storeId#tried", 0L)
     fun markAttempt(ctx: Context, storeId: String, ok: Boolean) {
         prefs(ctx).edit().putLong("$storeId#tried", System.currentTimeMillis()).putBoolean("$storeId#ok", ok).apply()
+    }
+
+    /** Sayfaları açılmayan kaydı siler (PDF kayıtlarına dokunulmaz). */
+    fun dropPages(ctx: Context, storeId: String) {
+        val e = read(ctx, storeId) ?: return
+        if (e.pdfs.isEmpty()) prefs(ctx).edit().remove(storeId).apply()
     }
 
     fun remove(ctx: Context, storeId: String) {
@@ -107,10 +116,11 @@ object DeviceBrochures {
             val u = (pm["url"] as? String)?.takeIf { it.startsWith("https://") } ?: return@mapNotNull null
             Pdf(u, pm["title"] as? String ?: "", pm["dates"] as? String ?: "")
         } ?: emptyList(),
-        (m["cover"] as? String)?.takeIf { it.startsWith("https://") || it.startsWith("file://") })
+        (m["cover"] as? String)?.takeIf { it.startsWith("https://") || it.startsWith("file://") },
+        (m["v"] as? Number)?.toInt() ?: 1)
 
     private fun encode(e: Entry): String =
-        "{\"title\":${q(e.title)},\"source\":${q(e.sourceUrl)},\"at\":${e.savedAt}," +
+        "{\"title\":${q(e.title)},\"source\":${q(e.sourceUrl)},\"at\":${e.savedAt},\"v\":${e.v}," +
             "\"pages\":[${e.pages.joinToString(",") { q(it) }}]," +
             "\"pdfs\":[${e.pdfs.joinToString(",") { "{\"url\":${q(it.url)},\"title\":${q(it.title)},\"dates\":${q(it.dates)}}" }}]" +
             (if (e.cover != null) ",\"cover\":${q(e.cover)}" else "") + "}"

@@ -1,5 +1,19 @@
 # Değişiklik günlüğü
 
+## 2.0.0-beta — 30 Ekim 2026
+(1.8/1.9 sürümlerinin üzerine; ayrıntıları docs/RELEASE_1.9.md)
+- **Yeni arayüz "Sahne":** koyu sahne zemini (#121212), katmanlı gri yüzeyler, tek canlı vurgu yeşil; saate göre
+  selamlama, hızlı geçiş çipleri, 2 sütunlu hızlı erişim, yuvarlak market simgeleri, düz alt menü. Varsayılan tema
+  koyu (Ayarlar › Görünüm'den Açık/Cihaz seçilebilir).
+- **Fırsat Asistanı tamamen kaldırıldı** (ekran, ana sayfa girişleri, tanıtım sayfası).
+- **Broşür verisi:** cihazda bulunan sayfalar kaydedilmeden önce gerçekten görsel mi diye denetlenir; değilse broşür
+  marketin kendi görüntüleyicisinde açılır (CarrefourSA). Eski biçimde kaydedilmiş sayfa listeleri yok sayılır.
+- **Okuyucu:** yakınlaşınca çubuklar gizlenir, sayfa tüm ekranı kullanır; flipbook görüntüleyicide geri = kapat.
+- **Market logoları:** marketin kendi sitesindeki simge/manifest bildirimlerinden; ürün fotoğraflı kapak (Tarım Kredi).
+- **Hata düzeltmeleri (ajan incelemesi):** arka plan okuyucu sızıntısı, kapalı bildirim tercihine rağmen bildirim,
+  yenilemede kaydırma konumu, anahtar sürükleme, açık temada okunmayan metin, yatay modda kenar boşlukları, son
+  uygulamalardan açılışta eski bildirimin yeniden açılması, Türkçe metinler.
+
 ## 1.7.0-beta — 23 Ekim 2026
 - **Fırsat Asistanı.** Cihazda çalışan, ücretsiz ve anahtarsız sohbet: "en ucuz süt nerede?", "BİM'de ne var?",
   "bugün neler indirimde?", uygulama yardımı ve neşeli küçük sohbetler. Yanıtlar yalnızca güncel broşür verisinden;

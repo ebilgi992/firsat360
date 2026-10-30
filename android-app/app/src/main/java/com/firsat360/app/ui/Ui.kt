@@ -95,7 +95,8 @@ fun Context.pill(label: String, fg: Int, bg: Int, sizeSp: Float = 11.5f, face: T
     }
 
 fun Context.chip(label: String, selected: Boolean, accent: Int = Theme.p.accent, onClick: () -> Unit): TextView =
-    text(label, 14f, if (selected) Theme.p.onAccent else Theme.p.text, if (selected) Theme.semibold else Theme.medium, 1).apply {
+    text(label, 14f, if (!selected) Theme.p.text else if (accent == Theme.p.accent) Theme.p.onAccent
+        else if (Theme.luminance(accent) > 0.19) 0xFF1A1400.toInt() else android.graphics.Color.WHITE, if (selected) Theme.semibold else Theme.medium, 1).apply {
         setPadding(dp(16), dp(13), dp(16), dp(13))
         background = ripple(if (selected) rounded(accent, 14f) else surfaceBg(14f), 14f)
         if (selected) contentDescription = "$label (seçili)"
@@ -328,13 +329,16 @@ fun Context.catalogCard(c: Catalog, storeName: String, today: LocalDate, wide: B
     contentDescription = "$storeName, ${c.title}, ${v.label}. Kataloğu açmak için dokunun"
     val frame = coverFrame(if (wide) 0.56f else 1.36f, c.storeId)
     frame.addView(coverPlaceholder(c.storeId, storeName, if (c.hasPdf) Icon.PDF else Icon.CATALOG), FrameLayout.LayoutParams(MATCH, MATCH))
-    if (c.coverUrl != null && com.firsat360.app.data.ImageLoader.enabled) {
+    val pageCover = c.coverUrl ?: c.pages.firstOrNull()?.let { it.thumbUrl ?: it.url }
+    if (pageCover != null && com.firsat360.app.data.ImageLoader.enabled) {
         val img = NetImage(context, 0f).apply {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
-        img.load(c.coverUrl, dp(360)) { img.visibility = View.GONE }
+        img.load(pageCover, dp(360)) { img.visibility = View.GONE }
         frame.addView(img, FrameLayout.LayoutParams(MATCH, MATCH))
+    } else if (com.firsat360.app.data.ImageLoader.enabled) {
+        Collage.view(context, c)?.let { frame.addView(it, FrameLayout.LayoutParams(MATCH, MATCH)) }
     }
     val first = Dates.dateTime(c.firstSeenAt)
     if (first != null && java.time.Duration.between(first, java.time.OffsetDateTime.now()).toHours() in -6..48)
@@ -461,5 +465,41 @@ fun Context.viewToggle(grid: Boolean, onChange: (Boolean) -> Unit): LinearLayout
             onTap { if (!on) onChange(g) }
         }
         addView(cell, LinearLayout.LayoutParams(dp(48), dp(40)))
+    }
+}
+
+
+/**
+ * Görseli olmayan ürün kataloğu (ör. Tarım Kredi "Kat Kat Fırsat") için kapak: kataloğun kendi ürün
+ * fotoğraflarından 2×2 kolaj (resmî ürün görselleri; uydurma kapak yok).
+ */
+object Collage {
+    @Volatile var feed: com.firsat360.app.core.Feed? = null
+    private val cache = HashMap<String, List<String>>()
+    fun images(c: Catalog): List<String> = synchronized(cache) {
+        cache.getOrPut(c.id) {
+            (feed?.offers ?: emptyList()).asSequence().filter { it.catalogId == c.id && it.imageUrl != null }
+                .sortedByDescending { o -> o.storeDeclaredOldPrice?.let { it - o.price } ?: 0.0 }
+                .mapNotNull { it.imageUrl }.distinct().take(4).toList()
+        }
+    }
+    fun reset(f: com.firsat360.app.core.Feed?) { synchronized(cache) { cache.clear() }; feed = f }
+    fun view(ctx: Context, c: Catalog): View? {
+        val imgs = images(c)
+        if (imgs.size < 2) return null
+        val grid = ctx.vbox().apply { setBackgroundColor(0xFFFFFFFF.toInt()); setPadding(dp(6), dp(6), dp(6), dp(6)) }
+        for (r in 0 until 2) {
+            val row = ctx.hbox()
+            for (k in 0 until 2) {
+                val u = imgs.getOrNull(r * 2 + k) ?: imgs[(r * 2 + k) % imgs.size]
+                row.addView(NetImage(ctx, 6f).apply {
+                    scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    load(u, dp(160))
+                }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+            }
+            grid.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        }
+        return grid
     }
 }

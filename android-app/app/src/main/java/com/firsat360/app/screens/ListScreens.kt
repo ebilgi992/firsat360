@@ -33,7 +33,7 @@ class ShoppingListScreen(a: MainActivity) : Screen(a) {
         col.addView(head)
 
         val s = ShoppingList.summary(items)
-        col.addView(a.text(if (items.isEmpty()) "Ürün detayında \"Listeye ekle\"ye dokunun ya da aşağıya yazın."
+        col.addView(a.text(if (items.isEmpty()) "Ürün detayında \"Alışveriş listesine ekle\"ye dokunun ya da aşağıya yazın."
             else "${s.open} ürün kaldı · bilinen toplam ${Money.format(s.knownTotal)}" +
                 (if (s.unknownPrices > 0) " · ${s.unknownPrices} ürünün fiyatı yok" else ""),
             13f, Theme.p.text2, Theme.medium), lp(l = dp(20), r = dp(20), t = dp(6)))

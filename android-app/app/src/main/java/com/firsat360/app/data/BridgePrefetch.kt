@@ -106,12 +106,24 @@ object BridgePrefetch {
             release()
             done(ok)
         }
-        current = { finished = true; release() }
-        val session = BridgeSession(ctx, job.url, job.profile, job.hosts, object : BridgeSession.Listener {
+        lateinit var session: BridgeSession
+        // Süre sınırı sayfa okuma içindir; kendi "katalog görüntüleyicisine geç" adımımızda yeniden başlar.
+        val timeout = Runnable { if (!released) { session.cancel(); end(false) } }
+        current = { finished = true; session.cancel(); main.removeCallbacks(timeout); release() }
+        session = BridgeSession(ctx, job.url, job.profile, job.hosts, object : BridgeSession.Listener {
+            override fun onNavigating() { main.removeCallbacks(timeout); main.postDelayed(timeout, PAGE_TIMEOUT_MS) }
             override fun onImages(pages: List<String>) {
-                val changed = DeviceBrochures.save(ctx, job.storeId, job.title, job.url, pages)
-                saved(changed)
-                end(true)
+                release()
+                Thread {
+                    // Bulunan sayfalar gerçekten açılıyor mu? Açılmıyorsa kaydedilmez (kart resmî görüntüleyiciyi açar).
+                    val ok = pages.take(2).any { Download.isImage(it) }
+                    main.post {
+                        if (finished) return@post
+                        if (ok) saved(DeviceBrochures.save(ctx, job.storeId, job.title, job.url, pages))
+                        else DeviceBrochures.dropPages(ctx, job.storeId)
+                        end(ok)
+                    }
+                }.start()
             }
             override fun onPdf(items: List<BridgeSession.PdfItem>) {
                 val pdfs = items.map { DeviceBrochures.Pdf(it.url, it.title, it.dates) }
@@ -154,7 +166,7 @@ object BridgePrefetch {
         host.addView(w, 0, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         w.loadUrl(job.url)
         // Süre sınırı yalnızca sayfa okuma için (PDF indirme sürerken WebView zaten bırakılmıştır)
-        main.postDelayed({ if (!released) { session.cancel(); end(false) } }, PAGE_TIMEOUT_MS)
+        main.postDelayed(timeout, PAGE_TIMEOUT_MS)
     }
 
     /** İlk PDF'i önbelleğe indirir ve ilk sayfasını kapak görseline çizer. Kapak "file://" adresi döner. */

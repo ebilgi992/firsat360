@@ -48,6 +48,14 @@ class NetImage(ctx: Context, radiusDp: Float = 14f) : ImageView(ctx) {
 class ZoomImageView(ctx: Context) : ImageView(ctx) {
     var onSwipe: ((Int) -> Unit)? = null
     var onTap: (() -> Unit)? = null
+    /** Yakınlaştırma durumu değişince (true = yakın). Okuyucu çubukları gizler/gösterir. */
+    var onZoom: ((Boolean) -> Unit)? = null
+    /** Yakınlaştırılmamış sayfa üst/alt çubukların ARASINA sığdırılır; yakınlaşınca tüm ekran kullanılır. */
+    var insetTop = 0
+        set(v) { field = v; reset() }
+    var insetBottom = 0
+        set(v) { field = v; reset() }
+    private var wasZoomed = false
     private val m = Matrix()
     private val base = Matrix()
     private val vals = FloatArray(9)
@@ -59,7 +67,7 @@ class ZoomImageView(ctx: Context) : ImageView(ctx) {
             val target = (cur * d.scaleFactor).coerceIn(minScale, minScale * 6f)
             val f = target / cur
             m.postScale(f, f, d.focusX, d.focusY)
-            clamp(); imageMatrix = m
+            clamp(); imageMatrix = m; zoomChanged()
             return true
         }
     })
@@ -72,6 +80,7 @@ class ZoomImageView(ctx: Context) : ImageView(ctx) {
                 val f = 2.5f
                 m.postScale(f, f, e.x, e.y); clamp(); imageMatrix = m
             }
+            zoomChanged()
             return true
         }
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float): Boolean {
@@ -93,18 +102,23 @@ class ZoomImageView(ctx: Context) : ImageView(ctx) {
 
     fun isZoomed() = currentScale() > minScale * 1.02f
 
+    private fun zoomChanged() { val z = isZoomed(); if (z != wasZoomed) { wasZoomed = z; onZoom?.invoke(z) } }
+
     private fun currentScale(): Float { m.getValues(vals); return vals[Matrix.MSCALE_X] }
 
     fun reset() {
         val d = drawable ?: return
         if (width == 0 || height == 0 || d.intrinsicWidth <= 0 || d.intrinsicHeight <= 0) return
-        val s = Math.min(width.toFloat() / d.intrinsicWidth, height.toFloat() / d.intrinsicHeight)
+        val avail = (height - insetTop - insetBottom).coerceAtLeast(height / 2)
+        val top = if (avail == height - insetTop - insetBottom) insetTop else 0
+        val s = Math.min(width.toFloat() / d.intrinsicWidth, avail.toFloat() / d.intrinsicHeight)
         base.reset()
         base.postScale(s, s)
-        base.postTranslate((width - d.intrinsicWidth * s) / 2f, (height - d.intrinsicHeight * s) / 2f)
+        base.postTranslate((width - d.intrinsicWidth * s) / 2f, top + (avail - d.intrinsicHeight * s) / 2f)
         minScale = s
         m.set(base)
         imageMatrix = m
+        zoomChanged()
     }
 
     private fun clamp() {
@@ -114,7 +128,9 @@ class ZoomImageView(ctx: Context) : ImageView(ctx) {
         var dx = 0f; var dy = 0f
         if (r.width() <= width) dx = (width - r.width()) / 2f - r.left
         else if (r.left > 0) dx = -r.left else if (r.right < width) dx = width - r.right
-        if (r.height() <= height) dy = (height - r.height()) / 2f - r.top
+        val band = height - insetTop - insetBottom
+        if (r.height() <= band) dy = insetTop + (band - r.height()) / 2f - r.top
+        else if (r.height() <= height) dy = (height - r.height()) / 2f - r.top
         else if (r.top > 0) dy = -r.top else if (r.bottom < height) dy = height - r.bottom
         m.postTranslate(dx, dy)
     }

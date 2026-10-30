@@ -47,6 +47,31 @@ internal object Download {
         val sb = StringBuilder(); for (b in md) sb.append(String.format("%02x", b)); return sb.toString()
     }
 
+    /**
+     * Adres GERÇEKTEN bir görsel mi (JPEG/PNG/WebP/GIF imzası)? Köprünün bulduğu sayfaları kaydetmeden önce
+     * denetlenir: görüntüleyici adres biçimini değiştirdiyse ya da görsel yalnızca kendi sayfasında gösterilmeye
+     * izinliyse (403/HTML) broşür uygulama okuyucusu yerine marketin kendi görüntüleyicisinde açılır.
+     */
+    fun isImage(url: String): Boolean {
+        if (!url.startsWith("https://")) return false
+        var conn: HttpURLConnection? = null
+        return try {
+            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10_000; readTimeout = 12_000; instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "FIRSAT360/${BuildInfo.VERSION} (Android)")
+                setRequestProperty("Range", "bytes=0-31")
+            }
+            if (conn.responseCode !in 200..206) return false
+            val b = ByteArray(16)
+            var n = 0
+            conn.inputStream.use { while (n < 12) { val r = it.read(b, n, 16 - n); if (r < 0) break; n += r } }
+            fun u(i: Int) = b[i].toInt() and 0xFF
+            n >= 4 && ((u(0) == 0xFF && u(1) == 0xD8) || (u(0) == 0x89 && u(1) == 0x50 && u(2) == 0x4E && u(3) == 0x47) ||
+                (u(0) == 0x47 && u(1) == 0x49 && u(2) == 0x46) ||
+                (n >= 12 && u(0) == 0x52 && u(1) == 0x49 && u(8) == 0x57 && u(9) == 0x45 && u(10) == 0x42 && u(11) == 0x50))
+        } catch (e: Exception) { false } finally { conn?.disconnect() }
+    }
+
     /** [url]'yi [target]'a indirir. İptal için [cancelled]; ilerleme (0..1, bilinmiyorsa -1). */
     fun to(url: String, target: File, maxBytes: Long, progress: ((Float) -> Unit)? = null,
            cancelled: () -> Boolean = { false }): Boolean {

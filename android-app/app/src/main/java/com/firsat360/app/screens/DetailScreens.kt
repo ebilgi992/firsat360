@@ -393,7 +393,7 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
         override fun onImages(pages: List<String>) { handOff(pages) }
         override fun onPdf(items: List<com.firsat360.app.data.BridgeSession.PdfItem>) { handOffPdf(items) }
         override fun onGiveUp(best: List<String>, reason: String) {
-            hideOverlay("Bu sayfada broşür bulunamadı; resmî sayfa gösteriliyor.")
+            hideOverlay("Broşür marketin kendi görüntüleyicisinde açıldı.")
             onFound?.invoke(0)
         }
     }
@@ -442,13 +442,32 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     /** Yerel okuyucuya geçiş: WebView yığından çıkar, yerine okuyucu açılır (geri → bir önceki ekran). */
     private fun handOff(pages: List<String>) {
         if (handedOff) return
-        storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
-        onFound?.invoke(pages.size)
         if (!com.firsat360.app.data.ImageLoader.enabled) {  // görseller kapalı (veri tasarrufu): okuyucu boş kalırdı
+            onFound?.invoke(pages.size)
             hideOverlay("Görseller kapalı olduğu için broşür resmî sayfada gösteriliyor.")
             return
         }
         handedOff = true
+        overlayText?.text = "Sayfalar hazırlanıyor…"
+        // Sayfalar uygulama okuyucusunda gerçekten açılıyor mu? Açılmıyorsa marketin kendi görüntüleyicisinde kalınır.
+        Thread {
+            val ok = pages.take(2).any { com.firsat360.app.data.Download.isImage(it) }
+            a.runOnUiThread {
+                if (web == null) return@runOnUiThread  // ekran kapandı
+                if (!ok) {
+                    storeId?.let { com.firsat360.app.data.DeviceBrochures.dropPages(a, it) }
+                    onFound?.invoke(pages.size)
+                    hideOverlay("Broşür marketin kendi görüntüleyicisinde açıldı.")
+                    return@runOnUiThread
+                }
+                storeId?.let { com.firsat360.app.data.DeviceBrochures.save(a, it, title, url, pages) }
+                onFound?.invoke(pages.size)
+                openReader(pages)
+            }
+        }.start()
+    }
+
+    private fun openReader(pages: List<String>) {
         val ps = pages.mapIndexed { i, u -> com.firsat360.app.core.CatalogPage(u, u, "Sayfa ${i + 1}", url, true) }
         a.replaceTop(CatalogReaderScreen(a, null, 0, null, title, extraPages = ps))
     }
@@ -465,8 +484,14 @@ class WebScreen(a: MainActivity, private val url: String, private val title: Str
     override fun onBack(): Boolean {
         // Broşür alınırken geri → ekran kapanır (kitaptan mağaza sayfasına dönüp yeniden ileri gidilmez).
         if (overlay?.visibility == View.VISIBLE && !handedOff) return false
+        // Broşür/katalog görüntüleyicisinde geri = kapat (flipbook her sayfa çevirişini geçmişe yazar; kullanıcı
+        // ilk sayfaya kadar geri basmak zorunda kalmasın). Diğer sayfalarda yalnızca GERÇEK bir önceki sayfaya dönülür.
+        if (catalog || storeId != null) return false
         val w = web ?: return false
-        if (w.canGoBack()) { w.goBack(); return true }
+        val list = w.copyBackForwardList()
+        val i = list.currentIndex
+        fun base(u: String?) = u?.substringBefore('#')
+        if (i > 0 && base(list.getItemAtIndex(i - 1)?.url) != base(list.currentItem?.url)) { w.goBack(); return true }
         return false
     }
 
@@ -606,7 +631,8 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
             if (sub != null) t.addView(a.text(sub, 12.5f, Theme.p.text2, Theme.regular), lp(t = dp(2)))
             r.addView(t, lp(0, WRAP, weight = 1f))
             r.addView(android.widget.Switch(a).apply {
-                isChecked = on; setOnClickListener { onClick() }; contentDescription = title
+                isChecked = on; contentDescription = title
+                setOnCheckedChangeListener { _, c -> if (c != on) onClick() }
                 val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
                 thumbTintList = android.content.res.ColorStateList(states, intArrayOf(Theme.p.accent, Theme.p.text3))
                 trackTintList = android.content.res.ColorStateList(states, intArrayOf(Theme.tint(Theme.p.accent, 0.45f), Theme.tint(Theme.p.text3, 0.3f)))
@@ -624,7 +650,7 @@ class SettingsScreen(a: MainActivity) : Screen(a) {
         // ---- Görünüm
         val look = section("Görünüm", Icon.SETTINGS)
         val seg = a.hbox().apply { background = rounded(Theme.p.surface2, 14f); setPadding(dp(4), dp(4), dp(4), dp(4)) }
-        for ((mode, label) in listOf("system" to "Cihaz", "light" to "Açık", "dark" to "Koyu")) {
+        for ((mode, label) in listOf("dark" to "Koyu", "light" to "Açık", "system" to "Cihaz")) {
             val on = a.user.themeMode == mode
             seg.addView(a.text(label, 14.5f, if (on) Theme.p.onAccent else Theme.p.text, Theme.semibold, 1, Gravity.CENTER).apply {
                 minHeight = dp(44); background = if (on) rounded(Theme.p.accent, 11f) else ripple(null, 11f)
