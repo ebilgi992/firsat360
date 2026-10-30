@@ -133,6 +133,60 @@ def catalog_group(c: Catalog) -> str:
     return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:12]
 
 
+def _first_page_url(c: Catalog) -> str | None:
+    if not c.pages_json:
+        return None
+    try:
+        pages = json.loads(c.pages_json)
+    except ValueError:
+        return None
+    if isinstance(pages, list) and pages and isinstance(pages[0], dict):
+        return (pages[0].get("url") or "").split("?")[0] or None
+    return None
+
+
+def catalog_groups(catalogs: list[Catalog]) -> dict[str, str]:
+    """catalog_group + içerik eşlemesi: aynı mağazanın ilk sayfa görseli aynı olan ya da içerik özeti (content_hash)
+    aynı olan katalogları (ör. BİM ürün sekmesi bim-1701 ile aynı afişleri taşıyan bim-afis-1432) tek gruba bağlar.
+    Dönüş: {katalog kimliği: grup}. Grup, birleşen kataloglardan en küçük temel grup anahtarıdır (kararlı)."""
+    parent = {c.id: c.id for c in catalogs}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+
+    base = {c.id: catalog_group(c) for c in catalogs}
+    by_key: dict[tuple, str] = {}
+    for c in sorted(catalogs, key=lambda c: c.id):
+        keys = [("g", c.store_id, base[c.id])]
+        first = _first_page_url(c)
+        if first:
+            keys.append(("p", c.store_id, first))
+        if c.content_hash:
+            keys.append(("h", c.store_id, c.content_hash))
+        for k in keys:
+            if k in by_key:
+                union(by_key[k], c.id)
+            else:
+                by_key[k] = c.id
+    members: dict[str, list[str]] = {}
+    for c in catalogs:
+        members.setdefault(find(c.id), []).append(c.id)
+    out = {}
+    for ids in members.values():
+        g = min(base[i] for i in ids)
+        for i in ids:
+            out[i] = g
+    return out
+
+
 def is_stale(c: Catalog, store: Store | None, catalogs_with_offers: set) -> bool:
     """Kaynakta artık listelenmeyen katalog: mağazanın son başarılı okumasından STALE_DAYS gün önce son görülmüş
     ve yayında ürünü yok. (Ör. eski anlık görüntüden kalan, yeni sayısıyla mükerrer görünen Migroskop kaydı.)"""
@@ -150,6 +204,7 @@ def archive_catalogs(session: Session, today: date, store_by_id: dict) -> list[d
     old = today - timedelta(days=ARCHIVE_DAYS)
     rows = session.scalars(select(Catalog).where(Catalog.data_mode == "real", Catalog.valid_to.is_not(None),
                                                  Catalog.valid_to < today, Catalog.valid_to >= old)).all()
+    groups = catalog_groups(list(rows))
     out = []
     for c in sorted(rows, key=lambda c: (c.store_id, c.valid_to), reverse=True):
         if c.store_id not in store_by_id:
@@ -164,7 +219,7 @@ def archive_catalogs(session: Session, today: date, store_by_id: dict) -> list[d
                     "valid_from": _iso(c.valid_from), "valid_to": _iso(c.valid_to), "official_url": c.official_url,
                     "source_method": c.source_method, "observed_at": _iso(c.observed_at), "offer_count": 0,
                     "pdf_url": pdf, "cover_url": cover or ((pages[0].get("thumb_url") or pages[0]["url"]) if pages else None),
-                    "pages": pages, "group": catalog_group(c), "archived": True})
+                    "pages": pages, "group": groups[c.id], "archived": True})
     return out
 
 
@@ -210,6 +265,7 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
     for h in session.scalars(select(PriceObservation).order_by(PriceObservation.observed_at)):
         history.setdefault(h.offer_id, []).append(h)
     store_by_id = {s.id: s for s in stores}
+    groups = catalog_groups(catalogs)
     counts: dict[str, int] = {}
     for o in offers:
         counts[o.catalog_id or ""] = counts.get(o.catalog_id or "", 0) + 1
@@ -242,7 +298,7 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
             "first_seen_at": _iso(c.first_seen_at), "last_checked_at": _iso(c.last_checked_at),
             "pdf_url": c.pdf_url if _images_allowed(store_by_id.get(c.store_id)) else None,
             "region": c.region,
-            "group": catalog_group(c),
+            "group": groups[c.id],
             "cover_url": c.cover_url if _images_allowed(store_by_id.get(c.store_id)) else None,
             "pages": catalog_pages(c, _images_allowed(store_by_id.get(c.store_id))),
         } for c in sorted(catalogs, key=lambda c: (c.store_id, c.valid_from or date.min), reverse=False)],

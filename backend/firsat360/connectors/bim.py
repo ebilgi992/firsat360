@@ -6,7 +6,7 @@ Yalnızca olgusal veri alınır: marka, ürün adı, açıklama, fiyat, resmî �
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from urllib.parse import urljoin
 
 from ..normalize import clean, parse_price, parse_tr_range
@@ -24,6 +24,18 @@ DETAIL_RE = re.compile(r"/aktuel-urunler/[^/]+/aktuel\.aspx")
 PRODUCT_IMG_RE = re.compile(r"/uploads/aktuel-urunler/\d+_(?:kucuk|buyuk)_", re.I)
 
 
+# Tek günlük aktüel sekmesi ("30 Ekim Perşembe") bitiş tarihi yazmaz; BİM aktüel ürünleri stoklarla sınırlı olarak
+# bir hafta satışta kalır → bitiş = başlangıç + 6 gün (bitişsiz eski sekme süresiz "güncel" görünmesin).
+AKTUEL_DAYS = 6
+
+
+def aktuel_range(label: str, observed: date) -> tuple[date | None, date | None]:
+    start, end = parse_tr_range(label, observed)
+    if start is not None and end is None:
+        end = start + timedelta(days=AKTUEL_DAYS)
+    return start, end
+
+
 def parse_tabs(html: str, observed: date) -> list[CatalogData]:
     tree = parse(html)
     seen: dict[str, CatalogData] = {}
@@ -36,7 +48,7 @@ def parse_tabs(html: str, observed: date) -> list[CatalogData]:
         key = m.group(1)
         if key in seen:
             continue
-        start, end = parse_tr_range(label, observed)
+        start, end = aktuel_range(label, observed)
         seen[key] = CatalogData(id=f"bim-{key}", title=f"{label} Aktüel", kind="aktuel",
                                 official_url=f"{LIST_URL}?Bim_AktuelTarihKey={key}",
                                 valid_from=start, valid_to=end)
@@ -168,7 +180,8 @@ def attach_afis(catalogs: list[CatalogData], groups: dict[str, dict], observed: 
             continue
         target = by_label.get(g["label"])
         if target is None:
-            start, end = parse_tr_range(g["label"], observed)
+            start, end = (parse_tr_range(g["label"], observed) if g["column"] == "indirim"
+                          else aktuel_range(g["label"], observed))
             if g["column"] == "indirim":
                 title, kind = f"{g['label']} İndirimleri", "discount_list"
             else:
