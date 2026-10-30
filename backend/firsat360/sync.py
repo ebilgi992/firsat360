@@ -327,6 +327,9 @@ def run_daily(sf: sessionmaker, connectors: dict, settings: Settings, trigger: s
             st["quality"] = compact(report["quality"])
         status_path.write_text(json.dumps(st, ensure_ascii=False, indent=1), encoding="utf-8")
         report["status"] = str(status_path)
+    # 6) Broşür sayfalarında metin arama dizini (OCR → page_index.json). İsteğe bağlı; hata günlük işi durdurmaz.
+    from .ocr_index import run_after_feed
+    report["page_index"] = run_after_feed(settings, report.get("feed"), transport=transport, sleep=sleep, live=live)
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     return report
 

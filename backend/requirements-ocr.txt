@@ -1,0 +1,8 @@
+# İsteğe bağlı: broşür sayfalarında metin arama dizini (firsat360/ocr_index.py → page_index.json).
+# Kurulamazsa günlük iş OCR'sız sürer (önbellekteki sayfalar yine dizine girer). CPU'da çalışır, anahtar gerekmez.
+# RapidOCR (Apache-2.0) + PP-OCRv6 small modelleri pakete gömülü (Türkçe tanıma: lang 'tr'); indirme gerekmez.
+# 30.10.2026'da bu sürümlerle test edildi (Python 3.13).
+rapidocr==3.10.0
+onnxruntime==1.29.0
+# Alternatif (eski paket adı): rapidocr-onnxruntime==1.2.3 — Python 3.13'te çözülen son sürüm; varsayılan Çince+Latin
+# model Türkçe harfleri düz harfle okur (ç→c …). ocr_index.py bu paketi de otomatik kullanır.

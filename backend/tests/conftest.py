@@ -79,6 +79,7 @@ def settings(tmp_path, monkeypatch):
     monkeypatch.setenv("LOG_DIR", str(tmp_path / "logs"))
     monkeypatch.setenv("NTFY_URL", "")
     monkeypatch.setenv("NTFY_TOPIC", "")
+    monkeypatch.setenv("OCR_INDEX", "0")  # OCR sayfa dizini yalnızca test_ocr_index.py'de (sahte motorla) sınanır
     return Settings()
 
 

@@ -65,6 +65,10 @@ jobs:
       - name: Bağımlılıklar
         run: pip install -r backend/requirements.txt
 
+      - name: OCR motoru (isteğe bağlı; kurulamazsa broşür sayfa dizini yalnızca önbellekten yazılır)
+        continue-on-error: true
+        run: pip install -r backend/requirements-ocr.txt
+
       - name: Tarayıcı motoru (isteğe bağlı; kurulamazsa yalnızca statik tarama yapılır)
         continue-on-error: true
         run: |
@@ -77,6 +81,8 @@ jobs:
           DATABASE_URL: sqlite:///${{ github.workspace }}/state/firsat360.db
           FEED_EXPORT_PATH: ${{ github.workspace }}/site/feed.json
           HTTP_CACHE_DIR: ${{ github.workspace }}/state/http-cache
+          OCR_CACHE_PATH: ${{ github.workspace }}/state/ocr-cache.json   # sayfa başına bir kez OCR
+          OCR_MAX_PAGES: ${{ vars.OCR_MAX_PAGES || '150' }}
           LOG_DIR: ${{ github.workspace }}/state/logs
           LOG_MAX_BYTES: "5242880"
           LOG_KEEP_DAYS: "7"
