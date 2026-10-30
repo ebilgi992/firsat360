@@ -253,7 +253,7 @@ def build_feed(session: Session, today: date | None = None, include_expired: boo
         # Günün İndirimleri (otomatik seçim) ve yeni katalog duyuruları (bildirimler bunlardan üretilir)
         "daily_deals": _deals(session, today),
         "client_bridge": client_bridge(),
-        "announcements": _announcements(session),
+        "announcements": _announcements(session, today),
         # Uzaktan yapılandırma (yönetim panelinden): reklam alanları vb. Gizli bilgi içermez.
         "app_config": _app_config(session),
         # Gelir altyapısı: yalnızca onaylı ve etkin olanlar "active" işaretlenir. Şu an hiçbiri onaylı değil.
@@ -287,9 +287,13 @@ def _app_config(session: Session) -> dict:
     return {"ads": ads}
 
 
-def _announcements(session: Session) -> list[dict]:
+def _announcements(session: Session, today: date | None = None) -> list[dict]:
+    """Yayındaki duyurular. Geçmiş/gelecek bir gün için üretilen feed o günün saatini kullanır (testler, yeniden üretim)."""
     from .sync import announcements_for_feed
-    return announcements_for_feed(session, datetime.now(timezone.utc))
+    now = datetime.now(timezone.utc)
+    if today is not None and today != now.date():
+        now = datetime.combine(today, datetime.max.time(), tzinfo=timezone.utc)
+    return announcements_for_feed(session, now)
 
 
 def export_feed(session: Session, path: str | Path, today: date | None = None) -> Path:

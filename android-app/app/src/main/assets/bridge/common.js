@@ -75,7 +75,10 @@ var F360 = (function () {
         if (r < rank) { rank = r; best = { dir: sp[0].slice(0, sp[0].length - b.length).replace(/\/thumb\/$/, '/large/'), q: sp[1] || '' }; } }); });
     window.__f360t = window.__f360t || Date.now();
     var base = location.href.split('#')[0].split('?')[0]; if (!/\/$/.test(base)) base = base.replace(/\/[^\/]*\.[a-z]+$/i, '/'); if (!/\/$/.test(base)) base += '/';
-    if (!best && Date.now() - window.__f360t < 6000) return [];
+    // Görüntüleyici sayfa dosyalarını yüklemeye başladıysa (…/files/…) eşleşme için en çok 6 sn beklenir;
+    // hiç yükleme yoksa klasik yol hemen denenir (uygulama sayfaları açmadan önce yine de doğrular).
+    var loading = seen.some(function (u) { return /\/files\/(large|page|mobile)\//.test(u); });
+    if (!best && loading && Date.now() - window.__f360t < 6000) return [];
     var urls = [];
     names.forEach(function (n) { if (!n) return;
       if (/^https?:/.test(n)) { urls.push(n); return; }
