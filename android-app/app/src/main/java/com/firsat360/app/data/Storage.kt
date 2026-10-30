@@ -59,9 +59,13 @@ internal object Download {
             conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000; readTimeout = 12_000; instanceFollowRedirects = true
                 setRequestProperty("User-Agent", "FIRSAT360/${BuildInfo.VERSION} (Android)")
+                WebSession.apply(this, url)
                 setRequestProperty("Range", "bytes=0-31")
             }
-            if (conn.responseCode !in 200..206) return false
+            if (conn.responseCode !in 200..206) {
+                AppLog.w("bridge.verify", "${conn.responseCode} ${conn.contentType} ${URL(url).host}")
+                return false
+            }
             val b = ByteArray(16)
             var n = 0
             conn.inputStream.use { while (n < 12) { val r = it.read(b, n, 16 - n); if (r < 0) break; n += r } }

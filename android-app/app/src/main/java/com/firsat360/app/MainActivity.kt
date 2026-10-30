@@ -86,6 +86,7 @@ class MainActivity : Activity() {
         com.firsat360.app.core.AppLog.init(java.io.File(filesDir, "logs"), verbose = false)
         applyStorageSettings()
         com.firsat360.app.data.ImageLoader.init(this)
+        com.firsat360.app.data.WebSession.init(this)
         com.firsat360.app.data.ImageLoader.enabled = user.showImages
         val app = applicationContext
         val appUser = com.firsat360.app.data.UserStore(app)  // etkinliği tutmaz (yeniden kurulumda sızıntı olmaz)

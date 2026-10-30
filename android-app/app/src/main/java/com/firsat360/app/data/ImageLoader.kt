@@ -140,6 +140,7 @@ object ImageLoader {
                 setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android ${android.os.Build.VERSION.RELEASE}) " +
                     "FIRSAT360/${BuildInfo.VERSION}")
                 setRequestProperty("Accept", "image/webp,image/jpeg,image/png,image/*;q=0.8")
+                WebSession.apply(this, url)
             }
             if (conn.responseCode != 200) return false
             var total = 0L
