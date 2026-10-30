@@ -84,13 +84,26 @@ def tk_title(name: str) -> str:
     return _tk_title(name)
 
 
+TK_CATALOG_TITLE = "Kampanya ürünleri"
+
+
+def tk_catalog_title(heading: str | None) -> str:
+    """"Kat Kat Fırsat 13-19 Ekim" → "Kampanya ürünleri · Kat Kat Fırsat 13-19 Ekim"; genel başlıkta yalnızca etiket."""
+    h = clean(heading)
+    if not h or re.fullmatch(r"(?i)(haftal[ıi]k\s+)?kampanya(lar)?|tar[ıi]m\s+kredi.*", h):
+        return TK_CATALOG_TITLE
+    return f"{TK_CATALOG_TITLE} · {h}"
+
+
 def parse_tk_campaign(html: str, url: str, observed: date) -> tuple[CatalogData, list[OfferData], int]:
     tree = parse(html)
     heading = text_of(tree.css_first("h1")) or text_of(tree.css_first("title")) or "Haftalık Kampanya"
     start, end = parse_tr_range(heading, observed)
     slug = urlparse(url).path.rstrip("/").rsplit("/", 1)[-1] or "kampanya"
     cid = f"tkkoop-{slug}" + (f"-{start:%m%d}" if start else "")
-    cat = CatalogData(id=cid, title=clean(heading) or "Haftalık Kampanya", kind="aktuel", official_url=url,
+    # Tarım Kredi resmî broşür yayımlamıyor: bu katalog kampanya sayfasındaki ürün listesidir. Başlık bunu açıkça
+    # söyler; broşür gibi görünmesin diye kapak/sayfa görseli uydurulmaz.
+    cat = CatalogData(id=cid, title=tk_catalog_title(heading), kind="aktuel", official_url=url,
                       valid_from=start, valid_to=end)
     offers, rejected, seen = [], 0, set()
     for a in tree.css('a[href*="/urun/"]'):
@@ -189,34 +202,76 @@ def _stem_title(stem: str) -> str:
     return " ".join(w.capitalize() if not w.isupper() else w for w in s.split()) or "Broşür"
 
 
+_HAKMAR_PAGE_NO = re.compile(r"(?i)sayfa[-_ ]?(\d{1,3})")
+
+
 def parse_hakmar(html: str, observed: date) -> list[CatalogData]:
+    """Hakmar /indirim/ sayfasındaki broşür sayfa görselleri.
+
+    Eski yapı: dosya adı yayını anlatır ("08-19-Ekim-2026-Genel-Insert-3-scaled.jpg") → dosya adından gruplanır.
+    29.10.2026 yapısı: dosya adları genel ("2026/10/sayfa1-1.jpg … sayfa8-1.jpg"), tarih görsellerden ÖNCEKİ <h2>'de
+    ("29 Ekim-9 Kasım") → görseller belge sırasında kendilerinden önceki en yakın tarihli <h2> bölümüne atanır."""
+    from ..normalize import fold
     tree = parse(html)
     groups: dict[str, dict] = {}
-    for im in tree.css("img"):
+    section: dict | None = None  # {"key", "heading", "start", "end"}
+    nodes = tree.root.traverse(include_text=False) if tree.root is not None else []
+    for node in nodes:
+        if node.tag == "h2":
+            heading = clean(text_of(node))
+            s, e = parse_tr_range(heading or "", observed)
+            # Tarih içermeyen <h2> (ör. "İndirimler") bölüm açmaz; önceki bölüm sürer, yoksa dosya adına bakılır.
+            if heading and s is not None:
+                section = {"key": "h2:" + fold(heading), "heading": heading, "start": s, "end": e}
+            continue
+        if node.tag != "img":
+            continue
+        im = node
         u = img_src(im)
         if not u or "/wp-content/uploads/" not in u or not IMG_EXT.search(u) or SKIP_IMG.search(u):
             continue
         u = urljoin(HAKMAR_URL, u)
         u = re.sub(r"-\d{2,4}x\d{2,4}(?=\.\w+$)", "", u)  # WordPress küçük boy → asıl dosya
         name = u.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-        # Sayfa numarasını at: "08-19-Ekim-2026-Genel-Insert-3-scaled" → "08-19-Ekim-2026-Genel-Insert"
-        key = re.sub(r"(?i)(?:-scaled)?$", "", name)
-        key = re.sub(r"-\d{1,2}(?:-\d)?$", "", key)
-        g = groups.setdefault(key, {"pages": [], "alt": im.attributes.get("alt") or ""})
+        if section is not None:
+            key = section["key"]
+            g = groups.setdefault(key, {"pages": [], "section": section})
+        else:
+            # Sayfa numarasını at: "08-19-Ekim-2026-Genel-Insert-3-scaled" → "08-19-Ekim-2026-Genel-Insert"
+            key = re.sub(r"(?i)(?:-scaled)?$", "", name)
+            key = re.sub(r"-\d{1,2}(?:-\d)?$", "", key)
+            g = groups.setdefault(key, {"pages": [], "section": None})
         if u not in [p["url"] for p in g["pages"]]:
-            g["pages"].append({"url": u, "thumb_url": u, "page": len(g["pages"]) + 1, "verified": True})
+            m = _HAKMAR_PAGE_NO.search(name)
+            g["pages"].append({"url": u, "thumb_url": u, "page": len(g["pages"]) + 1, "verified": True,
+                               "_no": int(m.group(1)) if m else None})
     cats = []
     for key, g in groups.items():
-        if len(g["pages"]) < 2:
+        pages = g["pages"]
+        if len(pages) < 2:
             continue  # tek görsel: büyük olasılıkla tanıtım/afiş değil (logo, kampanya kutusu vb.)
-        # "08-19-Ekim-2026-Genel-Insert" → "08-19 Ekim 2026 Genel Insert" (rakamlar arası tire korunur)
-        start, end = parse_tr_range(re.sub(r"(?<=\D)-|-(?=\D)", " ", key), observed)
-        title = _stem_title(key)
+        if all(p["_no"] is not None for p in pages):
+            pages.sort(key=lambda p: p["_no"])  # "sayfa1…sayfa8": dosya adındaki sayfa sırası esas
+        for i, p in enumerate(pages):
+            p.pop("_no", None)
+            p["page"] = i + 1
+        sec = g["section"]
+        if sec is not None:
+            start, end = sec["start"], sec["end"]
+            title = "Hakmar Broşürü"
+            slug = re.sub(r"[^a-z0-9]+", "-", key[3:]).strip("-") + (f"-{start.year}" if start else "")
+        else:
+            # "08-19-Ekim-2026-Genel-Insert" → "08-19 Ekim 2026 Genel Insert" (rakamlar arası tire korunur)
+            start, end = parse_tr_range(re.sub(r"(?<=\D)-|-(?=\D)", " ", key), observed)
+            title = _stem_title(key)
+            slug = re.sub(r"[^a-z0-9]+", "-", key.lower()).strip("-")
         if start and end:
             title = f"{title} · {start.day}{'' if start.month == end.month else ' ' + _month(start.month)}-{end.day} {_month(end.month)}"
-        cats.append(CatalogData(id="hakmar-" + re.sub(r"[^a-z0-9]+", "-", key.lower()).strip("-")[:48],
+        elif sec is not None:
+            title = f"{title} · {sec['heading']}"
+        cats.append(CatalogData(id="hakmar-" + slug[:48],
                                 title=title, kind="aktuel", official_url=HAKMAR_URL, valid_from=start, valid_to=end,
-                                cover_url=g["pages"][0]["url"], pages=g["pages"]))
+                                cover_url=pages[0]["url"], pages=pages))
     return cats
 
 
@@ -323,6 +378,44 @@ FLIPBOOK_HOSTS = ("publitas.com", "heyzine.com", "aflip.in", "fliphtml5.com", "i
                   "katalog.watsons.com.tr", "brosurler.metro-tr.com")
 
 
+def _useful_title(t: str | None) -> str | None:
+    """Başlık olarak anlamsız kısa/şablon metinler ("bt", "img", "tıkla") yok sayılır."""
+    if not t or len(t) < 4 or re.fullmatch(r"(?i)(img|image|g[öo]rsel|t[ıi]kla|incele|katalog\w*)", t):
+        return None
+    return t
+
+
+def distinct_titles(cats: list[CatalogData]) -> None:
+    """Aynı mağazanın farklı yayınları aynı başlığı taşıyorsa (ör. hepsi "Katalog") feed'de tek gruba düşmesinler diye
+    başlıklar sırayla numaralanır: "Katalog · 1", "Katalog · 2"."""
+    from ..normalize import fold
+    counts: dict[str, int] = {}
+    for c in cats:
+        counts[fold(c.title)] = counts.get(fold(c.title), 0) + 1
+    seen: dict[str, int] = {}
+    for c in cats:
+        k = fold(c.title)
+        if counts[k] > 1:
+            seen[k] = seen.get(k, 0) + 1
+            c.title = f"{c.title} · {seen[k]}"
+
+
+# Heyzine (aflip.in kısa adresleri dahil) kitap sayfası: og:title, og:image ve sayfada yayımlanmışsa resmî PDF.
+HEYZINE_HOSTS = ("heyzine.com", "aflip.in")
+_HEYZINE_PDF = re.compile(r"https://cdnm\.heyzine\.com/flip-book/pdf/[A-Za-z0-9_-]+\.pdf")
+
+
+def parse_heyzine_book(html: str, url: str) -> dict:
+    """{title, cover, pdf}. PDF yalnızca sayfada yazıyorsa alınır (adres tahmin edilmez)."""
+    m = page_meta(html, url)
+    title = m["title"]
+    if title:
+        title = clean(re.sub(r"\s*[|–-]\s*Heyzine.*$", "", title, flags=re.I)) or None
+    raw = html.replace("\\/", "/").replace("\\u002F", "/").replace("&amp;", "&")
+    pdf = _HEYZINE_PDF.search(raw)
+    return {"title": _useful_title(title), "cover": m["image"], "pdf": pdf.group(0) if pdf else None}
+
+
 def parse_flipbook_index(html: str, base_url: str, store_id: str, observed: date) -> list[CatalogData]:
     """Mağazanın katalog sayfasındaki flipbook bağlantıları + yanlarındaki kapak görseli."""
     tree = parse(html)
@@ -338,8 +431,9 @@ def parse_flipbook_index(html: str, base_url: str, store_id: str, observed: date
             if u and not SKIP_IMG.search(u):
                 img = urljoin(base_url, u)
                 break
-        title = clean(text_of(a)) or clean((a.css_first("img").attributes.get("alt") if a.css_first("img") else "")) \
-            or clean(a.attributes.get("title")) or "Katalog"
+        title = _useful_title(clean(text_of(a))) \
+            or _useful_title(clean((a.css_first("img").attributes.get("alt") if a.css_first("img") else ""))) \
+            or _useful_title(clean(a.attributes.get("title"))) or "Katalog"
         start, end = parse_tr_range(title, observed)
         slug = re.sub(r"[^a-z0-9]+", "-", href.lower().split("//", 1)[-1])[-40:].strip("-")
         out.append(CatalogData(id=f"{store_id}-{slug}", title=title, kind="flipbook", official_url=href,
@@ -371,6 +465,12 @@ def parse_publication(html: str, url: str, store_id: str, observed: date) -> Cat
     title = clean(re.sub(r"\s*[|–-]\s*(Publitas|Watsons|Metro).*$", "", m["title"])) or m["title"]
     start, end = parse_tr_range(title + " " + (m["description"] or ""), observed)
     slug = urlparse(url).path.strip("/").split("/")[0] or "katalog"
+    if start is None and end is None:
+        # Yalnızca ay adı ("Ekim Kataloğu", adres "ekim-katalog-2026"): ay sonunda sona erer (eski ay kalmasın).
+        from ..normalize import parse_tr_month
+        start, end = parse_tr_month(title, observed)
+        if start is None:
+            start, end = parse_tr_month(slug, observed)
     return CatalogData(id=f"{store_id}-{slug}"[:64], title=title, kind="flipbook", official_url=url,
                        valid_from=start, valid_to=end, cover_url=m["image"])
 
@@ -395,6 +495,60 @@ def publication_base(url: str) -> str:
     if "page" in parts:
         parts = parts[:parts.index("page")]
     return f"{p.scheme}://{p.netloc}/" + "/".join(parts[:1])
+
+
+_PUBLITAS_SIZES = ("at2000", "at1600", "at1200", "at1000", "at800", "at600", "at400", "at200")
+_PUBLITAS_THUMBS = ("at600", "at400", "at800", "at200")
+
+
+def parse_publitas_spreads(data, spreads_url: str, pub: str, max_pages: int = 80) -> list[dict]:
+    """Publitas'ın resmî ``spreads.json`` dosyası → sayfa görselleri (en büyük boy + küçük resim), yayın sırasıyla.
+
+    Biçim: [{"pages": [{"number": 1, "images": {"at200": …, "at600": …, "at1200": …, "at2000": …}}, …]}, …]
+    (ya da {"spreads": [...]}). Adresler göreli olabilir → spreads.json adresine göre mutlak yapılır."""
+    spreads = data.get("spreads") if isinstance(data, dict) else data
+    if isinstance(data, dict) and spreads is None and isinstance(data.get("pages"), list):
+        spreads = [{"pages": data["pages"]}]
+    if not isinstance(spreads, list):
+        return []
+    pages, seen = [], set()
+    for sp in spreads:
+        for pg in (sp.get("pages") if isinstance(sp, dict) else None) or []:
+            imgs = pg.get("images") if isinstance(pg, dict) else None
+            if not isinstance(imgs, dict):
+                continue
+            full = next((imgs[k] for k in _PUBLITAS_SIZES if isinstance(imgs.get(k), str) and imgs[k]), None)
+            if not full:
+                continue
+            thumb = next((imgs[k] for k in _PUBLITAS_THUMBS if isinstance(imgs.get(k), str) and imgs[k]), full)
+            full = urljoin(spreads_url, "https:" + full if full.startswith("//") else full)
+            thumb = urljoin(spreads_url, "https:" + thumb if thumb.startswith("//") else thumb)
+            if full in seen or not full.startswith("https://"):
+                continue
+            seen.add(full)
+            n = len(pages) + 1
+            pages.append({"url": full, "thumb_url": thumb, "page": n, "verified": True, "link": f"{pub}/page/{n}"})
+            if len(pages) >= max_pages:
+                return pages
+    return pages
+
+
+def publitas_spreads_pages(client: PoliteClient, pub: str, max_pages: int = 80) -> list[dict]:
+    """Yayının resmî spreads.json dosyası (aynı alan adı). İlk sayfa görseli ilk baytlarından (JPEG/PNG/WEBP)
+    doğrulanmazsa boş liste döner (çağıran eski /page/N yoluna düşer)."""
+    url = f"{pub}/spreads.json"
+    try:
+        r = client.get(url)
+        data = json.loads(r.text)
+    except (ConnectorError, ValueError):
+        return []
+    pages = parse_publitas_spreads(data, str(r.url), pub, max_pages)
+    if not pages:
+        return []
+    pr = client.probe(pages[0]["url"])
+    if not (pr.get("ok") and pr.get("kind") in ("jpeg", "png", "webp")):
+        return []
+    return pages
 
 
 def publitas_pages(client: PoliteClient, pub: str, max_pages: int = 80) -> list[dict]:
@@ -439,7 +593,9 @@ class PublitasConnector(Connector):
             raise ConnectorError(f"{self.store_id}: Publitas yayını okunamadı")
         pub = publication_base(final)
         cat.official_url = pub + "/page/1"
-        cat.pages = publitas_pages(client, pub, self.max_pages)
+        # Önce resmî spreads.json (tüm sayfalar); yoksa/doğrulanamazsa /page/N sırayla (eski yol; bazı yayınlarda
+        # /page/2 ilk sayfayı tekrar ettiği için yalnızca 1 sayfa okunabiliyordu).
+        cat.pages = publitas_spreads_pages(client, pub, self.max_pages) or publitas_pages(client, pub, self.max_pages)
         if cat.pages:
             cat.kind = "aktuel"
             cat.cover_url = cat.cover_url if cat.cover_url and "/screenshots" not in cat.cover_url else cat.pages[0]["url"]
@@ -484,8 +640,34 @@ class FlipbookIndexConnector(Connector):
                 if c.pages:
                     c.kind = "aktuel"
                     c.cover_url = c.cover_url or c.pages[0]["thumb_url"]
+            elif any(_host(c.official_url) == h or _host(c.official_url).endswith("." + h) for h in HEYZINE_HOSTS):
+                self._heyzine(client, c, observed_at.date(), res)
+        distinct_titles(cats)
         res.catalogs = cats
         return res
+
+    @staticmethod
+    def _heyzine(client: PoliteClient, c: CatalogData, observed: date, res: ConnectorResult) -> None:
+        """Heyzine kitap sayfası (robots.txt izin veriyorsa): başlık, kapak; sayfada resmî PDF bağlantısı varsa ve ilk
+        baytları %PDF ise PDF. Okunamazsa katalog dizindeki bilgiyle (resmî bağlantı) kalır."""
+        try:
+            r = client.get(c.official_url)
+        except ConnectorError as exc:
+            res.warnings.append(f"Heyzine kitabı okunamadı ({c.official_url}): {exc}")
+            return
+        book = parse_heyzine_book(r.text, str(r.url))
+        if book["title"]:
+            c.title = book["title"]
+            if c.valid_from is None and c.valid_to is None:
+                c.valid_from, c.valid_to = parse_tr_range(book["title"], observed)
+        if book["cover"]:
+            c.cover_url = book["cover"]
+        if book["pdf"]:
+            pr = client.probe(book["pdf"])
+            if pr.get("ok") and pr.get("kind") == "pdf":
+                c.pdf_url, c.kind = book["pdf"], "pdf"
+            else:
+                res.warnings.append(f"Heyzine PDF doğrulanamadı ({pr.get('status')}, {pr.get('kind')}): {book['pdf']}")
 
 
 class FlipbookConnector(Connector):

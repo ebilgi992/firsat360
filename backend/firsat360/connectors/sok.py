@@ -101,6 +101,19 @@ def _original_promo(u: str) -> str:
     return re.sub(r"/cdn-cgi/image/[^/]+/", "/", u)
 
 
+GALLERY_WIDTH = 1600
+
+
+def larger_thumb(u: str, width: int = GALLERY_WIDTH) -> str:
+    """…/cdn-cgi/image/width=512,height=260,fit=pad,…/promotion-assets/x.jpg → aynı adres, width=1600 (yükseklik
+    sınırı kaldırılır ki oran korunsun). Boyutlandırma öneki yoksa adres değişmez."""
+    m = re.search(r"/cdn-cgi/image/([^/]+)/", u)
+    if not m:
+        return u
+    opts = [o for o in m.group(1).split(",") if o and not o.startswith(("width=", "w=", "height=", "h="))]
+    return u[:m.start(1)] + ",".join([f"width={width}"] + opts) + u[m.end(1):]
+
+
 def parse_campaign_banners(html: str) -> list[dict]:
     """Kampanya listesindeki resmî kampanya afişleri → galeri sayfaları.
 
@@ -124,7 +137,8 @@ def parse_campaign_banners(html: str) -> list[dict]:
             continue
         seen.add(url)
         alt = next((i.attributes.get("alt") for i in card.css("img") if i.attributes.get("alt")), None)
-        title = clean(text_of(card.css_first("p"))) or clean(alt) or clean(text_of(a)) or "Kampanya"
+        title = (useful_title(clean(text_of(card.css_first("p")))) or useful_title(clean(alt))
+                 or useful_title(clean(text_of(a))) or slug_title(url))
         full = _original_promo(img)
         pages.append({"url": full, "thumb_url": img, "caption": title, "link": url, "page": len(pages) + 1,
                       "verified": True})
@@ -142,9 +156,32 @@ def parse_campaign_list(html: str) -> list[tuple[str, str]]:
         if url in seen:
             continue
         seen.add(url)
-        title = clean(text_of(a)) or clean(a.attributes.get("title")) or "Kampanya"
-        out.append((title, url))
+        title = useful_title(clean(text_of(a))) or useful_title(clean(a.attributes.get("title")))
+        if not title:
+            # Yeni kart yapısı: bağlantı metni yalnızca "Kampanya Detayı"; asıl başlık kartın <p>'sinde
+            card = ancestor_with(a, lambda n: n.css_first("p") is not None and n.css_first("img") is not None, max_up=5)
+            title = useful_title(clean(text_of(card.css_first("p")))) if card is not None else None
+        out.append((title or slug_title(url), url))
     return out
+
+
+GENERIC_TITLES = {"kampanya detayi", "kampanya detayı", "detay", "detaylar", "incele", "kampanya", "tumu", "tümü",
+                  "hemen incele", "kampanyayi incele", "kampanyayı incele"}
+
+
+def useful_title(t: str | None) -> str | None:
+    """"Kampanya Detayı" gibi düğme metinleri başlık değildir."""
+    from ..normalize import tr_lower
+    return None if not t or tr_lower(t).strip(" .:›>") in GENERIC_TITLES else t
+
+
+def slug_title(url: str) -> str:
+    """Kampanya adresinden başlık: "/1-alana-1-bedava-prm-…" → "1 Alana 1 Bedava"."""
+    from urllib.parse import urlparse
+    path = urlparse(url).path.strip("/").rsplit("/", 1)[-1]
+    slug = CAMPAIGN_RE.split(path)[0].strip("-")
+    words = [w for w in slug.split("-") if w]
+    return " ".join(w if w.isdigit() else w[:1].upper() + w[1:] for w in words) or "Kampanya"
 
 
 def campaign_price_from_title(title: str):
@@ -154,6 +191,11 @@ def campaign_price_from_title(title: str):
 
 def parse_campaign_page(html: str, url: str, title: str, observed) -> tuple[CatalogData, list[OfferData], int]:
     tree = parse(html)
+    # Liste sayfasındaki başlık genel ("Kampanya Detayı") ya da adresten türetilmişse kampanya sayfasının <h1>'i esas
+    h1 = useful_title(clean(text_of(tree.css_first("h1"))))
+    if h1 and (not useful_title(title) or title == slug_title(url)):
+        title = h1
+    title = useful_title(title) or slug_title(url)
     page_text = text_of(tree.body) if tree.body else ""
     vf_match = VALID_FROM_RE.search(page_text)
     valid_from = parse_tr_date(vf_match.group(1), observed.date()) if vf_match else None
@@ -250,8 +292,10 @@ class SokConnector(Connector):
             # Tam boy (boyutlandırmasız) adres gerçekten görsel mi? Değilse resmî küçük boyuta düşülür.
             pr = client.probe(banners[0]["url"])
             if not (pr.get("ok") and pr.get("kind") in ("jpeg", "png", "webp")):
+                # Doğrulanamadı (ör. görsel sunucusu robots.txt ile kapalı): sitenin kullandığı aynı resmî CDN
+                # boyutlandırma adresinin büyük boyu (width=512 → width=1600). Yeni sayfa/görsel indirilmez.
                 for b in banners:
-                    b["url"] = b["thumb_url"]
+                    b["url"] = larger_thumb(b["thumb_url"])
             result.catalogs.append(CatalogData(id="sok-kampanya-gorselleri", title="ŞOK Kampanyaları",
                                                kind="campaign_gallery", official_url=LIST_URL, pages=banners,
                                                cover_url=banners[0]["thumb_url"]))

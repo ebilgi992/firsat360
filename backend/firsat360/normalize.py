@@ -187,6 +187,30 @@ def parse_tr_range(text: str | None, observed: date) -> tuple[date | None, date 
     return start, end
 
 
+def month_end(d: date) -> date:
+    """Ayın son günü."""
+    nxt = date(d.year + (d.month == 12), d.month % 12 + 1, 1)
+    return nxt - timedelta(days=1)
+
+
+def parse_tr_month(text: str | None, observed: date) -> tuple[date | None, date | None]:
+    """Yalnızca ay adı (gün yok) yazan başlık: "Ekim Kataloğu", "ekim-katalog-2026" → (1 Ekim, 31 Ekim).
+    Gün içeren metinler için parse_tr_range kullanılır; bu fonksiyon yalnızca o sonuç vermediğinde çağrılmalıdır.
+    Birden çok farklı ay geçiyorsa belirsizdir → (None, None)."""
+    if not text:
+        return None, None
+    f = re.sub(r"[-_/]+", " ", _date_fold(text))
+    found = re.findall(r"(?<![a-z])(" + "|".join(MONTHS) + r")(?![a-z])", f)
+    if len(set(found)) != 1:
+        return None, None
+    month = MONTHS[found[0]]
+    y = re.search(r"(?<!\d)(20\d{2})(?!\d)", f)
+    start = date(int(y.group(1)), month, 1) if y else _infer_year(month, 1, observed)
+    if start is None:
+        return None, None
+    return start, month_end(start)
+
+
 # ---------------------------------------------------------------- kategoriler
 CATEGORIES = {
     "elektronik": "Elektronik",

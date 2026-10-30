@@ -69,4 +69,6 @@ def test_probe_respects_robots_without_failing_the_store():
     res = SokConnector(max_pages=0).fetch(client, datetime(2026, 10, 21, tzinfo=timezone.utc))
     gal = next(c for c in res.catalogs if c.id == "sok-kampanya-gorselleri")
     assert not asked  # görsel sunucusuna hiç istek yapılmadı
-    assert "width=512" in gal.pages[0]["url"]  # sitenin gösterdiği resmî küçük boy
+    # aynı resmî CDN adresinin büyük boyu (küçük resim 512 px kalır)
+    assert "width=1600" in gal.pages[0]["url"] and "promotion-assets/sub-folder/1c219942.jpg" in gal.pages[0]["url"]
+    assert "width=512" in gal.pages[0]["thumb_url"]

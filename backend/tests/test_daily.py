@@ -133,8 +133,12 @@ def test_first_seen_is_kept_when_catalog_is_read_again(sf, settings):
 
 
 # ------------------------------------------------------------------ kaynak hatası: veri korunur
-def test_source_failure_keeps_verified_data(sf, settings, no_sleep):
+def test_source_failure_keeps_verified_data(sf, settings, no_sleep, monkeypatch):
+    from firsat360 import pipeline
     from firsat360.connectors import live_connectors
+    # Bağlayıcı gözlem zamanı (pipeline.utcnow) sabitlenir: fikstürdeki BİM sekmeleri (13-14 Ekim) artık bitiş
+    # tarihi taşıdığından (tek gün → +6 gün) duvar saatine göre süresi dolmuş sayılmasın.
+    monkeypatch.setattr(pipeline, "utcnow", lambda: NOW)
     conns = {"bim": live_connectors()["bim"]}
     settings.enabled_live_stores = ("bim",)
     r1 = run_daily(sf, conns, settings, transport=make_transport(), now=NOW, snapshot_root=settings_root_none(),
@@ -463,6 +467,8 @@ def test_publitas_all_pages_extracted():
         p = req.url.path
         if p == "/":
             return httpx.Response(302, headers={"location": "https://katalog.example.test/ekim-katalog/page/1"})
+        if p.endswith("/spreads.json"):
+            return httpx.Response(404)  # spreads.json yok → eski /page/N yolu
         n = int(p.rsplit("/", 1)[-1])
         n = min(n, total)  # son sayfadan sonrası son sayfayı döndürür
         return httpx.Response(200, text=f'<html><head><meta property="og:title" content="Ekim Kataloğu 1 - 31 Ekim | Publitas">'

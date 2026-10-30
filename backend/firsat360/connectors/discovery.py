@@ -256,8 +256,19 @@ def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx:
     if title and re.fullmatch(r"(?i)\s*(kataloglar|katalog|insert\s*&?\s*bro[şs][üu]r|indirim\s+b[üu]lteni|bro[şs][üu]rler|aktüel|aktuel)\s*", title):
         title = default_title
     start, end = parse_tr_range(title, observed)
-    if found.images:
-        pages = [{"url": u, "thumb_url": u, "page": i + 1, "verified": True} for i, u in enumerate(found.images[:60])]
+    images = found.images
+    if page_kind == "poster" and images:
+        # Afiş dosya adındaki ay-yıl ("…_072026_AFIS…" = Temmuz 2026): o ayın sonunda sona erer. Süresi geçmiş afiş
+        # alınmaz; kalan afişlerin hepsi tarihliyse katalog en geç bitenin ay sonunda sona erer.
+        # Hepsi eskiyse katalog geçmiş bitiş tarihiyle kaydedilir (feed göstermez; mağaza hata durumuna düşmez).
+        ends = {u: poster_month_end(u) for u in images}
+        current = [u for u in images if ends[u] is None or ends[u] >= observed]
+        images = current or images
+        dated = [ends[u] for u in images if ends[u] is not None]
+        if images and end is None and len(dated) == len(images):
+            end = max(dated)
+    if images:
+        pages = [{"url": u, "thumb_url": u, "page": i + 1, "verified": True} for i, u in enumerate(images[:60])]
         out.append(CatalogData(id=f"{store_id}-{slug or idx}"[:64], title=title, kind=page_kind, official_url=page_url,
                                valid_from=start, valid_to=end, pages=pages, cover_url=pages[0]["url"]))
     for j, pdf in enumerate(found.pdfs[:5]):
@@ -277,6 +288,20 @@ def to_catalogs(store_id: str, page_url: str, found: Found, observed: date, idx:
         out.append(CatalogData(id=f"{store_id}-{fslug}"[:64], title=t or title, kind="flipbook", official_url=fb,
                                valid_from=s3, valid_to=e3))
     return out
+
+
+_MMYYYY = re.compile(r"(?<!\d)(0[1-9]|1[0-2])(20\d{2})(?!\d)")
+
+
+def poster_month_end(url: str) -> date | None:
+    """Dosya adındaki AAYYYY (ör. "072026") → o ayın son günü. Yoksa/birden çok farklı ay varsa None."""
+    from ..normalize import month_end
+    name = urlparse(url).path.rsplit("/", 1)[-1]
+    found = {(int(y), int(m)) for m, y in _MMYYYY.findall(name)}
+    if len(found) != 1:
+        return None
+    y, m = found.pop()
+    return month_end(date(y, m, 1))
 
 
 def _numeric_range(name: str, observed: date) -> tuple[date | None, date | None]:

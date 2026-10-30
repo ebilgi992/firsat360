@@ -34,7 +34,11 @@ def ensure_stores(session: Session, settings: Settings | None = None) -> None:
                           catalog_url=meta["catalog_url"], legal_note=meta["legal_note"])
             session.add(store)
         else:
+            # Yapılandırmadaki resmî adresler esastır (ör. File: filemarket.com.tr → file.com.tr düzeltmesi
+            # mevcut veritabanı kaydına da yansır).
             store.legal_note = meta["legal_note"]
+            store.official_url = meta["official_url"]
+            store.catalog_url = meta["catalog_url"]
         store.image_policy = settings.image_policy(sid)
     session.commit()
 
